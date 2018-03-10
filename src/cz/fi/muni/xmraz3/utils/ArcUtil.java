@@ -5,6 +5,10 @@ import cz.fi.muni.xmraz3.*;
 import cz.fi.muni.xmraz3.math.Plane;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Vector;
+import cz.fi.muni.xmraz3.mesh.Arc;
+import cz.fi.muni.xmraz3.mesh.Boundary;
+import cz.fi.muni.xmraz3.mesh.Edge;
+import cz.fi.muni.xmraz3.mesh.SphericalPatch;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -263,7 +267,7 @@ public class ArcUtil {
                 int i = 0;
                 int iterator = 0;
                 //while (Math.abs(loopEnd.dotProduct(pivot) - 1) >= 0.00001) {
-                while (Point.subtractPoints(loopEnd, pivot).sqrtMagnitude() > Main.scaleFactor * 0.0002) {
+                while (Point.subtractPoints(loopEnd, pivot).sqrtMagnitude() > Surface.scaleFactor * 0.0002) {
                     if (iterator > sp.arcs.size() + 10) {
                         System.err.println("Cycle detected for atom id:" + sp.id);
                         System.out.println("Iterator: " + iterator);
@@ -280,7 +284,7 @@ public class ArcUtil {
                     Arc lop = queue.get(i);
                     //Vector vLop = lop.toEnd1;
                     Point pLop = lop.end1;
-                    if (Point.subtractPoints(pLop, pivot).sqrtMagnitude() < Main.scaleFactor * 0.0002) {
+                    if (Point.subtractPoints(pLop, pivot).sqrtMagnitude() < Surface.scaleFactor * 0.0002) {
                         boolean betterCand = false;
                         Arc tmp = lop;
                         for (int j = i + 1; j < queue.size(); ++j) {
@@ -537,7 +541,7 @@ public class ArcUtil {
         a1.vrts.add(mid1);
         a1.vrts.add(p2);
         //ArcUtil.refineArc(a1, 0, true, 1, false);
-        ArcUtil.refineArc(a1, Main.maxEdgeLen, false, 0, false);
+        ArcUtil.refineArc(a1, Surface.maxEdgeLen, false, 0, false);
         Arc a2 = new Arc(circle.p, radius);
         a2.setEndPoints(p2, p1, false);
         a2.setNormal(circle.v);
@@ -546,7 +550,7 @@ public class ArcUtil {
         a2.vrts.add(mid2);
         a2.vrts.add(p1);
         //ArcUtil.refineArc(a2, 0, true, 1, false);
-        ArcUtil.refineArc(a2, Main.maxEdgeLen, false, 0, false);
+        ArcUtil.refineArc(a2, Surface.maxEdgeLen, false, 0, false);
         Boundary b = new Boundary();
         b.arcs.add(a1);
         b.arcs.add(a2);

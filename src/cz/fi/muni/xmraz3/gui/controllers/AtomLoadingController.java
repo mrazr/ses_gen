@@ -1,6 +1,7 @@
 package cz.fi.muni.xmraz3.gui.controllers;
 
-import cz.fi.muni.xmraz3.Main;
+import cz.fi.muni.xmraz3.Surface;
+import cz.fi.muni.xmraz3.SurfaceParser;
 import cz.fi.muni.xmraz3.gui.MainPanel;
 import cz.fi.muni.xmraz3.gui.MainWindow;
 import javafx.beans.value.ChangeListener;
@@ -40,11 +41,11 @@ public class AtomLoadingController {
         task = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
-                Main.atomsProcessed.addListener(new ChangeListener<Number>() {
+                Surface.atomsProcessed.addListener(new ChangeListener<Number>() {
                     @Override
                     public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                        updateProgress(newValue.longValue(), Main.convexPatches.size());
-                        updateMessage("Progress: " + newValue.longValue() + " / " + Main.convexPatches.size());
+                        updateProgress(newValue.longValue(), Surface.convexPatches.size());
+                        updateMessage("Progress: " + newValue.longValue() + " / " + Surface.convexPatches.size());
                     }
                 });
                 if (MainPanel.atomView == null){
@@ -55,7 +56,7 @@ public class AtomLoadingController {
                 MainPanel.atomView.stopRendering(true);
                 MainPanel.atomView.requestFreeResources();
                 while(!MainPanel.atomView.getResourcesFreed());
-                Main.ses_start(folder);
+                SurfaceParser.ses_start(folder);
                 return null;
             }
         };

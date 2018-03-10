@@ -1,6 +1,6 @@
 package cz.fi.muni.xmraz3.math;
 
-import cz.fi.muni.xmraz3.AdvancingFrontMethod;
+import cz.fi.muni.xmraz3.mesh.AdvancingFrontMethod;
 
 public class Plane {
     public Point p;

@@ -1,7 +1,7 @@
 package cz.fi.muni.xmraz3.math;
 
-import cz.fi.muni.xmraz3.Edge;
-import cz.fi.muni.xmraz3.Main;
+import cz.fi.muni.xmraz3.mesh.Edge;
+import cz.fi.muni.xmraz3.Surface;
 import org.json.simple.JSONObject;
 
 /**
@@ -57,9 +57,9 @@ public class Point {
     }
 
     public Point(JSONObject jObj){
-        x = Main.scaleFactor * (Double)jObj.get("x");
-        y = Main.scaleFactor * (Double)jObj.get("y");
-        z = Main.scaleFactor * (Double)jObj.get("z");
+        x = Surface.scaleFactor * (Double)jObj.get("x");
+        y = Surface.scaleFactor * (Double)jObj.get("y");
+        z = Surface.scaleFactor * (Double)jObj.get("z");
     }
 
     public static Point translatePoint(Point p, Vector v){

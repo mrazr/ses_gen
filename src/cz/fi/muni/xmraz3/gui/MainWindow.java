@@ -17,6 +17,7 @@ import cz.fi.muni.xmraz3.*;
 import cz.fi.muni.xmraz3.gui.controllers.MainPanelController;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Vector;
+import cz.fi.muni.xmraz3.mesh.*;
 import cz.fi.muni.xmraz3.utils.GLUtil;
 import cz.fi.muni.xmraz3.utils.PatchUtil;
 import graphicslib3D.*;
@@ -33,7 +34,6 @@ import smile.neighbor.Neighbor;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -626,7 +626,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
 
     public void selectToriPatchesByIDs(List<Integer> ids){
         toriPatchesSelect.clear();
-        ids.forEach(i -> { if (i < Main.rectangles.size()) { toriPatchesSelect.add(i); }});
+        ids.forEach(i -> { if (i < Surface.rectangles.size()) { toriPatchesSelect.add(i); }});
     }
 
     public void setup(){
@@ -739,7 +739,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     toriPatchesSelect.clear();
                     toriPatchesSelect.add(newValue.intValue());
                 }
-                ToroidalPatch tp = Main.rectangles.get(newValue.intValue());
+                ToroidalPatch tp = Surface.rectangles.get(newValue.intValue());
                 lastCameraTarget = tp.midProbe;
             }
         });
@@ -862,12 +862,12 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         this.probeVbo[0] = bobjects[1];
         this.probeFaceCount = bobjects[2];
         this.probeScaleT.glLoadIdentity();
-        float r = (float)Double.longBitsToDouble(Main.probeRadius.get());
+        float r = (float)Double.longBitsToDouble(Surface.probeRadius.get());
         //this.probeScaleT.glScalef(r, r, r);
         this.probeScaleT.glPushMatrix();
         camDir = new Quaternion(direction[0] ,direction[1], direction[2], 0.f);
         camDir.normalize();
-        camTar = new Quaternion((float)Main.centerOfgravity.getX() - cameraPos[0], (float)Main.centerOfgravity.getY() - cameraPos[1], (float)Main.centerOfgravity.getZ() - cameraPos[2], 0.f);
+        camTar = new Quaternion((float) Surface.centerOfgravity.getX() - cameraPos[0], (float) Surface.centerOfgravity.getY() - cameraPos[1], (float) Surface.centerOfgravity.getZ() - cameraPos[2], 0.f);
         camTar.normalize();
         slerping = true;
         slerpParam = 0;
@@ -1044,7 +1044,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 for (Integer i : linkNeighbors) {
                     SphericalPatch cp = concavePatchList.get(i);
                     probeScaleT.glPushMatrix();
-                    float r = (float) Double.longBitsToDouble(Main.probeRadius.get());
+                    float r = (float) Double.longBitsToDouble(Surface.probeRadius.get());
 
                     float[] center = cp.sphere.center.getFloatData();
                     probeScaleT.glTranslatef(center[0], center[1], center[2]);
@@ -1304,7 +1304,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             gl.glUseProgram(selProgram);
             if (!selectInitialized){
                 //Integer[] offsets = new Integer[convexPatches.size() + concavePatchList.size() + Main.rectangles.size()];
-                IntBuffer boffsets = GLBuffers.newDirectIntBuffer(convexPatchList.size() + concavePatchList.size() + Main.rectangles.size());
+                IntBuffer boffsets = GLBuffers.newDirectIntBuffer(convexPatchList.size() + concavePatchList.size() + Surface.rectangles.size());
                 int accumulator = 0;
                 for (SphericalPatch a : convexPatchList){
                     boffsets.put(accumulator);
@@ -1316,7 +1316,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     accumulator += cp.vertices.size();
                     concaveVerticesCount += cp.vertices.size();
                 }
-                for (ToroidalPatch tp : Main.rectangles){
+                for (ToroidalPatch tp : Surface.rectangles){
                     boffsets.put(accumulator);
                     accumulator += tp.vrts.size() / 2;
                     toriVerticesCount += tp.vrts.size() / 2;
@@ -1377,7 +1377,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             gl.glFrontFace(GL4.GL_CCW);
 
             gl.glUniform1i(uniStart, concavePatchList.size() + convexPatchList.size());
-            gl.glUniform1i(uniEnd, concavePatchList.size() + convexPatchList.size() + Main.rectangles.size());
+            gl.glUniform1i(uniEnd, concavePatchList.size() + convexPatchList.size() + Surface.rectangles.size());
             gl.glUniform1i(uniGlobalOffset, convexVerticesCount + concaveVerticesCount);
             gl.glBindVertexArray(meshVao[TORUS]);
             gl.glDrawArrays(GL4.GL_TRIANGLES, 0, 3 * toriPatchesFaceCount);
@@ -1433,7 +1433,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 long time = 0;
                 //System.out.println("Meshing atom " + i);
                 if (a.boundaries.size() > 0) {
-                    afm.initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Main.maxEdgeLen * (Math.sqrt(3) / 2.f));
+                    afm.initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f));
                     //updaFaces = afm.soho(a.convexPatchBoundaries.get(0), Math.toRadians(75), 0.2, 0.3 * (Math.sqrt(3) / 2.f), false, noveBody);
                         /*do {
                             overallTime += System.currentTimeMillis() - time;
@@ -1634,7 +1634,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 gl.glUniform3fv(uniNormalColorLoc, 1, toriPatchCol, 0);
                 gl.glBindVertexArray(meshVao[TORUS]);
                 for (Integer i : toriPatchesSelect){
-                    ToroidalPatch rp = Main.rectangles.get(i);
+                    ToroidalPatch rp = Surface.rectangles.get(i);
                     gl.glDrawArrays(GL4.GL_TRIANGLES, rp.vboOffset, 3 * rp.faces.size());
                 }
                 gl.glBindVertexArray(0);
@@ -1645,7 +1645,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             IntBuffer start = GLBuffers.newDirectIntBuffer(toriPatchesSelect.size());
             IntBuffer end = GLBuffers.newDirectIntBuffer(toriPatchesSelect.size());
             for (Integer i : toriPatchesSelect) {
-                ToroidalPatch a = Main.rectangles.get(i);
+                ToroidalPatch a = Surface.rectangles.get(i);
                 start.put(a.vboOffset);
                 end.put(a.vboOffset + (a.vrts.size() / 2));
             }
@@ -1689,7 +1689,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 while (!afm.atomComplete) {
                     faces.clear();
                     verts.clear();
-                    afm.initializeConcaveAFM(cp, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Main.maxEdgeLen * (Math.sqrt(3) / 2.f));
+                    afm.initializeConcaveAFM(cp, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f));
                     long time = System.currentTimeMillis();
                     afm.mesh2(verts, faces, false);
                     //meshTime += System.currentTimeMillis() - time;
@@ -1731,7 +1731,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         stopRendering.set(true);
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < end; ++i){
-            ToroidalPatch tp = Main.rectangles.get(i);
+            ToroidalPatch tp = Surface.rectangles.get(i);
             PatchUtil.meshToroidalPatch(tp);
         }
         long endTime = System.currentTimeMillis();
@@ -1846,7 +1846,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         List<Point> vrtsNormals = new ArrayList<>();
         int vboOffset = 0;
         int faceCount = 0;
-        for (ToroidalPatch tp : Main.rectangles){
+        for (ToroidalPatch tp : Surface.rectangles){
             for (Point p : tp.vrts){
                 vrtsNormals.add(p);
             }
@@ -1960,16 +1960,16 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         }
 
         if (keyEvent.getKeyCode() == KeyEvent.VK_F5){
-            SurfaceParser.exportCP(Main.triangles.get(concavePatchesSelect.get(0)), "/home/radoslav/objs/cp" + concavePatchesSelect.get(0).toString() + "_" + Math.random() + ".obj");
+            SurfaceParser.exportCP(Surface.triangles.get(concavePatchesSelect.get(0)), "/home/radoslav/objs/cp" + concavePatchesSelect.get(0).toString() + "_" + Math.random() + ".obj");
         }
 
         if (keyEvent.getKeyChar() == ']'){
             //toriPushData2GPU.set(false);
-            int step = Main.rectangles.size() / 4;
+            int step = Surface.rectangles.size() / 4;
             Runnable t1 = new Runnable() {
                 @Override
                 public void run() {
-                    meshToriPatches(0, Main.rectangles.size(), true);
+                    meshToriPatches(0, Surface.rectangles.size(), true);
                 }
             };
             Runnable t2 = new Runnable() {
@@ -1987,7 +1987,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             Runnable t4 = new Runnable() {
                 @Override
                 public void run() {
-                    meshToriPatches(3 * step, Main.rectangles.size(), true);
+                    meshToriPatches(3 * step, Surface.rectangles.size(), true);
                 }
             };
             toriPushData2GPU.set(true);
@@ -2225,7 +2225,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         if (keyEvent.getKeyCode() == KeyEvent.VK_SPACE){
             List<Neighbor<double[], SphericalPatch>> neighs = new ArrayList<>();
             SphericalPatch cp = concavePatchList.get(selectedConcaveP.get());
-            Main.probeTree.range(cp.sphere.center.getData(), 2 * Double.longBitsToDouble(Main.probeRadius.get()), neighs);
+            Surface.probeTree.range(cp.sphere.center.getData(), 2 * Double.longBitsToDouble(Surface.probeRadius.get()), neighs);
             System.out.println("found " + neighs.size() + " neighbors");
             linkNeighbors.clear();
             for (Neighbor<double[], SphericalPatch> n : neighs){
@@ -2287,8 +2287,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 System.out.println("loc count: " + localCount);
                 int h = 0;
                 //selectedToriP.set(hoverAtom - convexPatches.size() - concavePatchList.size());
-                for (int i = 0; i < Main.rectangles.size(); ++i){
-                    h += Main.rectangles.get(i).vrts.size() / 2;
+                for (int i = 0; i < Surface.rectangles.size(); ++i){
+                    h += Surface.rectangles.get(i).vrts.size() / 2;
                     if (localCount < h){
                         hoverSelectID = i;
                         break;
@@ -2573,14 +2573,14 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             angleX += 0.01 * diffx;
             angleY += 0.01 * diffy;
             modelMAT.glLoadIdentity();
-            modelMAT.glTranslatef((float)Main.centerOfgravity.x, (float)Main.centerOfgravity.y, (float)Main.centerOfgravity.z);
+            modelMAT.glTranslatef((float) Surface.centerOfgravity.x, (float) Surface.centerOfgravity.y, (float) Surface.centerOfgravity.z);
             Quaternion q1 = new Quaternion(0, 0, 0, 0);
             q1.setFromAngleNormalAxis((float)angleX, up);
             Quaternion q2 = new Quaternion(0, 0, 0, 0);
             q2.setFromAngleNormalAxis((float)-angleY, right);
             modelMAT.glRotate(q1);
             modelMAT.glRotate(q2);
-            modelMAT.glTranslatef((float)-Main.centerOfgravity.x, (float)-Main.centerOfgravity.y, (float)-Main.centerOfgravity.z);
+            modelMAT.glTranslatef((float)-Surface.centerOfgravity.x, (float)-Surface.centerOfgravity.y, (float)-Surface.centerOfgravity.z);
             lastX = mouseEvent.getX();
             lastY = mouseEvent.getY();
         }

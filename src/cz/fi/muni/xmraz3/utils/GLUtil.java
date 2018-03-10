@@ -5,7 +5,7 @@ import com.jogamp.opengl.GL4;
 import com.jogamp.opengl.GLContext;
 import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.util.GLBuffers;
-import cz.fi.muni.xmraz3.Face;
+import cz.fi.muni.xmraz3.mesh.Face;
 import cz.fi.muni.xmraz3.math.Point;
 import graphicslib3D.Matrix3D;
 

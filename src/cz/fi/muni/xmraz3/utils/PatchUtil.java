@@ -5,6 +5,7 @@ import cz.fi.muni.xmraz3.math.Plane;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Sphere;
 import cz.fi.muni.xmraz3.math.Vector;
+import cz.fi.muni.xmraz3.mesh.*;
 import smile.neighbor.Neighbor;
 
 import java.util.*;
@@ -31,7 +32,7 @@ public class PatchUtil {
                 tp.valid = false;
             }
             if (!tp.valid){
-                Main.rectangles.remove(tp);
+                Surface.rectangles.remove(tp);
                 //System.out.println(" errorrrr");
                 return;
             }
@@ -157,8 +158,8 @@ public class PatchUtil {
             leftStart.vrts.add(cusps[0]);
             //leftStart.refineLoop(Main.maxEdgeLen, 0.0, true, 1, false);
             //leftStart.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-            ArcUtil.refineArc(leftStart, Main.maxEdgeLen, true,1, false);
-            ArcUtil.refineArc(leftStart, Main.maxEdgeLen, false, 0, false);
+            ArcUtil.refineArc(leftStart, Surface.maxEdgeLen, true,1, false);
+            ArcUtil.refineArc(leftStart, Surface.maxEdgeLen, false, 0, false);
             leftStart.endEdge1 = new Edge(0, 1);
             leftStart.endEdge1.p1 = leftStart.end1;
             leftStart.endEdge1.p2 = leftStart.vrts.get(1);
@@ -180,8 +181,8 @@ public class PatchUtil {
             leftEnd.vrts.add(leftEnd.end2);
             //leftEnd.refineLoop(Main.maxEdgeLen, 0.0, true, 1, false);
             //leftEnd.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-            ArcUtil.refineArc(leftEnd, Main.maxEdgeLen, true, 1, false);
-            ArcUtil.refineArc(leftEnd, Main.maxEdgeLen, false, 0, false);
+            ArcUtil.refineArc(leftEnd, Surface.maxEdgeLen, true, 1, false);
+            ArcUtil.refineArc(leftEnd, Surface.maxEdgeLen, false, 0, false);
             leftEnd.endEdge1 = new Edge(0, 1);
             leftEnd.endEdge1.p1 = leftEnd.end1;
             leftEnd.endEdge1.p2 = leftEnd.vrts.get(1);
@@ -203,8 +204,8 @@ public class PatchUtil {
             rightStart.vrts.add(cusps[1]);
             //rightStart.refineLoop(Main.maxEdgeLen, 0.0, true, 1, false);
             //rightStart.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-            ArcUtil.refineArc(rightStart, Main.maxEdgeLen, true,1, false);
-            ArcUtil.refineArc(rightStart, Main.maxEdgeLen, false,0, false);
+            ArcUtil.refineArc(rightStart, Surface.maxEdgeLen, true,1, false);
+            ArcUtil.refineArc(rightStart, Surface.maxEdgeLen, false,0, false);
             rightStart.endEdge1 = new Edge(0, 1);
             rightStart.endEdge1.p1 = rightStart.end1;
             rightStart.endEdge1.p2 = rightStart.vrts.get(1);
@@ -226,8 +227,8 @@ public class PatchUtil {
             rightEnd.vrts.add(rightEnd.end2);
             //rightEnd.refineLoop(Main.maxEdgeLen, 0.0, true, 1, false);
             //rightEnd.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-            ArcUtil.refineArc(rightEnd, Main.maxEdgeLen, true,1, false);
-            ArcUtil.refineArc(rightEnd, Main.maxEdgeLen, false,0, false);
+            ArcUtil.refineArc(rightEnd, Surface.maxEdgeLen, true,1, false);
+            ArcUtil.refineArc(rightEnd, Surface.maxEdgeLen, false,0, false);
             rightEnd.endEdge1 = new Edge(0, 1);
             rightEnd.endEdge1.p1 = rightEnd.end1;
             rightEnd.endEdge1.p2 = rightEnd.vrts.get(1);
@@ -301,7 +302,7 @@ public class PatchUtil {
             leftMid.endEdge2.p1 = leftMid.vrts.get(leftMid.vrts.size() - 2);
             leftMid.endEdge2.p2 = leftMid.end2;
             //leftMid.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-            ArcUtil.refineArc(leftMid, Main.maxEdgeLen, false,0, false);
+            ArcUtil.refineArc(leftMid, Surface.maxEdgeLen, false,0, false);
             //Util.reverserOrder(leftMid, true);
             //leftMid.buildEdges();
 
@@ -379,8 +380,8 @@ public class PatchUtil {
             rightStart.owner = rightMid.owner = rightEnd.owner = right;
             leftMid.intersecting = true;
             rightMid.intersecting = true;
-            Main.intersectingArcs.add(leftMid);
-            Main.intersectingArcs.add(rightMid);
+            Surface.intersectingArcs.add(leftMid);
+            Surface.intersectingArcs.add(rightMid);
             left.intersectingPatches.add(right.id);
             right.intersectingPatches.add(left.id);
 
@@ -621,14 +622,14 @@ public class PatchUtil {
                     newA2.vrts.add(in);
                     newA2.valid = true;
                     //newA2.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-                    ArcUtil.refineArc(newA2, Main.maxEdgeLen, false,0, false);
+                    ArcUtil.refineArc(newA2, Surface.maxEdgeLen, false,0, false);
                     Arc newA = new Arc(arc.center, arc.radius);
                     newA.setNormal(arc.normal);
                     newA.vrts.add(in);
                     newA.vrts.add(arc.end2);
                     //newA.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
                     newA.setEndPoints(in, arc.end2, false);
-                    ArcUtil.refineArc(newA, Main.maxEdgeLen, false,0, false);
+                    ArcUtil.refineArc(newA, Surface.maxEdgeLen, false,0, false);
 
                     newA.prev = newA2;
                     newA2.next = newA;
@@ -675,7 +676,7 @@ public class PatchUtil {
                     a.vrts.add(a.end2);
                     a.mid = null;
                     //a.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-                    ArcUtil.refineArc(a, Main.maxEdgeLen, false,0, false);
+                    ArcUtil.refineArc(a, Surface.maxEdgeLen, false,0, false);
                     a.setEndPoints(in, a.end2, false);
                     a.valid = true;
                     arc.vrts.clear();
@@ -684,7 +685,7 @@ public class PatchUtil {
                     arc.mid = null;
                     //arc.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
                     arc.setEndPoints(arc.end1, in, false);
-                    ArcUtil.refineArc(arc, Main.maxEdgeLen, false,0, false);
+                    ArcUtil.refineArc(arc, Surface.maxEdgeLen, false,0, false);
 
                     a.prev = arc;
                     arc.next = a;
@@ -769,10 +770,10 @@ public class PatchUtil {
             Point centerOfRot = Point.translatePoint(tp.convexPatchArcs.get(0).owner.sphere.center, a1toa2);
             Vector vr = Point.subtractPoints(tp.probe1, centerOfRot);
             if (tp.concavePatchArcs.size() == 0){
-                if (vr.sqrtMagnitude() < Double.longBitsToDouble(Main.probeRadius.get())) {
+                if (vr.sqrtMagnitude() < Double.longBitsToDouble(Surface.probeRadius.get())) {
                     System.err.println("beginning to mesh circ patch");
                     Point centerOfRect = Point.translatePoint(tp.probe1, Point.subtractPoints(tp.probe2, tp.probe1).multiply(0.5f));
-                    double centerToCuspLength = Math.sqrt(Math.pow(Double.longBitsToDouble(Main.probeRadius.get()), 2) - Math.pow(Point.subtractPoints(tp.probe1, tp.probe2).sqrtMagnitude() / 2.f, 2));
+                    double centerToCuspLength = Math.sqrt(Math.pow(Double.longBitsToDouble(Surface.probeRadius.get()), 2) - Math.pow(Point.subtractPoints(tp.probe1, tp.probe2).sqrtMagnitude() / 2.f, 2));
                     Point bottomCusp = Point.translatePoint(centerOfRect, Point.subtractPoints(bottom.owner.sphere.center, top.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
                     Point topCusp = Point.translatePoint(centerOfRect, Point.subtractPoints(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
                     Arc topForBottomRect = new Arc(bottom.center, bottom.radius);
@@ -786,8 +787,8 @@ public class PatchUtil {
                     Vector v;
                     left.vrts.add(bottomCusp);
                     left.setEndPoints(bottom.end2, bottomCusp, true);
-                    ArcUtil.refineArc(left, Main.maxEdgeLen, true,3, false);
-                    ArcUtil.refineArc(left, Main.maxEdgeLen, false,0, false);
+                    ArcUtil.refineArc(left, Surface.maxEdgeLen, true,3, false);
+                    ArcUtil.refineArc(left, Surface.maxEdgeLen, false,0, false);
 
                     newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
 
@@ -799,22 +800,22 @@ public class PatchUtil {
                     right.vrts.add(bottomCusp);
                     right.setEndPoints(bottom.end1, bottomCusp, true);
                     int numOfDivs = (int)(Math.log10(left.vrts.size() - 1) / Math.log10(2));
-                    ArcUtil.refineArc(right, Main.maxEdgeLen, true, numOfDivs, false);
+                    ArcUtil.refineArc(right, Surface.maxEdgeLen, true, numOfDivs, false);
                     meshToroidalPatch(tp, bottom, topForBottomRect, left, right, false);
 
                     Arc bottomForTopRect = new Arc(top.center, top.radius);
                     for (Point p : top.vrts){
                         bottomForTopRect.vrts.add(topCusp);
                     }
-                    newCenter = (Point.subtractPoints(top.end2, Sphere.getContactPoint(new Sphere(tp.probe1, Double.longBitsToDouble(Main.probeRadius.get())), top.owner.sphere)).sqrtMagnitude() < 0.0001) ? tp.probe1 : tp.probe2;
+                    newCenter = (Point.subtractPoints(top.end2, Sphere.getContactPoint(new Sphere(tp.probe1, Double.longBitsToDouble(Surface.probeRadius.get())), top.owner.sphere)).sqrtMagnitude() < 0.0001) ? tp.probe1 : tp.probe2;
                     left = new Arc(newCenter, SesConfig.probeRadius);
                     left.vrts.add(top.end2);
                     mid = Point.translatePoint(left.vrts.get(0), Point.subtractPoints(topCusp, left.vrts.get(0)).multiply(0.5f));
                     v = Point.subtractPoints(mid, left.center).makeUnit().multiply(left.radius);
                     left.vrts.add(topCusp);
                     left.setEndPoints(top.end2, topCusp, true);
-                    ArcUtil.refineArc(left, Main.maxEdgeLen, true,3, false);
-                    ArcUtil.refineArc(left, Main.maxEdgeLen, false, 0, false);
+                    ArcUtil.refineArc(left, Surface.maxEdgeLen, true,3, false);
+                    ArcUtil.refineArc(left, Surface.maxEdgeLen, false, 0, false);
                     newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
                     right = new Arc(newCenter, SesConfig.probeRadius);
                     right.vrts.add(top.end1);
@@ -824,7 +825,7 @@ public class PatchUtil {
                     right.vrts.add(topCusp);
                     right.setEndPoints(top.end1, topCusp, true);
                     numOfDivs = (int)(Math.log10(left.vrts.size() - 1) / Math.log10(2));
-                    ArcUtil.refineArc(right, Main.maxEdgeLen, true, numOfDivs, false);
+                    ArcUtil.refineArc(right, Surface.maxEdgeLen, true, numOfDivs, false);
                     meshToroidalPatch(tp, top, bottomForTopRect, left, right, false);
                     System.out.println("finished meshing circ patch");
                 } else {
@@ -834,14 +835,14 @@ public class PatchUtil {
                     left.vrts.add(bottom.end2);
                     left.vrts.add(top.end1);
                     left.setEndPoints(bottom.end2, top.end1, true);
-                    ArcUtil.refineArc(left, Main.maxEdgeLen, true,3, false);
+                    ArcUtil.refineArc(left, Surface.maxEdgeLen, true,3, false);
                     newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
                     right = new Arc(newCenter, SesConfig.probeRadius);
 
                     right.vrts.add(bottom.end1);
                     right.vrts.add(top.end2);
                     right.setEndPoints(bottom.end1, top.end2, true);
-                    ArcUtil.refineArc(right, Main.maxEdgeLen, false,3, false);
+                    ArcUtil.refineArc(right, Surface.maxEdgeLen, false,3, false);
                     if (right.vrts.size() != left.vrts.size()){
                         System.out.println("weird");
                     }
@@ -984,7 +985,7 @@ public class PatchUtil {
                     tp.normals.add(n);
                     tp.faces.add(new Face(offset, offset + 1, offset + 2));
                     tp.faces.add(new Face(offset + 2, offset + 1, offset + 3));
-                    Main.numoftriangles += 2;
+                    Surface.numoftriangles += 2;
 
                 }
                 leftVArc.clear();
@@ -1020,8 +1021,24 @@ public class PatchUtil {
     }
 
     public static void processIntersectingConcavePatches(){
-        for (SphericalPatch sp : Main.triangles){
+        for (SphericalPatch sp : Surface.triangles){
             trimConcavePatch(sp);
+        }
+    }
+
+    public static void processSelfIntersectingTori(){
+        for (ToroidalPatch tp : Surface.selfIntersectingRects){
+            PatchUtil.torProcessSelfIntersection(tp);
+        }
+    }
+
+    public static void processSelfIntersectingConcavePatches() {
+        try {
+            for (Arc cpl : Surface.intersectingArcs) {
+                PatchUtil.trimSelfIntersectingPatch(cpl);
+            }
+        } catch(Exception e){
+            e.printStackTrace();
         }
     }
 
@@ -1049,7 +1066,7 @@ public class PatchUtil {
             }
             ArcUtil.refineArc(newA, 0, true, subdLevel, false);
         } else {
-            ArcUtil.refineArc(newA, Main.maxEdgeLen, false, 0, false);
+            ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
         }
         //}
         b.arcs.add(newA);
@@ -1060,7 +1077,7 @@ public class PatchUtil {
         newA.setNormal(circle.v);
         newA.vrts.add(bp1);
         newA.vrts.add(bp2);
-        ArcUtil.refineArc(newA, Main.maxEdgeLen, false, 0, false);
+        ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
         b.arcs.add(newA);
         /*if (bp2 == in2Arc.end1){
             newA = in2Arc;
@@ -1081,7 +1098,7 @@ public class PatchUtil {
                 }
                 ArcUtil.refineArc(newA, 0, true, subdLevel, false);
             } else {
-                ArcUtil.refineArc(newA, Main.maxEdgeLen, false, 0, false);
+                ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
             }
         //}
         b.arcs.add(newA);
@@ -1128,7 +1145,7 @@ public class PatchUtil {
                 newA.vrts.add(in2);
                 usedPoints.add(in1);
                 usedPoints.add(in2);
-                ArcUtil.refineArc(newA, Main.maxEdgeLen, false, 0, false);
+                ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                 b.arcs.add(newA);
                 toBridge = false;
                 in1 = in2;
@@ -1164,7 +1181,7 @@ public class PatchUtil {
                     newA.vrts.add(in1);
                     newA.vrts.add(in2);
                     usedPoints.add(in2);
-                    ArcUtil.refineArc(newA, Main.maxEdgeLen, false, 0, false);
+                    ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     toBridge = true;
                     in1 = in2;
                     in2 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in1, false, circle.p, circle.v, true);
@@ -1196,7 +1213,7 @@ public class PatchUtil {
                         }
                         ArcUtil.refineArc(newA, 0, true, subdLevel, false);
                     } else {
-                        ArcUtil.refineArc(newA, Main.maxEdgeLen, false, 0, false);
+                        ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     }
                     b.arcs.add(newA);
                 }
@@ -1221,7 +1238,7 @@ public class PatchUtil {
                         }
                         ArcUtil.refineArc(newA, 0, true, subdLevel, false);
                     } else {
-                        ArcUtil.refineArc(newA, Main.maxEdgeLen, false, 0, false);
+                        ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     }
                     b.arcs.add(newA);
                 }
@@ -1394,7 +1411,7 @@ public class PatchUtil {
                     newA1.vrts.add(in1);
                     newA1.setEndPoints(a1.end1, in1, false);
                     newA1.setNormal(a1.normal);
-                    ArcUtil.refineArc(newA1, Main.maxEdgeLen, false, 0, false);
+                    ArcUtil.refineArc(newA1, Surface.maxEdgeLen, false, 0, false);
                     newA1.prev = a1.prev;
                     newA1.prev.next = newA1;
 
@@ -1409,7 +1426,7 @@ public class PatchUtil {
                         bridge.vrts.add(mid);
                     }
                     bridge.vrts.add(in2);
-                    ArcUtil.refineArc(bridge, Main.maxEdgeLen, false, 0, false);
+                    ArcUtil.refineArc(bridge, Surface.maxEdgeLen, false, 0, false);
 
                     Point in3 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in2, false, circle.p, circle.v, true);
                     Arc a3  = (in3 == null) ? null : ArcUtil.findContainingArc(in3, circle, sp, null);
@@ -1437,7 +1454,7 @@ public class PatchUtil {
                                         arc3.vrts.add(mid2);
                                     }
                                     arc3.vrts.add(in3);
-                                    ArcUtil.refineArc(arc3, Main.maxEdgeLen, false, 0, false);
+                                    ArcUtil.refineArc(arc3, Surface.maxEdgeLen, false, 0, false);
                                     //b.arcs.add(arc3);
                                     //arc3.prev = bridge;
                                     //bridge.next = arc3;
@@ -1454,7 +1471,7 @@ public class PatchUtil {
                                     arc3.vrts.add(mid2);
                                 }
                                 arc3.vrts.add(in3);
-                                ArcUtil.refineArc(arc3, Main.maxEdgeLen, false, 0, false);
+                                ArcUtil.refineArc(arc3, Surface.maxEdgeLen, false, 0, false);
                                 //b.arcs.add(arc3);
                                 //arc3.prev = bridge;
                                 //bridge.next = arc3;
@@ -1474,7 +1491,7 @@ public class PatchUtil {
                                     arc3.vrts.add(mid2);
                                 }
                                 arc3.vrts.add(in3);
-                                ArcUtil.refineArc(arc3, Main.maxEdgeLen, false, 0, false);
+                                ArcUtil.refineArc(arc3, Surface.maxEdgeLen, false, 0, false);
                                 //b.arcs.add(arc3);
                                 //arc3.prev = bridge;
                                 //bridge.next = arc3;
@@ -1493,7 +1510,7 @@ public class PatchUtil {
                             newA2.vrts.add(a2.end2);
                             newA2.setEndPoints(in2, a2.end2, false);
                             newA2.setNormal(a2.normal);
-                            ArcUtil.refineArc(newA2, Main.maxEdgeLen, false, 0, false);
+                            ArcUtil.refineArc(newA2, Surface.maxEdgeLen, false, 0, false);
                             b.arcs.add(newA2);
                         }
 
@@ -1517,14 +1534,14 @@ public class PatchUtil {
                         arc4.setNormal(circle.v);
                         arc4.vrts.add(in3);
                         arc4.vrts.add(in4);
-                        ArcUtil.refineArc(arc4, Main.maxEdgeLen, false, 0, false);
+                        ArcUtil.refineArc(arc4, Surface.maxEdgeLen, false, 0, false);
 
                         Arc arc5 = new Arc(a4.center, a4.radius);
                         arc5.setEndPoints(in4, a4.end2, false);
                         arc5.setNormal(a4.normal);
                         arc5.vrts.add(in4);
                         arc5.vrts.add(a4.end2);
-                        ArcUtil.refineArc(arc5, Main.maxEdgeLen, false, 0, false);
+                        ArcUtil.refineArc(arc5, Surface.maxEdgeLen, false, 0, false);
 
                         b.arcs.add(newA1);
                         b.arcs.add(bridge);
@@ -1572,7 +1589,7 @@ public class PatchUtil {
     private static void trimConcavePatch(SphericalPatch sp){
         try {
             List<Neighbor<double[], SphericalPatch>> neighbors = new ArrayList<>();
-            Main.probeTree.range(sp.sphere.center.getData(), 2 * SesConfig.probeRadius, neighbors);
+            Surface.probeTree.range(sp.sphere.center.getData(), 2 * SesConfig.probeRadius, neighbors);
             Collections.sort(neighbors, new Comparator<Neighbor<double[], SphericalPatch>>() {
                 @Override
                 public int compare(Neighbor<double[], SphericalPatch> o1, Neighbor<double[], SphericalPatch> o2) {
@@ -1582,9 +1599,6 @@ public class PatchUtil {
                     return (o1.distance - o2.distance > 0.0) ? -1 : 1;
                 }
             });
-            //List<Integer> laterId = new ArrayList<>();
-            //List<Point> laterCirc = new ArrayList<>();
-            List<Intersection> possibleIntersections = new ArrayList<>();
             for (Neighbor<double[], SphericalPatch> n : neighbors) {
                 if (n.value == sp) {
                     continue;
@@ -1861,7 +1875,7 @@ public class PatchUtil {
                         }
                         ArcUtil.refineArc(newA, 0, true, subdLevel, false);
                     } else {
-                        ArcUtil.refineArc(newA, Main.maxEdgeLen, false, 0, false);
+                        ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     }
                 }
                 /*newA.prev = arc.prev;
@@ -1882,7 +1896,7 @@ public class PatchUtil {
                     }
                     ArcUtil.refineArc(newA2, 0, true, subdLevel, false);
                 } else {
-                    ArcUtil.refineArc(newA2, Main.maxEdgeLen, false, 0, false);
+                    ArcUtil.refineArc(newA2, Surface.maxEdgeLen, false, 0, false);
                 }
                 /*newA2.prev = newA;
                 newA.next = newA2;
@@ -1930,7 +1944,7 @@ public class PatchUtil {
                     }
                     ArcUtil.refineArc(newA, 0, true, subdLevel, false);
                 } else {
-                    ArcUtil.refineArc(newA, Main.maxEdgeLen, false, 0, false);
+                    ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                 }
                 /*newA.prev = a.prev;
                 newA.prev.next = newA;*/
@@ -1951,7 +1965,7 @@ public class PatchUtil {
                         }
                         ArcUtil.refineArc(newA2, 0, true, subdLevel, false);
                     } else {
-                        ArcUtil.refineArc(newA2, Main.maxEdgeLen, false, 0, false);
+                        ArcUtil.refineArc(newA2, Surface.maxEdgeLen, false, 0, false);
                     }
                 }
                 /*newA.next = newA2;

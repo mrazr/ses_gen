@@ -1,6 +1,6 @@
 package cz.fi.muni.xmraz3.gui.controllers;
 
-import cz.fi.muni.xmraz3.Main;
+import cz.fi.muni.xmraz3.Surface;
 import cz.fi.muni.xmraz3.SesConfig;
 import cz.fi.muni.xmraz3.SurfaceParser;
 import cz.fi.muni.xmraz3.gui.MainPanel;
@@ -277,8 +277,8 @@ public class MainPanelController {
             @Override
             public void changed(ObservableValue<? extends Double> observable, Double oldValue, Double newValue) {
                 if (newValue > 0.01 && newValue < 4){
-                    Main.maxEdgeLen = newValue;
-                    SesConfig.distTolerance = 0.4 * Main.maxEdgeLen;
+                    Surface.maxEdgeLen = newValue;
+                    SesConfig.distTolerance = 0.4 * Surface.maxEdgeLen;
                 }
             }
         });
@@ -366,7 +366,7 @@ public class MainPanelController {
             @Override
             public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
                 lblProbeRadius.setText(Double.toString(newValue.doubleValue()));
-                Main.probeRadius.set(Double.doubleToLongBits(newValue.doubleValue()));
+                Surface.probeRadius.set(Double.doubleToLongBits(newValue.doubleValue()));
             }
         });
         cmbExportFormat.getItems().add("STL binary");
@@ -437,7 +437,7 @@ public class MainPanelController {
             SurfaceParser.parseSesConfig(raw);
             lblAtomCount.setText(Integer.toString(SesConfig.atomCount));
             lblProbeRadius.setText(Double.toString(SesConfig.probeRadius));
-            Main.probeRadius.set(Double.doubleToLongBits(SesConfig.probeRadius));
+            Surface.probeRadius.set(Double.doubleToLongBits(SesConfig.probeRadius));
             AnchorPane anch = (AnchorPane) loader.load();
             Scene scene = new Scene(anch);
             Stage stage = new Stage();
@@ -456,7 +456,7 @@ public class MainPanelController {
                     sldProbeAlpha.setDisable(false);
                     chkShowProbe.setDisable(false);
                     //MainPanel.atomView.setup();
-                    MainPanel.atomView.sendPatchesLists(Main.convexPatches, Main.triangles);
+                    MainPanel.atomView.sendPatchesLists(Surface.convexPatches, Surface.triangles);
                     //MainPanel.atomView.sendConvexPatchList(Main.convexPatches);
                     //MainPanel.atomView.sendConcavePatchList(Main.triangles);
                     MainPanel.atomView.selectedConcaveP.addListener(new ChangeListener<Number>() {

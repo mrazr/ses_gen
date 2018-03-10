@@ -54,6 +54,7 @@ public class SphericalPatch {
         tori = new TreeMap<>();
         vertices = new ArrayList<>();
         faces = new ArrayList<>();
+        convexPatch = convex;
     }
 
     public SphericalPatch(Boundary b){

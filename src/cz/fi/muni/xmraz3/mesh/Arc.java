@@ -35,6 +35,8 @@ public class Arc {
 
     public Arc opposite;
 
+    public Arc refined = null;
+
     public ToroidalPatch torus;
     public CuspTriangle cuspTriangle;
     public Boundary bOwner;

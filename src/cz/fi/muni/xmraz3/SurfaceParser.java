@@ -295,7 +295,8 @@ public class SurfaceParser {
                         //ArcUtil.refineArc(smallerRadius, Main.maxEdgeLen, true,2, false);
                         ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, false,0, false);
                         ArcUtil.buildEdges(smallerRadius);
-                        int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
+                        //int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
+                        int numOfDivs = ArcUtil.getSubdivisionLevel(smallerRadius);
                         ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, true, numOfDivs, false);
                         ArcUtil.buildEdges(greaterRadius);
                         System.out.println("refined circle loop: " + smallerRadius.vrts.size() + ", " + greaterRadius.vrts.size());
@@ -330,7 +331,8 @@ public class SurfaceParser {
         //ArcUtil.refineArc(smallerRadius, Main.maxEdgeLen, 2, false);
         ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, false,0, false);
         ArcUtil.buildEdges(smallerRadius);
-        int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
+        //int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
+        int numOfDivs = ArcUtil.getSubdivisionLevel(smallerRadius);
         ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, true, numOfDivs, false);
         ArcUtil.buildEdges(greaterRadius);
         if (smallerRadius.vrts.size() != greaterRadius.vrts.size()){

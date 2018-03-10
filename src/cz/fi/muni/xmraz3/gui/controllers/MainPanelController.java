@@ -277,12 +277,13 @@ public class MainPanelController {
             @Override
             public void changed(ObservableValue<? extends Double> observable, Double oldValue, Double newValue) {
                 if (newValue > 0.01 && newValue < 4){
-                    Surface.maxEdgeLen = newValue;
-                    SesConfig.distTolerance = 0.4 * Surface.maxEdgeLen;
+                    //Surface.maxEdgeLen = newValue;
+                    //SesConfig.distTolerance = 0.4 * Surface.maxEdgeLen;
+                    SesConfig.edgeLimit = newValue;
                 }
             }
         });
-        SpinnerValueFactory<Double> edgeLenFactory = new SpinnerValueFactory.DoubleSpinnerValueFactory(0.01, 4.0, 0.9, 0.05);
+        SpinnerValueFactory<Double> edgeLenFactory = new SpinnerValueFactory.DoubleSpinnerValueFactory(0.1, 4.0, 0.3, 0.05);
         spinnerEdgeLength.setValueFactory(edgeLenFactory);
         SpinnerValueFactory<Double> maxAngleFactory = new SpinnerValueFactory.DoubleSpinnerValueFactory(20, 175, 75, 5);
         spinnerEdgeAngle.setValueFactory(maxAngleFactory);

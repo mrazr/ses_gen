@@ -78,6 +78,14 @@ public class ArcUtil {
         }
     }
 
+    public static void refineOppositeArcs(Arc a1, Arc a2, double maxlen){
+        Arc shorter = (a1.radius - a2.radius > 0.0) ? a2 : a1;
+        Arc longer = (shorter == a2) ? a1 : a2;
+        refineArc(shorter, maxlen, false, 0, false);
+        int numOfDivs = getSubdivisionLevel(shorter);
+        refineArc(longer, 0, true, numOfDivs, false);
+    }
+
     public static void buildEdges(Arc a){
         try {
             a.lines.clear();
@@ -243,7 +251,7 @@ public class ArcUtil {
         a.toEnd2 = Point.subtractPoints(end2, sp.sphere.center).makeUnit();
 
         a.vrts.add(end1);
-        a.vrts.add(mid);
+        //a.vrts.add(mid);
         a.vrts.add(end2);
         end1.isShared = end2.isShared = mid.isShared = true;
         a.owner = sp;

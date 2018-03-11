@@ -1857,6 +1857,7 @@ public class PatchUtil {
                 Plane circle = new Plane(arc.center, arc.normal);
                 List<Boundary> newBS = new ArrayList<>();
                 Point first = ArcUtil.findClosestPointOnCircle(intersectionPoints, arc.end1, true, arc.center, arc.normal, true);
+                intersectionPoints.remove(first);
                 Arc a = ArcUtil.findContainingArc(first, circle, sp, arc);
                 Boundary b = new Boundary();
                 Arc newA = (Point.distance(first, arc.end1) < 0.0018) ? null : new Arc(arc.center, arc.radius);
@@ -1877,6 +1878,8 @@ public class PatchUtil {
                     } else {
                         ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     }
+                } else {
+                    first = arc.end1;
                 }
                 /*newA.prev = arc.prev;
                 newA.prev.next = newA;*/
@@ -1924,7 +1927,7 @@ public class PatchUtil {
                 ArcUtil.buildEdges(b, true);
 
                 newBS.add(b);
-                intersectionPoints.remove(first);
+
 
                 Point second = intersectionPoints.get(0); //remaining intersection point
                 a = ArcUtil.findContainingArc(second, circle, sp, arc);
@@ -1967,6 +1970,11 @@ public class PatchUtil {
                     } else {
                         ArcUtil.refineArc(newA2, Surface.maxEdgeLen, false, 0, false);
                     }
+                } else {
+                    second = arc.end2;
+                    newA.end2 = second;
+                    newA.vrts.remove(1);
+                    newA.vrts.add(second);
                 }
                 /*newA.next = newA2;
                 /newA.next.prev = newA;

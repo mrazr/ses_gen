@@ -18,6 +18,7 @@ public class SphericalPatch {
     public List<Integer> intersectingPatches;
     public List<Point> vertices;
     public List<Face> faces;
+    public Map<Integer, Point> idPointMap;
 
     public int id;
     public static int nextConvexID = 0;

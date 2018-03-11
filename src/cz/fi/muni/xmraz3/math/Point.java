@@ -18,7 +18,10 @@ public class Point {
     public int idx = -1;
     public boolean common = true;
     public int ownIdx = -1;
-    public static double scaleFactor = 5;
+    //public static double scaleFactor = 5;
+    public int convexPointID = -1;
+    public int concavePointID = -1;
+    public int tempIdx = -1;
 
     public double getX() {
         return x;
@@ -138,9 +141,9 @@ public class Point {
         return result;
     }
 
-    public void scale(){
+    /*public void scale(){
         x *= scaleFactor;
         y *= scaleFactor;
         z *= scaleFactor;
-    }
+    }*/
 }

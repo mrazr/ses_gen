@@ -5,15 +5,17 @@ import cz.fi.muni.xmraz3.*;
 import cz.fi.muni.xmraz3.math.Plane;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Vector;
-import cz.fi.muni.xmraz3.mesh.Arc;
-import cz.fi.muni.xmraz3.mesh.Boundary;
-import cz.fi.muni.xmraz3.mesh.Edge;
-import cz.fi.muni.xmraz3.mesh.SphericalPatch;
+import cz.fi.muni.xmraz3.mesh.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 public class ArcUtil {
+
+
+
     public static void refineArc(Arc a, double maxLen, boolean fixedCount, int numOfSubdivisions, boolean fullCircle){
         try {
             int it = 0;
@@ -78,12 +80,118 @@ public class ArcUtil {
         }
     }
 
-    public static void refineOppositeArcs(Arc a1, Arc a2, double maxlen){
+    public static void refineArc(Arc a, double maxLen, boolean fixedCount, int numOfSubdivisions, boolean fullCircle, Map<Integer, Map<Integer, Point>> edgeSplit){
+        try {
+            boolean convex = true;
+            int it = 0;
+            if (a.mid == null){
+                Vector v = Point.subtractPoints(a.end1, a.end2).multiply(0.5f);
+                Point mid = Point.translatePoint(a.end2, v);
+                Vector toMid = Point.subtractPoints(mid, a.center).makeUnit().multiply(a.radius);
+                boolean useMid = false;
+                if (Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
+                    toMid.multiply(-1.0);
+                    //useMid = true;
+                }
+                a.mid = Point.translatePoint(a.center, toMid);
+                /*if (useMid){
+                    a.vrts.add(1, a.mid);
+                }*/
+            }
+            double angle = getAngleR(a);
+            if (!fixedCount && Math.toRadians(280) - angle < 0.0){
+                refineArc(a, 0, true, 2, false, edgeSplit);
+            } else if (!fixedCount && Math.PI - angle < 0.0){
+                refineArc(a, 0, true, 1, false, edgeSplit);
+            }
+            while ((!fixedCount && Point.subtractPoints(a.vrts.get(0), a.vrts.get(1)).sqrtMagnitude() > 1.2 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
+                List<Point> newVerts = new ArrayList<>();
+                for (int i = 0; i < a.vrts.size() - ((fullCircle) ? 0 : 1); ++i) {
+                    Point v1 = a.vrts.get(i);
+                    Point v2 = (i < a.vrts.size() - 1) ? a.vrts.get(i + 1) : a.vrts.get(0);
+                    if (v1.convexPointID >= 0 && v2.convexPointID >= 0){
+                        if (v1.convexPointID > v2.convexPointID){
+                            Point temp = v1;
+                            v1 = v2;
+                            v2 = temp;
+                        }
+                        v1.tempIdx = v1.convexPointID;
+                        v2.tempIdx = v2.convexPointID;
+                    } else if (v1.concavePointID >= 0 && v2.concavePointID >= 0){
+                        if (v1.concavePointID > v2.concavePointID){
+                            Point temp = v1;
+                            v1 = v2;
+                            v2 = temp;
+                        }
+                        v1.tempIdx = v1.concavePointID;
+                        v2.tempIdx = v2.concavePointID;
+                        convex = false;
+                    }
+                    if (v1.tempIdx < 0){
+                        int b = 42;
+                    }
+                    if (!edgeSplit.containsKey(v1.tempIdx)){
+                        edgeSplit.put(v1.tempIdx, new TreeMap<>());
+                    }
+                    Point tmp = null;
+                    if (a.vrts.size() == 2){
+                        if (a.mid != null) {
+                            tmp = a.mid;
+                        } else {
+                            tmp = Point.translatePoint(a.end1, Point.subtractPoints(a.end2, a.end1).multiply(0.5f));
+                            Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
+                            if (Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
+                                toMid.multiply(-1.0);
+                            }
+                            tmp = Point.translatePoint(a.center, toMid);
+                        }
+                    } else {
+                        if (i < a.vrts.size() - 1) {
+                            tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
+                        } else {
+                            tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
+                        }
+                        Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
+                        tmp = Point.translatePoint(a.center, toMid);
+                    }
+
+                    newVerts.add(a.vrts.get(i));
+                    newVerts.add(tmp);
+                    if (convex){
+                        tmp.convexPointID = MeshRefinement.nextConvexPointID++;
+                    } else {
+                        tmp.concavePointID = MeshRefinement.nextConcavePointID++;
+                    }
+                    if (v1.tempIdx == v2.tempIdx){
+                        int d = 42;
+                    }
+                    edgeSplit.get(v1.tempIdx).put(v2.tempIdx, tmp);
+                    if (!fullCircle && i == a.vrts.size() - 2) {
+                        newVerts.add(a.vrts.get(i + 1));
+                    }
+                }
+                a.vrts = newVerts;
+                it++;
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void refineOppositeArcs(Arc a1, Arc a2, double maxlen, Map<Integer, Map<Integer, Point>> edgeSplit){
         Arc shorter = (a1.radius - a2.radius > 0.0) ? a2 : a1;
         Arc longer = (shorter == a2) ? a1 : a2;
-        refineArc(shorter, maxlen, false, 0, false);
-        int numOfDivs = getSubdivisionLevel(shorter);
-        refineArc(longer, 0, true, numOfDivs, false);
+        if (edgeSplit == null) {
+            int currentLevel = getSubdivisionLevel(shorter);
+            refineArc(shorter, maxlen, false, 0, false);
+            int numOfDivs = getSubdivisionLevel(shorter) - currentLevel;
+            refineArc(longer, 0, true, numOfDivs, false);
+        } else {
+            int currentLevel = getSubdivisionLevel(shorter);
+            refineArc(shorter, maxlen, false, 0, false, edgeSplit);
+            int numOfDivs = getSubdivisionLevel(shorter) - currentLevel;
+            refineArc(longer, 0, true, numOfDivs, false, edgeSplit);
+        }
     }
 
     public static void buildEdges(Arc a){
@@ -263,6 +371,7 @@ public class ArcUtil {
     public static void linkArcs(SphericalPatch sp) {
         try {
             List<Arc> queue = new ArrayList<>(sp.arcs);
+            boolean setValid = true;
             while (queue.size() > 0) {
                 ArrayList<Arc> newB = new ArrayList<>();
                 Arc l = queue.get(0);
@@ -287,6 +396,7 @@ public class ArcUtil {
                     iterator++;
                     if (queue.size() == 0) {
                         System.err.println("Atom " + sp.id);
+                        setValid = false;
                         break;
                     }
                     Arc lop = queue.get(i);
@@ -326,16 +436,20 @@ public class ArcUtil {
                         //return;
                     }
                 }
-                newB.get(0).end1 = l.end2;
-                newB.get(0).lines.get(0).p1 = l.end2;
-                newB.get(0).vrts.remove(0);
-                newB.get(0).vrts.add(0, l.end2);
-                newB.get(0).endEdge1.prev = l.endEdge2;
-                l.endEdge2.next = newB.get(0).endEdge1;
-                Boundary b = new Boundary();
-                b.patch = sp;
-                b.arcs = newB;
-                sp.boundaries.add(b);
+                if (setValid) {
+                    newB.get(0).end1 = l.end2;
+                    newB.get(0).lines.get(0).p1 = l.end2;
+                    newB.get(0).vrts.remove(0);
+                    newB.get(0).vrts.add(0, l.end2);
+                    newB.get(0).endEdge1.prev = l.endEdge2;
+                    l.endEdge2.next = newB.get(0).endEdge1;
+                    Boundary b = new Boundary();
+                    b.patch = sp;
+                    b.arcs = newB;
+                    sp.boundaries.add(b);
+                } else {
+                    sp.valid = false;
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

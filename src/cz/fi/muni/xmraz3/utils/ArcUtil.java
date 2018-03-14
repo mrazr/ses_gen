@@ -80,7 +80,7 @@ public class ArcUtil {
         }
     }
 
-    public static void refineArc(Arc a, double maxLen, boolean fixedCount, int numOfSubdivisions, boolean fullCircle, Map<Integer, Map<Integer, Point>> edgeSplit){
+    public static void refineArc(Arc a, double maxLen, boolean fixedCount, int numOfSubdivisions, boolean fullCircle, Map<Integer, Map<Integer, Integer>> edgeSplit){
         try {
             boolean convex = true;
             int it = 0;
@@ -109,29 +109,8 @@ public class ArcUtil {
                 for (int i = 0; i < a.vrts.size() - ((fullCircle) ? 0 : 1); ++i) {
                     Point v1 = a.vrts.get(i);
                     Point v2 = (i < a.vrts.size() - 1) ? a.vrts.get(i + 1) : a.vrts.get(0);
-                    if (v1.convexPointID >= 0 && v2.convexPointID >= 0){
-                        if (v1.convexPointID > v2.convexPointID){
-                            Point temp = v1;
-                            v1 = v2;
-                            v2 = temp;
-                        }
-                        v1.tempIdx = v1.convexPointID;
-                        v2.tempIdx = v2.convexPointID;
-                    } else if (v1.concavePointID >= 0 && v2.concavePointID >= 0){
-                        if (v1.concavePointID > v2.concavePointID){
-                            Point temp = v1;
-                            v1 = v2;
-                            v2 = temp;
-                        }
-                        v1.tempIdx = v1.concavePointID;
-                        v2.tempIdx = v2.concavePointID;
-                        convex = false;
-                    }
-                    if (v1.tempIdx < 0){
-                        int b = 42;
-                    }
-                    if (!edgeSplit.containsKey(v1.tempIdx)){
-                        edgeSplit.put(v1.tempIdx, new TreeMap<>());
+                    if (!edgeSplit.containsKey(v1._id)){
+                        edgeSplit.put(v1._id, new TreeMap<>());
                     }
                     Point tmp = null;
                     if (a.vrts.size() == 2){
@@ -157,15 +136,9 @@ public class ArcUtil {
 
                     newVerts.add(a.vrts.get(i));
                     newVerts.add(tmp);
-                    if (convex){
-                        tmp.convexPointID = MeshRefinement.nextConvexPointID++;
-                    } else {
-                        tmp.concavePointID = MeshRefinement.nextConcavePointID++;
-                    }
-                    if (v1.tempIdx == v2.tempIdx){
-                        int d = 42;
-                    }
-                    edgeSplit.get(v1.tempIdx).put(v2.tempIdx, tmp);
+                    tmp._id = a.owner.nextVertexID++;
+                    a.owner.vertices.add(tmp);
+                    edgeSplit.get(v1._id).put(v2._id, tmp._id);
                     if (!fullCircle && i == a.vrts.size() - 2) {
                         newVerts.add(a.vrts.get(i + 1));
                     }
@@ -178,19 +151,27 @@ public class ArcUtil {
         }
     }
 
-    public static void refineOppositeArcs(Arc a1, Arc a2, double maxlen, Map<Integer, Map<Integer, Point>> edgeSplit){
+    public static void refineOppositeArcs(Arc a1, Arc a2, double maxlen, boolean meshRefine){
         Arc shorter = (a1.radius - a2.radius > 0.0) ? a2 : a1;
         Arc longer = (shorter == a2) ? a1 : a2;
-        if (edgeSplit == null) {
+        if (!meshRefine) {
             int currentLevel = getSubdivisionLevel(shorter);
             refineArc(shorter, maxlen, false, 0, false);
             int numOfDivs = getSubdivisionLevel(shorter) - currentLevel;
             refineArc(longer, 0, true, numOfDivs, false);
         } else {
+            for (Point v :  a1.vrts){
+                v._id = a1.owner.nextVertexID++;
+                a1.owner.vertices.add(v);
+            }
+            for (Point v : a2.vrts){
+                v._id = a2.owner.nextVertexID++;
+                a2.owner.vertices.add(v);
+            }
             int currentLevel = getSubdivisionLevel(shorter);
-            refineArc(shorter, maxlen, false, 0, false, edgeSplit);
+            refineArc(shorter, maxlen, false, 0, false, MeshRefinement.convexEdgeSplitMap.get(shorter.owner.id));
             int numOfDivs = getSubdivisionLevel(shorter) - currentLevel;
-            refineArc(longer, 0, true, numOfDivs, false, edgeSplit);
+            refineArc(longer, 0, true, numOfDivs, false, MeshRefinement.convexEdgeSplitMap.get(longer.owner.id));
         }
     }
 
@@ -452,14 +433,14 @@ public class ArcUtil {
                     sp.valid = false;
                 }
             }
-            int nextIdx = 0;
+            /*int nextIdx = 0;
             for (Boundary b : sp.boundaries){
                 for (Point v : b.vrts){
                     v._id = nextIdx++;
                     sp.vertices.add(v);
                 }
             }
-            sp.nextVertexID = nextIdx;
+            sp.nextVertexID = nextIdx;*/
         } catch (Exception e) {
             e.printStackTrace();
         }

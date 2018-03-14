@@ -54,6 +54,27 @@ public class SurfaceParser {
     }
 
     public static void ses_start(String folder) {
+
+        Runnable r1 = new Runnable() {
+            @Override
+            public void run() {
+                MeshRefinement.convexEdgeSplitMap = new ArrayList<>(SesConfig.atomCount);
+                for (int i = 0; i < SesConfig.atomCount; ++i){
+                    MeshRefinement.convexEdgeSplitMap.add(new TreeMap<>());
+                }
+            }
+        };
+        (new Thread(r1)).start();
+        Runnable r2 = new Runnable() {
+            @Override
+            public void run() {
+                MeshRefinement.concaveEdgeSplitMap = new ArrayList<>(SesConfig.trianglesCount);
+                for (int i = 0; i < SesConfig.trianglesCount; ++i){
+                    MeshRefinement.concaveEdgeSplitMap.add(new TreeMap<>());
+                }
+            }
+        };
+        (new Thread(r2)).start();
         Surface.triangles.clear();
         Surface.rectangles.clear();
         Surface.atomsProcessed.set(0);
@@ -232,6 +253,7 @@ public class SurfaceParser {
                     }
                     ArcUtil.buildEdges(b, true);
                 }
+                //refine arcs - when refining an arc, its opposite arc will be refined as well as to have the same number of vertices on both of them
                 Surface.atomsProcessed.set(sp.id + 1);
             }
         } catch (IOException e){
@@ -318,6 +340,15 @@ public class SurfaceParser {
                         int numOfDivs = ArcUtil.getSubdivisionLevel(smallerRadius);
                         ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, true, numOfDivs, false);
                         ArcUtil.buildEdges(greaterRadius);
+
+                        smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
+                        greaterRadius.refined = ArcUtil.dbgCloneArc(greaterRadius);
+
+                        smallerRadius.refined.owner = smallerRadius.owner;
+                        greaterRadius.refined.owner = greaterRadius.owner;
+
+                        ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);
+
                         System.out.println("refined circle loop: " + smallerRadius.vrts.size() + ", " + greaterRadius.vrts.size());
                     }
                 }
@@ -354,6 +385,11 @@ public class SurfaceParser {
         int numOfDivs = ArcUtil.getSubdivisionLevel(smallerRadius);
         ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, true, numOfDivs, false);
         ArcUtil.buildEdges(greaterRadius);
+        smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
+        smallerRadius.refined.owner = smallerRadius.owner;
+        greaterRadius.refined = ArcUtil.dbgCloneArc(greaterRadius);
+        greaterRadius.refined.owner = greaterRadius.owner;
+        ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);
         if (smallerRadius.vrts.size() != greaterRadius.vrts.size()){
             System.err.println("inconsistency detected");
         }

@@ -5,6 +5,7 @@ import cz.fi.muni.xmraz3.Surface;
 import cz.fi.muni.xmraz3.gui.MainWindow;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.utils.ArcUtil;
+import cz.fi.muni.xmraz3.utils.PatchUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -21,6 +22,10 @@ public class MeshRefinement {
     private static Queue<SphericalPatch> phase2Queue = new ConcurrentLinkedQueue<>();
     private static Map<Integer, Map<Integer, Point>> edgeSplitConcave = new TreeMap<>();
     private static Map<Integer, Map<Integer, Point>> edgeSplitConvex = new TreeMap<>();
+
+    public static List<Map<Integer, Map<Integer, Integer>>> convexEdgeSplitMap;
+    public static List<Map<Integer, Map<Integer, Integer>>> concaveEdgeSplitMap;
+
     public static List<SphericalPatch> convexComplete = new ArrayList<>();
     public static List<SphericalPatch> concaveComplete = new ArrayList<>();
     private boolean running = false;
@@ -29,17 +34,17 @@ public class MeshRefinement {
         Runnable r = new Runnable() {
             @Override
             public void run() {
-                phase1Refine();
+                meshRefine();
             }
         };
         (new Thread(r)).start();
-        Runnable r2 = new Runnable() {
+        /*Runnable r2 = new Runnable() {
             @Override
             public void run() {
                 phase2Refine();
             }
         };
-        (new Thread(r2)).start();
+        (new Thread(r2)).start();*/
         running = true;
     }
 
@@ -124,78 +129,157 @@ public class MeshRefinement {
         phase1Queue.add(sp);
     }
 
-    public static void phase2Refine(){
-        while (convexMeshed < Surface.convexPatches.size() || concaveMeshed < Surface.triangles.size()){
-            while (phase2Queue.isEmpty());
-            SphericalPatch sp = phase2Queue.poll();
-            if (sp.convexPatch){
-                sp.idPointMap = new TreeMap<>();
-                for (Point p : sp.vertices){
-                    sp.idPointMap.put(p.convexPointID, p);
-                }
-                for (Face f : sp.faces){
-                    Point a = sp.vertices.get(f.a);
-                    Point b = sp.vertices.get(f.b);
-                    Point c = sp.vertices.get(f.c);
-                    f.a = a.convexPointID;
-                    f.b = b.convexPointID;
-                    f.c = c.convexPointID;
-                    /*if (!sp.idPointMap.containsKey(a.convexPointID)){
-                        sp.idPointMap.put(a.convexPointID, a);
-                    }
-                    if (!sp.idPointMap.containsKey(b.convexPointID)){
-                        sp.idPointMap.put(b.convexPointID, b);
-                    }
-                    if (!sp.idPointMap.containsKey(c.convexPointID)){
-                        sp.idPointMap.put(c.convexPointID, c);
-                    }*/
-                }
+    private static void meshRefine(){
+        Queue<Face> facesToRefine = new LinkedList<>();
+        while (convexMeshed < Surface.convexPatches.size()){
+            while (phase1Queue.isEmpty());
+            SphericalPatch sp = phase1Queue.poll();
+            if (!sp.valid){
                 convexMeshed++;
-                if (sp.vertices.size() > 0) {
-                    convexComplete.add(sp);
-                }
-                if (convexMeshed == Surface.convexPatches.size()){
-                    MainWindow.mainWindow.pushConvex();
-                }
-                sp.vertices.clear();
+                continue;
             }
-            else {
-                sp.idPointMap = new TreeMap<>();
-                for (Point p : sp.vertices){
-                    sp.idPointMap.put(p.concavePointID, p);
-                }
-                for (Face f : sp.faces){
-                    Point a = sp.vertices.get(f.a);
-                    Point b = sp.vertices.get(f.b);
-                    Point c = sp.vertices.get(f.c);
-                    f.a = a.concavePointID;
-                    f.b = b.concavePointID;
-                    f.c = c.concavePointID;
-                    if (f.a < 0 || f.b < 0 || f.c < 0){
-                        int i = 42;
+            facesToRefine.clear();
+            facesToRefine.addAll(sp.faces);
+            sp.faces.clear();
+            Map<Integer, Map<Integer, Integer>> splitMap = (sp.convexPatch) ? convexEdgeSplitMap.get(sp.id) : concaveEdgeSplitMap.get(sp.id);
+            while (!facesToRefine.isEmpty()){
+                Face face = facesToRefine.poll();
+                Point a = sp.vertices.get(face.a);
+                Point b = sp.vertices.get(face.b);
+                Point c = sp.vertices.get(face.c);
+
+                if (face.forceRefine || Point.distance(a, b) - SesConfig.edgeLimit > 0 || Point.distance(b, c) - SesConfig.edgeLimit > 0 || Point.distance(c, a) - SesConfig.edgeLimit > 0){
+                    int sID = (a._id > b._id) ? b._id : a._id;
+                    int bID = (sID == a._id) ? b._id : a._id;
+                    Point d = null;
+
+
+                    if (!splitMap.containsKey(sID)){
+                        splitMap.put(sID, new TreeMap<>());
                     }
-                    /*if (!sp.idPointMap.containsKey(a.concavePointID)){
-                        sp.idPointMap.put(a.concavePointID, a);
+                    Map<Integer, Integer> map = splitMap.get(sID);
+                    if (!map.containsKey(bID)){
+                        d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
+                        d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        d._id = sp.nextVertexID++;
+                        sp.vertices.add(d);
+                        map.put(bID, d._id);
+                        try {
+                            Optional<Face> op = sp.edgeFacesMap.get(sID).get(bID).stream().filter(_f -> _f != face).findFirst();
+                            if (op.isPresent()){
+                                facesToRefine.add(op.get());
+                                op.get().forceRefine = true;
+                            }
+                        } catch (Exception ex){
+                            ex.printStackTrace();
+                        }
                     }
-                    if (!sp.idPointMap.containsKey(b.concavePointID)){
-                        sp.idPointMap.put(b.concavePointID, b);
+                    d = sp.vertices.get(map.get(bID));
+                    sID = (b._id > c._id) ? c._id : b._id;
+                    bID = (sID == b._id) ? c._id : b._id;
+                    Point e = null;
+                    if (!splitMap.containsKey(sID)){
+                        splitMap.put(sID, new TreeMap<>());
                     }
-                    if (!sp.idPointMap.containsKey(c.concavePointID)){
-                        sp.idPointMap.put(c.concavePointID, c);
-                    }*/
+                    map = splitMap.get(sID);
+                    if (!map.containsKey(bID)){
+                        e = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
+                        e = Point.translatePoint(sp.sphere.center, Point.subtractPoints(e, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        sp.vertices.add(e);
+                        e._id = sp.nextVertexID++;
+                        map.put(bID, e._id);
+                        try {
+                            Optional<Face> op = sp.edgeFacesMap.get(sID).get(bID).stream().filter(_f -> _f != face).findFirst();
+                            if (op.isPresent()){
+                                facesToRefine.add(op.get());
+                                op.get().forceRefine = true;
+                            }
+                        } catch (Exception ex){
+                            ex.printStackTrace();
+                        }
+                    }
+                    e = sp.vertices.get(map.get(bID));
+
+                    sID = (a._id > c._id) ? c._id : a._id;
+                    bID = (sID == a._id) ? c._id : a._id;
+                    Point f = null;
+
+                    if (!splitMap.containsKey(sID)){
+                        splitMap.put(sID, new TreeMap<>());
+                    }
+                    map = splitMap.get(sID);
+                    if (!map.containsKey(bID)){
+                        f = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
+                        f = Point.translatePoint(sp.sphere.center, Point.subtractPoints(f, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        sp.vertices.add(f);
+                        f._id = sp.nextVertexID++;
+                        map.put(bID, f._id);
+                        try {
+                            Optional<Face> op = sp.edgeFacesMap.get(sID).get(bID).stream().filter(_f -> _f != face).findFirst();
+                            if (op.isPresent()){
+                                facesToRefine.add(op.get());
+                                op.get().forceRefine = true;
+                            }
+                        } catch (Exception ex){
+                            ex.printStackTrace();
+                        }
+                    }
+                    f = sp.vertices.get(map.get(bID));
+                    Face nF = new Face(a._id, d._id, f._id);
+                    facesToRefine.add(nF);
+                    PatchUtil.updateEdgeFacesMap(sp, nF);
+
+                    nF = new Face(b._id, e._id, d._id);
+                    facesToRefine.add(nF);
+                    PatchUtil.updateEdgeFacesMap(sp, nF);
+
+                    nF = new Face(c._id, f._id, e._id);
+                    facesToRefine.add(nF);
+                    PatchUtil.updateEdgeFacesMap(sp, nF);
+
+                    nF = new Face(d._id, e._id, f._id);
+                    facesToRefine.add(nF);
+                    PatchUtil.updateEdgeFacesMap(sp, nF);
+                } else {
+                    sp.faces.add(face);
                 }
-                concaveMeshed++;
-                if (sp.vertices.size() > 0) {
-                    concaveComplete.add(sp);
-                }
-                if (concaveMeshed == Surface.triangles.size()){
-                    MainWindow.mainWindow.pushConcave();
-                }
-                sp.vertices.clear();
             }
-            //sp.vertices.clear();
+            splitMap.clear();
+            convexMeshed++;
         }
-        System.out.println("Refinement phase 2 done, conc: " + concaveMeshed + " / " + Surface.triangles.size() + " conv: " + convexMeshed + " / " + Surface.convexPatches.size());
+        System.out.println("REFINE COMPLETE");
+        MainWindow.mainWindow.pushConvex();
     }
+
+    private static boolean checkToSubdivideFace(Face f, Map<Integer, Map<Integer, Integer>> split){
+        int sID = (f.a > f.b) ? f.b : f.a;
+        int bID = (sID == f.b) ? f.a : f.b;
+
+        if (split.containsKey(sID)){
+            if (split.get(sID).containsKey(bID)){
+                return true;
+            }
+        }
+
+        sID = (f.b > f.c) ? f.c : f.b;
+        bID = (sID == f.c) ? f.b : f.c;
+
+        if (split.containsKey(sID)){
+            if (split.get(sID).containsKey(bID)){
+                return true;
+            }
+        }
+
+        sID = (f.c > f.a) ? f.a : f.c;
+        bID = (sID == f.c) ? f.a : f.c;
+
+        if (split.containsKey(sID)){
+            if (split.get(sID).containsKey(bID)){
+                return true;
+            }
+        }
+        return false;
+    }
+
     private MeshRefinement(){}
 }

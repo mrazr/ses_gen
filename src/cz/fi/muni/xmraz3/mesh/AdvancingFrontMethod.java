@@ -6,6 +6,7 @@ import cz.fi.muni.xmraz3.Surface;
 import cz.fi.muni.xmraz3.math.Plane;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Vector;
+import cz.fi.muni.xmraz3.utils.PatchUtil;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -1294,7 +1295,9 @@ public class AdvancingFrontMethod {
             if (e.next.next == e.prev){
                 //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, e.next.p2.afmIdx + vrtsOffset));
                 //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, e.next.p2.afmIdx + vrtsOffset));
-                patch.faces.add(new Face(e.p1._id, e.p2._id, e.next.p2._id));
+                Face nF = new Face(e.p1._id, e.p2._id, e.next.p2._id);
+                patch.faces.add(nF);
+                PatchUtil.updateEdgeFacesMap(patch, nF);
                 Surface.numoftriangles++;
                 facets.remove(e);
                 facets.remove(e.next);
@@ -1785,7 +1788,9 @@ public class AdvancingFrontMethod {
                         newPoints.add(pTest);
                         //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
                         //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
-                        patch.faces.add(new Face(e.p1._id, e.p2._id, pTest._id));
+                        Face nF = new Face(e.p1._id, e.p2._id, pTest._id);
+                        patch.faces.add(nF);
+                        PatchUtil.updateEdgeFacesMap(patch, nF);
                         Surface.numoftriangles++;
                         //System.out.println("f: " + newFaces.get(newFaces.size() - 1).toString());
                         //newLines.add(leftFacet);
@@ -1886,7 +1891,9 @@ public class AdvancingFrontMethod {
                     //newLines.add(newFacet);
                     //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p1.afmIdx + vrtsOffset));
                     //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p1.afmIdx + vrtsOffset));
-                    patch.faces.add(new Face(e.p1._id, e.p2._id, newFacet.p1._id));
+                    Face nF = new Face(e.p1._id, e.p2._id, newFacet.p1._id);
+                    patch.faces.add(nF);
+                    PatchUtil.updateEdgeFacesMap(patch, nF);
                     Surface.numoftriangles++;
                     //System.out.println("Bridge with e.prev");
                     e = newFacet.next;
@@ -1929,7 +1936,9 @@ public class AdvancingFrontMethod {
                     //System.out.println("Bridge with e.next");
                     //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p2.afmIdx + vrtsOffset));
                     //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p2.afmIdx + vrtsOffset));
-                    patch.faces.add(new Face(e.p1._id, e.p2._id, newFacet.p2._id));
+                    Face nF = new Face(e.p1._id, e.p2._id, newFacet.p2._id);
+                    patch.faces.add(nF);
+                    PatchUtil.updateEdgeFacesMap(patch, nF);
                     Surface.numoftriangles++;
                     e = newFacet.next;
                     newFacet.loopID = activeLoop;
@@ -2043,7 +2052,9 @@ public class AdvancingFrontMethod {
                         e.frontFaceID = rightFacet.frontFaceID = leftFacet.frontFaceID = patch.faceCount;
                         //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
                         //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
-                        patch.faces.add(new Face(e.p1._id, e.p2._id, rightFacet.p1._id));
+                        Face nF = new Face(e.p1._id, e.p2._id, rightFacet.p1._id);
+                        patch.faces.add(nF);
+                        PatchUtil.updateEdgeFacesMap(patch, nF);
                         Surface.numoftriangles++;
                         //System.out.println("Bridge with something else");
                         //System.out.println("afm: " + pt.afmIdx);

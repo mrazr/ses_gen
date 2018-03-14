@@ -17,13 +17,14 @@ public class SphericalPatch {
     public List<Integer> intersectingPatches;
     public List<Point> vertices;
     public List<Face> faces;
-    public Map<Integer, Point> idPointMap;
+    public Map<Integer, Map<Integer, List<Face>>> edgeFacesMap;
 
     public int id;
     public int nextVertexID = 0;
     public static int nextConvexID = 0;
     public static int nextConcaveID = 0;
     boolean convexPatch = true;
+    public boolean boundariesLinked = false;
     public boolean valid = true;
 
     //opengl stuff
@@ -56,6 +57,7 @@ public class SphericalPatch {
         vertices = new ArrayList<>();
         faces = new ArrayList<>();
         convexPatch = convex;
+        edgeFacesMap = new TreeMap<>();
     }
 
     public SphericalPatch(Boundary b){

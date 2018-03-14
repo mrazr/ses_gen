@@ -6,6 +6,7 @@ public class Face{
     public int a;
     public int b;
     public int c;
+    public boolean forceRefine = false;
     public Face(int ca, int cb, int cc){
         a = ca;
         b = cb;

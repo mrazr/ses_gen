@@ -2256,4 +2256,43 @@ public class PatchUtil {
         }
         return true;
     }
+
+    public static void updateEdgeFacesMap(SphericalPatch sp, Face f){
+        int sID = (f.a > f.b) ? f.b : f.a;
+        int bID = (sID == f.a) ? f.b : f.a;
+
+        Map<Integer, Map<Integer, List<Face>>> map1 = sp.edgeFacesMap;
+        if (!map1.containsKey(sID)){
+            map1.put(sID, new TreeMap<>());
+        }
+        Map<Integer, List<Face>> map2 = map1.get(sID);
+        if (!map2.containsKey(bID)){
+            map2.put(bID, new ArrayList<>(2));
+        }
+        map2.get(bID).add(f);
+
+        sID = (f.c > f.b) ? f.b : f.c;
+        bID = (sID == f.c) ? f.b : f.c;
+
+        if (!map1.containsKey(sID)){
+            map1.put(sID, new TreeMap<>());
+        }
+        map2 = map1.get(sID);
+        if (!map2.containsKey(bID)){
+            map2.put(bID, new ArrayList<>(2));
+        }
+        map2.get(bID).add(f);
+
+        sID = (f.c > f.a) ? f.a : f.c;
+        bID = (sID == f.c) ? f.a : f.c;
+
+        if (!map1.containsKey(sID)){
+            map1.put(sID, new TreeMap<>());
+        }
+        map2 = map1.get(sID);
+        if (!map2.containsKey(bID)){
+            map2.put(bID, new ArrayList<>(2));
+        }
+        map2.get(bID).add(f);
+    }
 }

@@ -18,6 +18,7 @@ public class Point {
     public int idx = -1;
     public boolean common = true;
     public int ownIdx = -1;
+    public int _id = -1;
     //public static double scaleFactor = 5;
     public int convexPointID = -1;
     public int concavePointID = -1;

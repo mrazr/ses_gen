@@ -17,11 +17,11 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Surface {
     public static  double maxEdgeLen = 0.9;
     public static IntegerProperty atomsProcessed = new SimpleIntegerProperty(0);
-    public static List<SphericalPatch> convexPatches;
+    public static ArrayList<SphericalPatch> convexPatches;
     public static AtomicLong probeRadius = new AtomicLong(Double.doubleToLongBits(1.4));
-    public static List<SphericalPatch> triangles = new ArrayList<>();
-    public static List<ToroidalPatch> rectangles = new ArrayList<>();
-    public static List<ToroidalPatch> smallRectangles = new ArrayList<>();
+    public static ArrayList<SphericalPatch> triangles = new ArrayList<>();
+    public static ArrayList<ToroidalPatch> rectangles = new ArrayList<>();
+    //public static List<ToroidalPatch> smallRectangles = new ArrayList<>();
     public static List<ToroidalPatch> selfIntersectingRects = new ArrayList<>();
     public static List<Arc> intersectingArcs = new ArrayList<>();
     public static List<Point> commonVrts = new ArrayList<>();

@@ -19,11 +19,28 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Created by radoslav on 27.2.2017.
  */
 public class SurfaceParser {
+
+    private static Map<Integer, Map<Integer, List<SphericalPatch>>> missingArcs = new TreeMap<>();
+
+    private static void updateMissingArcs(int atom1, int atom2, SphericalPatch triangle){
+        int smaller = (atom1 > atom2) ? atom2 : atom1;
+        int bigger = (smaller == atom1) ? atom2 : atom1;
+        if (!missingArcs.containsKey(smaller)){
+            missingArcs.put(smaller, new TreeMap<>());
+        }
+        Map<Integer, List<SphericalPatch>> mapList = missingArcs.get(smaller);
+        if (!mapList.containsKey(bigger)){
+            mapList.put(bigger, new ArrayList<>());
+        }
+        mapList.get(bigger).add(triangle);
+    }
 
     private static void constructProbeTree(){
         double[][] keys = new double[Surface.triangles.size()][3];
@@ -45,6 +62,8 @@ public class SurfaceParser {
         Surface.numoftriangles = 0;
         SphericalPatch.nextConcaveID = SphericalPatch.nextConvexID = 0;
         ToroidalPatch.nextID = 0;
+        Surface.triangles.ensureCapacity(SesConfig.trianglesCount);
+        Surface.rectangles.ensureCapacity(SesConfig.toriCount);
         Surface.convexPatches = SurfaceParser.parseAtoms(folder + "atoms.dat");
         Surface.centerOfgravity.x /= SesConfig.atomCount;
         Surface.centerOfgravity.y /= SesConfig.atomCount;
@@ -220,16 +239,16 @@ public class SurfaceParser {
         }
     }
 
-    public static List<SphericalPatch> parseAtoms(String filename){
+    public static ArrayList<SphericalPatch> parseAtoms(String filename){
         double x, y, z, r;
-        int id;
-        List<SphericalPatch> n = new ArrayList<>();
+        int id = -1;
+        ArrayList<SphericalPatch> n = new ArrayList<>(SesConfig.atomCount);
         try (DataInputStream in = new DataInputStream(new FileInputStream(filename))){
             byte[] buffer = new byte[SesConfig.atomCount * 20];
             in.read(buffer, 0, buffer.length);
             ByteBuffer data = ByteBuffer.wrap(buffer);
             for (int i = 0; i < SesConfig.atomCount; i++){
-                id = data.getInt();
+                id = data.getInt(); //dont delete
                 x = data.getFloat();
                 y = data.getFloat();
                 z = data.getFloat();
@@ -340,14 +359,13 @@ public class SurfaceParser {
         }
         tp.width = Point.distance(Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probeMid)) + Point.distance(Sphere.getContactPoint(atom1.sphere, probeMid), Sphere.getContactPoint(atom1.sphere, probe2));
         if (tp.width < 0.005){
-            Surface.smallRectangles.add(tp);
+            //Surface.smallRectangles.add(tp);
             //System.err.println("added small rectangle to data structure");
         }
         if (PatchUtil.getProbeAxisDistance(probe1.center, atom1.sphere.center, atom2.sphere.center) - SesConfig.probeRadius < 0.0){
             Surface.selfIntersectingRects.add(tp);
         }
     }
-
     public static void assignRollingPatchToAtoms(SphericalPatch s1, SphericalPatch s2, ToroidalPatch tp){
         if (!s1.tori.containsKey(s2.id)){
             s1.tori.put(s2.id, new ArrayList<>());
@@ -374,6 +392,7 @@ public class SurfaceParser {
             Point mid = Point.getMidPoint(a1touch, a2touch);
             Vector probeMid = Point.subtractPoints(mid, probe.center).makeUnit().multiply(probe.radius);
             mid = Point.translatePoint(probe.center, probeMid);
+            SphericalPatch cpatch = new SphericalPatch(probe, false);
             Arc cpl1 = new Arc(probe.center, probe.radius);
             cpl1.vrts.add(a1touch);
             cpl1.vrts.add(mid);
@@ -401,6 +420,7 @@ public class SurfaceParser {
             }
             if (tp == null) {
                 System.out.println("corresponding rolling patch not found");
+                updateMissingArcs(atom1, atom2, cpatch);
             } else {
                 tp.concavePatchArcs.add(cpl1);
                 cpl1.torus = tp;
@@ -488,6 +508,7 @@ public class SurfaceParser {
             if (tp == null) {
                 System.out.println("corresponding rolling patch not found");
                 //continue;
+                updateMissingArcs(atom1, atom3, cpatch);
             } else {
                 tp.concavePatchArcs.add(cpl2);
                 cpl2.torus = tp;
@@ -565,6 +586,9 @@ public class SurfaceParser {
             if (a2.tori.get(atom3) == null) {
                System.out.println("corresponding rolling patch not found for " + atom2 + " " + atom3);
                 //continue;
+                if (atom1 == 224 || atom2 == 224 || atom3 == 224){
+                    System.out.println("for atom 224");
+                }
             } else {
                 for (ToroidalPatch tor : a2.tori.get(atom3)) {
                     if (Point.subtractPoints(probe.center, tor.probe1).sqrtMagnitude() < Surface.scaleFactor * 0.005 || Point.subtractPoints(probe.center, tor.probe2).sqrtMagnitude() < Surface.scaleFactor * 0.005) {
@@ -575,6 +599,7 @@ public class SurfaceParser {
             if (tp == null) {
                 //System.out.println("corresponding rolling patch not found");
                 //continue;
+                updateMissingArcs(atom2, atom3, cpatch);
             } else {
                 tp.concavePatchArcs.add(cpl3);
                 cpl3.torus = tp;
@@ -672,7 +697,7 @@ public class SurfaceParser {
                     }
                 }
             } while (Point.subtractPoints(start, pivot).sqrtMagnitude() >= 0.0001);
-            SphericalPatch cpatch = new SphericalPatch(probe, false);
+
             if (ghost) {
                 /*if (cpl1.torus.id == 0) {
                     System.out.println("fdsa");

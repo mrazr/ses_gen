@@ -361,7 +361,7 @@ public class ArcUtil {
         a.vrts.add(end1);
         //a.vrts.add(mid);
         a.vrts.add(end2);
-        end1.isShared = end2.isShared = mid.isShared = true;
+        //end1.isShared = end2.isShared = mid.isShared = true;
         a.owner = sp;
         sp.arcs.add(a);
         a.midProbe = midProbe;
@@ -447,10 +447,19 @@ public class ArcUtil {
                     b.patch = sp;
                     b.arcs = newB;
                     sp.boundaries.add(b);
+                    ArcUtil.buildEdges(b, true);
                 } else {
                     sp.valid = false;
                 }
             }
+            int nextIdx = 0;
+            for (Boundary b : sp.boundaries){
+                for (Point v : b.vrts){
+                    v._id = nextIdx++;
+                    sp.vertices.add(v);
+                }
+            }
+            sp.nextVertexID = nextIdx;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -551,6 +560,13 @@ public class ArcUtil {
         return vrts;
     }
 
+    public static void replaceMiddleVertex(Arc a, Point newMid){
+        int idx = (a.vrts.size() - 1) / 2;
+        a.vrts.remove(idx);
+        a.vrts.add(idx, newMid);
+        a.mid = newMid;
+    }
+
     private static final double PLANE_EPS = 0.002;
     public static Arc findContainingArc(Point p, Plane circle, SphericalPatch sp, Arc exclude){
         for (Boundary b : sp.boundaries){
@@ -646,6 +662,17 @@ public class ArcUtil {
         return na;
     }
 
+    /*
+        copies the arc a into new one, cloning its vertices instead of just sharing them with the original arc
+     */
+    public static Arc cloneArc(Arc a){
+        Arc newA = new Arc(a.center, a.radius);
+        a.vrts.forEach(v -> newA.vrts.add(new Point(v)));
+        newA.setNormal(a.normal);
+        newA.setEndPoints(newA.vrts.get(0), newA.vrts.get(newA.vrts.size() - 1), false);
+        return newA;
+    }
+
     public static Boundary generateCircularBoundary(Plane circle, double radius){
         Vector perp = circle.v.getPerpendicularVector().makeUnit().multiply(radius);
         Vector perp2 = Vector.getNormalVector(circle.v, perp).makeUnit().multiply(radius);
@@ -684,5 +711,9 @@ public class ArcUtil {
 
     public static int getSubdivisionLevel(Arc a){
         return (int)(Math.log10(a.vrts.size() - 1) / Math.log10(2));
+    }
+
+    public static void markShared(Arc a){
+        a.vrts.stream().forEach(v -> v.isShared = true);
     }
 }

@@ -10,7 +10,6 @@ import java.util.TreeMap;
 
 public class SphericalPatch {
     public Sphere sphere;
-
     public List<Arc> arcs;
     public List<Boundary> boundaries;
     public Map<Integer, List<ToroidalPatch>> tori;
@@ -21,6 +20,7 @@ public class SphericalPatch {
     public Map<Integer, Point> idPointMap;
 
     public int id;
+    public int nextVertexID = 0;
     public static int nextConvexID = 0;
     public static int nextConcaveID = 0;
     boolean convexPatch = true;

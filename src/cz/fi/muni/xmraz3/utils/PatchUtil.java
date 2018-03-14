@@ -301,25 +301,27 @@ public class PatchUtil {
             leftMid.endEdge2 = new Edge(leftMid.vrts.size() - 2, leftMid.vrts.size() - 1);
             leftMid.endEdge2.p1 = leftMid.vrts.get(leftMid.vrts.size() - 2);
             leftMid.endEdge2.p2 = leftMid.end2;
+            leftMid.mid = middlevrts.get(1);
             //leftMid.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
             ArcUtil.refineArc(leftMid, Surface.maxEdgeLen, false,0, false);
             //Util.reverserOrder(leftMid, true);
             //leftMid.buildEdges();
+            //ArcUtil.markShared(leftMid);
 
 
 
 
 
-            Arc rightMid = new Arc(circle, radius);
+            Arc rightMid = ArcUtil.cloneArc(leftMid);
             rightMid.owner = rightL.owner;
             //rightMid.end1 = cusps[0];
             //rightMid.end2 = cusps[1];
-            rightMid.setEndPoints(cusps[0], cusps[1], false);
+            //rightMid.setEndPoints(cusps[0], cusps[1], false);
             rightMid.setNormal(Point.subtractPoints(rightMid.owner.sphere.center, circle).makeUnit());
-            rightMid.vrts.addAll(leftMid.vrts);
+            //rightMid.vrts = ArcUtil.cloneArc(leftMid);
             //Util.reverserOrder(rightMid, true);
             ArcUtil.reverseArc(rightMid, true);
-            rightMid.mid = leftMid.mid;
+            ArcUtil.replaceMiddleVertex(rightMid, new Point(leftMid.mid));
             rightMid.next = rightEnd;
             rightEnd.prev = rightMid;
             rightMid.prev = rightStart;
@@ -330,6 +332,14 @@ public class PatchUtil {
             rightMid.endEdge2 = new Edge(rightMid.vrts.size() - 2, rightMid.vrts.size() - 1);
             rightMid.endEdge2.p1 = rightMid.vrts.get(rightMid.vrts.size() - 2);
             rightMid.endEdge2.p2 = rightMid.end2;
+
+            rightEnd.vrts.remove(0);
+            rightEnd.vrts.add(0, rightMid.end2);
+            rightEnd.end1 = rightMid.end2;
+
+            rightStart.vrts.remove(rightStart.vrts.size() - 1);
+            rightStart.vrts.add(rightMid.end1);
+            rightStart.end2 = rightMid.end1;
             //rightMid.buildEdges();
 
 
@@ -577,6 +587,7 @@ public class PatchUtil {
                 for (Point p : pointOfIntersection){
                     System.out.println(p.toString());
                 }*/
+            System.err.println("FOUND IT");
             for (Boundary b : sp.boundaries){
                 for (Arc a : b.arcs){
                     a.valid = false;
@@ -771,7 +782,7 @@ public class PatchUtil {
             Vector vr = Point.subtractPoints(tp.probe1, centerOfRot);
             if (tp.concavePatchArcs.size() == 0){
                 if (vr.sqrtMagnitude() < Double.longBitsToDouble(Surface.probeRadius.get())) {
-                    System.err.println("beginning to mesh circ patch");
+                    //System.err.println("beginning to mesh circ patch");
                     Point centerOfRect = Point.translatePoint(tp.probe1, Point.subtractPoints(tp.probe2, tp.probe1).multiply(0.5f));
                     double centerToCuspLength = Math.sqrt(Math.pow(Double.longBitsToDouble(Surface.probeRadius.get()), 2) - Math.pow(Point.subtractPoints(tp.probe1, tp.probe2).sqrtMagnitude() / 2.f, 2));
                     Point bottomCusp = Point.translatePoint(centerOfRect, Point.subtractPoints(bottom.owner.sphere.center, top.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
@@ -827,7 +838,7 @@ public class PatchUtil {
                     numOfDivs = (int)(Math.log10(left.vrts.size() - 1) / Math.log10(2));
                     ArcUtil.refineArc(right, Surface.maxEdgeLen, true, numOfDivs, false);
                     meshToroidalPatch(tp, top, bottomForTopRect, left, right, false);
-                    System.out.println("finished meshing circ patch");
+                    //System.out.println("finished meshing circ patch");
                 } else {
 
                     Point newCenter = (Point.subtractPoints(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)).sqrtMagnitude() < 0.0001) ? tp.probe1 : tp.probe2;
@@ -1146,6 +1157,7 @@ public class PatchUtil {
                 usedPoints.add(in1);
                 usedPoints.add(in2);
                 ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
+               // ArcUtil.markShared(newA);
                 b.arcs.add(newA);
                 toBridge = false;
                 in1 = in2;
@@ -1309,7 +1321,7 @@ public class PatchUtil {
                         return;
                     }
                     if (a1.bOwner != a2.bOwner && a1.bOwner.nestedBoundaries.contains(a2.bOwner)) {
-                        System.out.println("about to merge nested boundaries");
+                        //System.out.println("about to merge nested boundaries");
                     }
 
                     //int spl = patchSplit(intersectionPoints, in1, in2, sp, circle);
@@ -1352,7 +1364,7 @@ public class PatchUtil {
                         //i = intersectionPoints.size();
                         toRemove.add(boundaryAlgorithm2(circle, radius, in1, a1, in2, a2, intersectionPoints, usedPoints, newBS, sp));
                     }*/
-                    System.out.println("to : " + sp.id);
+                    //System.out.println("to : " + sp.id);
                     //toRemove.add(boundaryAlgorithm2(circle, radius, in1, a1, in2, a2, ps, usedPoints, newBS, sp));
                     boundaryAlgorithm2(circle, radius, in1, a1, in2, a2, ps, usedPoints, toRemove, newBS, sp);
                     i += ps.size();
@@ -1620,16 +1632,16 @@ public class PatchUtil {
                     planes.put(sp2.id, new ArrayList<>());
                 }*/
                 sp.intersectingPatches.add(sp2.id);
-                if (Point.distance(sp.sphere.center, sp2.sphere.center) < 0.005){
+                if (Point.distance(sp.sphere.center, sp2.sphere.center) < 0.008){
                     continue;
                 }
                 //sp2.intersectingPatches.add(sp.id);
                 if (sp2.id == 1187 && sp.id == 1196){
-                    System.out.println("1299 and 1371");
+                    //System.out.println("1299 and 1371");
                 }
 
                 if (sp.id == 1371){
-                    System.out.println("am.");
+                    //System.out.println("am.");
                 }
                 Plane p = new Plane(center, nV);
                 List<Point> intersectionPoints = new ArrayList<>();
@@ -1637,7 +1649,7 @@ public class PatchUtil {
                 if (intersectionPoints.size() > 1) {
                     if (planes.get(sp.id).stream().noneMatch(plane -> plane.isIdenticalWith(p))) {
                         planes.get(sp.id).add(p);
-                        System.out.println("about to: " + sp.id);
+                        //System.out.println("about to: " + sp.id);
                         generateNewBoundaries2(sp, intersectionPoints, p, radius);
                     }
                 } else if (intersectionPoints.size() == 0) {
@@ -1691,7 +1703,7 @@ public class PatchUtil {
                                     nb.nestedBoundaries.removeAll(toRemove);
                                 }
                                 nest = true;
-                                System.out.println("nestted b " + sp.id);
+                                //System.out.println("nestted b " + sp.id);
                             }
                         }
                     }
@@ -1732,6 +1744,12 @@ public class PatchUtil {
                     }
                 }*/
             //System.out.println("");
+            for (Boundary b : sp.boundaries){
+                for (Point v : b.vrts){
+                    v._id = sp.nextVertexID++;
+                    sp.vertices.add(v);
+                }
+            }
         } catch (Exception e){
             e.printStackTrace();
         }

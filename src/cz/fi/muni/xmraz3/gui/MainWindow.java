@@ -35,10 +35,13 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainWindow implements GLEventListener, KeyListener, MouseListener{
+    public static MainWindow mainWindow = null;
     public GLWindow window;
     private Animator animator;
     private int mainProgram;
@@ -435,7 +438,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         window.setTitle("SES");
         float[] scale = new float[2];
         scale = window.getCurrentSurfaceScale(scale);
-        System.err.println("win scale: " + scale[0] + " " + scale[1]);
+        //System.err.println("win scale: " + scale[0] + " " + scale[1]);
         window.addWindowListener(new WindowAdapter() {
             @Override
             public void windowDestroyed(WindowEvent windowEvent) {
@@ -565,6 +568,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         vaos = new ArrayList<>();
         vbos = new ArrayList<>();
         ebos = new ArrayList<>();
+        MainWindow.mainWindow = this;
     }
 
     public void showProbe(boolean v){
@@ -1189,7 +1193,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         for (int i = start; i < end; ++i) {
             SphericalPatch a = convexPatchList.get(i);
             if (!a.valid){
-                MeshRefinement.refinement.enqueue(a);
+                //MeshRefinement.refinement.enqueue(a);
                 continue;
             }
             if (!atomsMeshed[i]) {
@@ -1198,7 +1202,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 long time = 0;
                 //System.out.println("Meshing atom " + i);
                 if (a.boundaries.size() > 0) {
-                    afm.initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f));
+                    afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f));
                     //updaFaces = afm.soho(a.convexPatchBoundaries.get(0), Math.toRadians(75), 0.2, 0.3 * (Math.sqrt(3) / 2.f), false, noveBody);
                         /*do {
                             overallTime += System.currentTimeMillis() - time;
@@ -1220,7 +1224,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     faces.clear();
                     //time = System.currentTimeMillis();
                     do {
-                        afm.mesh2(verts, faces, false);
+                        afm._mesh2(verts, faces, false);
                     } while (!afm.atomComplete);
                     if (afm.volpe){
                         System.out.println("convex " + i + " looped");
@@ -1233,7 +1237,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                         //System.out.println(".");
                     //}
                 }
-                MeshRefinement.refinement.enqueue(a);
+                //MeshRefinement.refinement.enqueue(a);
             }
         }
         long endTime = System.currentTimeMillis();
@@ -1447,7 +1451,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             if (!concavePatchesMeshed[i]) {
                 SphericalPatch cp = concavePatchList.get(i);
                 if (!cp.valid){
-                    MeshRefinement.refinement.enqueue(cp);
+                    //MeshRefinement.refinement.enqueue(cp);
                     continue;
                 }
                 //selectedConcaveP.set(i);
@@ -1457,9 +1461,9 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 while (!afm.atomComplete) {
                     faces.clear();
                     verts.clear();
-                    afm.initializeConcaveAFM(cp, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f));
+                    afm._initializeConcaveAFM(cp, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f));
                     long time = System.currentTimeMillis();
-                    afm.mesh2(verts, faces, false);
+                    afm._mesh2(verts, faces, false);
                     //meshTime += System.currentTimeMillis() - time;
                     //cpVrts = noveBody;
                     //trianglesCount += cpFaces.size();
@@ -1473,7 +1477,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     //cpUpdate.set(true);
                     //while (cpUpdate.get()) ;
                 }
-                MeshRefinement.refinement.enqueue(cp);
+                //MeshRefinement.refinement.enqueue(cp);
             }
         }
         long endTime = System.currentTimeMillis();
@@ -1548,6 +1552,11 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
         gl.glBindVertexArray(0);
         stopRendering.set(false);
+        if (bufferObjectsIdx == CONCAVE){
+            concaveMeshInitialized = true;
+        } else {
+            convexMeshInitialized = true;
+        }
     }
 
     private void pushConvexPatchesToGPU(){
@@ -1610,6 +1619,116 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         System.out.println("Number of triangles: " + faceCount);
     }
 
+    private void _pushConvexPatchesToGPU(){
+        List<Point> vrtsNnormals = new ArrayList<>();
+        List<Integer> indices = new ArrayList<>();
+        int vboOffset = 0;
+        int eboOffset = 0;
+        int faceCount = 0;
+        for (SphericalPatch a : MeshRefinement.convexComplete){
+            for (Map.Entry<Integer, Point>  e: a.idPointMap.entrySet()){
+                Point v = e.getValue();
+                Point n = new Point(Point.subtractPoints(v, a.sphere.center).makeUnit().getFloatData());
+                vrtsNnormals.add(v);
+                vrtsNnormals.add(n);
+            }
+            for (Face f : a.faces){
+                indices.add(f.a);
+                indices.add(f.b);
+                indices.add(f.c);
+            }
+            a.vboOffset = vboOffset;
+            a.eboOffset = eboOffset;
+            vboOffset += a.idPointMap.size();
+            eboOffset += 3 * a.faces.size();
+            faceCount += a.faces.size();
+        }
+        convexPatchesFaceCount = indices.size() / 3;
+        System.out.println(convexPatchList.size() + " convex patches");
+        pushMeshToGPU(vrtsNnormals, indices, CONVEX);
+        convexPushData2GPU.set(false);
+        System.out.println("Number of triangles: " + faceCount);
+    }
+
+    private void _pushConcavePatchesToGPU(){
+        List<Point> vrtsNnormals = new ArrayList<>();
+        List<Integer> indices = new ArrayList<>();
+        int vboOffset = 0;
+        int eboOffset = 0;
+        int faceCount = 0;
+        Map<Integer, Integer> sharedVertices = new TreeMap<>();
+        int vertexOffset = 0;
+        for (SphericalPatch cp : MeshRefinement.concaveComplete){
+            boolean sharedVertexFound = false;
+            for (Map.Entry<Integer, Point> e : cp.idPointMap.entrySet()){
+                /*if (e.getKey() < vrtsNnormals.size() / 2){
+                    sharedVertices.put(e.getKey(), vrtsNnormals.size());
+                    sharedVertexFound = true;
+                }*/
+                if (e.getValue().isShared){
+                    sharedVertices.put(e.getKey(), vrtsNnormals.size() / 2);
+                    sharedVertexFound = true;
+                }
+                Point v = e.getValue();
+                Point n = new Point(Point.subtractPoints(cp.sphere.center, v).makeUnit().getFloatData());
+                vrtsNnormals.add(v);
+                vrtsNnormals.add(n);
+            }
+            for (Face f : cp.faces) {
+                int idx1 = f.a + vertexOffset;
+                int idx2 = f.b + vertexOffset;
+                int idx3 = f.c + vertexOffset;
+                if (sharedVertexFound){
+                    if (sharedVertices.containsKey(f.a)){
+                        idx1 = sharedVertices.get(f.a);
+                    }
+                    if (sharedVertices.containsKey(f.b)){
+                        idx2 = sharedVertices.get(f.b);
+                    }
+                    if (sharedVertices.containsKey(f.c)){
+                        idx3 = sharedVertices.get(f.c);
+                    }
+                }
+                indices.add(idx1);
+                indices.add(idx2);
+                indices.add(idx3);
+            }
+            sharedVertices.clear();
+            cp.vboOffset = vboOffset;
+            cp.eboOffset = eboOffset;
+            vboOffset += cp.idPointMap.size();
+            eboOffset += 3 * cp.faces.size();
+            faceCount += cp.faces.size();
+        }
+        concavePatchesFaceCount = indices.size() / 3;
+        System.out.println(concavePatchList.size() + " concave patches");
+        pushMeshToGPU(vrtsNnormals, indices, CONCAVE);
+        concavePushData2GPU.set(false);
+        System.out.println("Number of triangles: " + faceCount);
+    }
+
+    public void pushConvex(){
+        GLRunnable r = new GLRunnable() {
+            @Override
+            public boolean run(GLAutoDrawable glAutoDrawable) {
+                _pushConvexPatchesToGPU();
+                return true;
+            }
+        };
+        window.invoke(false, r);
+    }
+
+    public void pushConcave(){
+        GLRunnable r = new GLRunnable() {
+            @Override
+            public boolean run(GLAutoDrawable glAutoDrawable) {
+                _pushConcavePatchesToGPU();
+                return true;
+            }
+        };
+        window.invoke(false, r);
+    }
+
     private void pushToriMesh2GPU(){
         stopRendering.set(true);
         List<Point> vrtsNormals = new ArrayList<>();
@@ -1650,7 +1769,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
 
         if (keyEvent.getKeyChar() == ','){
             if (!MeshRefinement.refinement.isRunning()){
-                MeshRefinement.refinement.start();
+                //MeshRefinement.refinement.start();
             }
             convexPushData2GPU.set(false);
             int half = convexPatchList.size() / 2;
@@ -1688,7 +1807,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
 
         if (keyEvent.getKeyChar() == '.'){
             if (!MeshRefinement.refinement.isRunning()){
-                MeshRefinement.refinement.start();
+                //MeshRefinement.refinement.start();
             }
             concavePushData2GPU.set(false);
             int half = concavePatchList.size() / 2;

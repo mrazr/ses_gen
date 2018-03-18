@@ -1,5 +1,6 @@
 package cz.fi.muni.xmraz3.math;
 
+import cz.fi.muni.xmraz3.mesh.Arc;
 import cz.fi.muni.xmraz3.mesh.Edge;
 import cz.fi.muni.xmraz3.Surface;
 import org.json.simple.JSONObject;
@@ -20,9 +21,8 @@ public class Point {
     public int ownIdx = -1;
     public int _id = -1;
     //public static double scaleFactor = 5;
-    public int convexPointID = -1;
-    public int concavePointID = -1;
-    public int tempIdx = -1;
+    public boolean arcPoint = false;
+    public Arc arc;
 
     public double getX() {
         return x;

@@ -457,7 +457,7 @@ public class MainPanelController {
                     sldProbeAlpha.setDisable(false);
                     chkShowProbe.setDisable(false);
                     //MainPanel.atomView.setup();
-                    MainPanel.atomView.sendPatchesLists(Surface.convexPatches, Surface.triangles);
+                    //MainPanel.atomView.sendPatchesLists(Surface.convexPatches, Surface.triangles);
                     //MainPanel.atomView.sendConvexPatchList(Main.convexPatches);
                     //MainPanel.atomView.sendConcavePatchList(Main.triangles);
                     MainPanel.atomView.selectedConcaveP.addListener(new ChangeListener<Number>() {

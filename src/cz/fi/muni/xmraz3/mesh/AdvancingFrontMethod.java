@@ -11,6 +11,7 @@ import cz.fi.muni.xmraz3.utils.PatchUtil;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class AdvancingFrontMethod {
@@ -400,8 +401,7 @@ public class AdvancingFrontMethod {
     public boolean mesh2(List<Point> newVrts, List<Face> newFaces, boolean step){
         boolean loopDetected = false;
         volpe = false;
-        //List<Edge> newLines = new ArrayList<>();
-        //List<Face> newFaces = new ArrayList<>();
+
         List<Point> candidates = new ArrayList<>();
         //System.err.println(b.arcs.size());
         int ones = 0;
@@ -1253,11 +1253,10 @@ public class AdvancingFrontMethod {
         return false;
     }
 
-    public boolean _mesh2(List<Point> newVrts, List<Face> newFaces, boolean step){
+    public boolean _mesh2(){
         boolean loopDetected = false;
         volpe = false;
-        //List<Edge> newLines = new ArrayList<>();
-        //List<Face> newFaces = new ArrayList<>();
+        Map<Integer, List<Face>> vertexFaceMap = (patch.convexPatch) ? MeshRefinement.convexVertexFaceMap.get(patch.id) : MeshRefinement.concaveVertexFaceMap.get(patch.id);
         List<Point> candidates = new ArrayList<>();
         //System.err.println(b.arcs.size());
         int ones = 0;
@@ -1296,8 +1295,20 @@ public class AdvancingFrontMethod {
                 //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, e.next.p2.afmIdx + vrtsOffset));
                 //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, e.next.p2.afmIdx + vrtsOffset));
                 Face nF = new Face(e.p1._id, e.p2._id, e.next.p2._id);
+                if (!vertexFaceMap.containsKey(e.p1._id)) {
+                    vertexFaceMap.put(e.p1._id, new ArrayList<>());
+                }
+                if (!vertexFaceMap.containsKey(e.p2._id)){
+                    vertexFaceMap.put(e.p2._id, new ArrayList<>());
+                }
+                if (!vertexFaceMap.containsKey(e.next.p2._id)){
+                    vertexFaceMap.put(e.next.p2._id, new ArrayList<>());
+                }
+                vertexFaceMap.get(e.p1._id).add(nF);
+                vertexFaceMap.get(e.p2._id).add(nF);
+                vertexFaceMap.get(e.next.p2._id).add(nF);
                 patch.faces.add(nF);
-                PatchUtil.updateEdgeFacesMap(patch, nF);
+                PatchUtil.addFaceToEdgeFacesMap(patch, nF);
                 Surface.numoftriangles++;
                 facets.remove(e);
                 facets.remove(e.next);
@@ -1325,10 +1336,6 @@ public class AdvancingFrontMethod {
                 activeLoop = e.loopID;
                 if (facets.size() == 0){
                     ///System.out.println("exiting bcause facets size");
-                    break;
-                }
-                if (step){
-                    //System.out.println("exiting bcause step");
                     break;
                 }
                 continue;
@@ -1790,7 +1797,17 @@ public class AdvancingFrontMethod {
                         //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
                         Face nF = new Face(e.p1._id, e.p2._id, pTest._id);
                         patch.faces.add(nF);
-                        PatchUtil.updateEdgeFacesMap(patch, nF);
+                        if (!vertexFaceMap.containsKey(e.p1._id)) {
+                            vertexFaceMap.put(e.p1._id, new ArrayList<>());
+                        }
+                        if (!vertexFaceMap.containsKey(e.p2._id)){
+                            vertexFaceMap.put(e.p2._id, new ArrayList<>());
+                        }
+                        vertexFaceMap.put(pTest._id, new ArrayList<>());
+                        vertexFaceMap.get(e.p1._id).add(nF);
+                        vertexFaceMap.get(e.p2._id).add(nF);
+                        vertexFaceMap.get(pTest._id).add(nF);
+                        PatchUtil.addFaceToEdgeFacesMap(patch, nF);
                         Surface.numoftriangles++;
                         //System.out.println("f: " + newFaces.get(newFaces.size() - 1).toString());
                         //newLines.add(leftFacet);
@@ -1893,7 +1910,19 @@ public class AdvancingFrontMethod {
                     //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p1.afmIdx + vrtsOffset));
                     Face nF = new Face(e.p1._id, e.p2._id, newFacet.p1._id);
                     patch.faces.add(nF);
-                    PatchUtil.updateEdgeFacesMap(patch, nF);
+                    if (!vertexFaceMap.containsKey(e.p1._id)) {
+                        vertexFaceMap.put(e.p1._id, new ArrayList<>());
+                    }
+                    if (!vertexFaceMap.containsKey(e.p2._id)){
+                        vertexFaceMap.put(e.p2._id, new ArrayList<>());
+                    }
+                    if (!vertexFaceMap.containsKey(newFacet.p1._id)){
+                        vertexFaceMap.put(newFacet.p1._id, new ArrayList<>());
+                    }
+                    vertexFaceMap.get(e.p1._id).add(nF);
+                    vertexFaceMap.get(e.p2._id).add(nF);
+                    vertexFaceMap.get(newFacet.p1._id).add(nF);
+                    PatchUtil.addFaceToEdgeFacesMap(patch, nF);
                     Surface.numoftriangles++;
                     //System.out.println("Bridge with e.prev");
                     e = newFacet.next;
@@ -1938,7 +1967,19 @@ public class AdvancingFrontMethod {
                     //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p2.afmIdx + vrtsOffset));
                     Face nF = new Face(e.p1._id, e.p2._id, newFacet.p2._id);
                     patch.faces.add(nF);
-                    PatchUtil.updateEdgeFacesMap(patch, nF);
+                    if (!vertexFaceMap.containsKey(e.p1._id)) {
+                        vertexFaceMap.put(e.p1._id, new ArrayList<>());
+                    }
+                    if (!vertexFaceMap.containsKey(e.p2._id)){
+                        vertexFaceMap.put(e.p2._id, new ArrayList<>());
+                    }
+                    if (!vertexFaceMap.containsKey(newFacet.p2._id)){
+                        vertexFaceMap.put(newFacet.p2._id, new ArrayList<>());
+                    }
+                    vertexFaceMap.get(e.p1._id).add(nF);
+                    vertexFaceMap.get(e.p2._id).add(nF);
+                    vertexFaceMap.get(newFacet.p2._id).add(nF);
+                    PatchUtil.addFaceToEdgeFacesMap(patch, nF);
                     Surface.numoftriangles++;
                     e = newFacet.next;
                     newFacet.loopID = activeLoop;
@@ -2054,7 +2095,19 @@ public class AdvancingFrontMethod {
                         //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
                         Face nF = new Face(e.p1._id, e.p2._id, rightFacet.p1._id);
                         patch.faces.add(nF);
-                        PatchUtil.updateEdgeFacesMap(patch, nF);
+                        if (!vertexFaceMap.containsKey(e.p1._id)) {
+                            vertexFaceMap.put(e.p1._id, new ArrayList<>());
+                        }
+                        if (!vertexFaceMap.containsKey(e.p2._id)){
+                            vertexFaceMap.put(e.p2._id, new ArrayList<>());
+                        }
+                        if (!vertexFaceMap.containsKey(rightFacet.p1._id)){
+                            vertexFaceMap.put(rightFacet.p1._id, new ArrayList<>());
+                        }
+                        vertexFaceMap.get(e.p1._id).add(nF);
+                        vertexFaceMap.get(e.p2._id).add(nF);
+                        vertexFaceMap.get(rightFacet.p1._id).add(nF);
+                        PatchUtil.addFaceToEdgeFacesMap(patch, nF);
                         Surface.numoftriangles++;
                         //System.out.println("Bridge with something else");
                         //System.out.println("afm: " + pt.afmIdx);
@@ -2071,11 +2124,6 @@ public class AdvancingFrontMethod {
                     }
 
                 }
-            }
-            if (step){
-                patch.faceToHightlight = (facets.size() > 0) ? e.frontFaceID : 0;
-                //System.err.println("face to highlight: " + atom.faceToHightlight);
-                break;
             }
         }
         if (facets.size() == 0){

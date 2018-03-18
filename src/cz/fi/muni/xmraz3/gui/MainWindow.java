@@ -18,6 +18,7 @@ import cz.fi.muni.xmraz3.gui.controllers.MainPanelController;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Vector;
 import cz.fi.muni.xmraz3.mesh.*;
+import cz.fi.muni.xmraz3.utils.ArcUtil;
 import cz.fi.muni.xmraz3.utils.GLUtil;
 import cz.fi.muni.xmraz3.utils.PatchUtil;
 import graphicslib3D.*;
@@ -279,13 +280,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             @Override
             public boolean run(GLAutoDrawable glAutoDrawable) {
                 freeGLResources();
-                gl.glGenVertexArrays(3, meshVao, 0);
-                gl.glGenBuffers(3, meshVbo, 0);
-                gl.glGenBuffers(2, meshEbo, 0);
 
-                gl.glGenVertexArrays(2, lineVao, 0);
-                gl.glGenBuffers(2, lineVbo, 0);
-                gl.glGenBuffers(2, lineEbo, 0);
                 ///while (!stoppedRendering.get());
                 sendConvexPatchList(convex);
                 sendConcavePatchList(concave);
@@ -315,15 +310,21 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         for (SphericalPatch a : convexPatchList){
             a.lineOffset = indexOffset;
             for (Boundary b : a.boundaries){
-                a.lineCount += b.lines.size();
-                for (Point p : b.vrts){
+                Boundary b_ = new Boundary();
+                b_.patch = a;
+                for (Arc _a : b.arcs){
+                    b_.arcs.add(_a.refined);
+                }
+                ArcUtil.buildEdges(b_, true);
+                a.lineCount += b_.lines.size();
+                for (Point p : b_.vrts){
                     vertices.add(p);
                 }
-                for (Edge e : b.lines){
+                for (Edge e : b_.lines){
                     indices.add(e.v1 + vertexOffset);
                     indices.add(e.v2 + vertexOffset);
                 }
-                vertexOffset += b.vrts.size();
+                vertexOffset += b_.vrts.size();
                 //totalVerticesCount += b.vrts.size();
             }
             indexOffset += a.lineCount;
@@ -1224,7 +1225,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     faces.clear();
                     //time = System.currentTimeMillis();
                     do {
-                        afm._mesh2(verts, faces, false);
+                        afm._mesh2();
                     } while (!afm.atomComplete);
                     if (afm.volpe){
                         System.out.println("convex " + i + " looped");
@@ -1463,7 +1464,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     verts.clear();
                     afm._initializeConcaveAFM(cp, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f));
                     long time = System.currentTimeMillis();
-                    afm._mesh2(verts, faces, false);
+                    afm._mesh2();
                     //meshTime += System.currentTimeMillis() - time;
                     //cpVrts = noveBody;
                     //trianglesCount += cpFaces.size();
@@ -1529,6 +1530,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
 
     private void pushMeshToGPU(List<Point> vrtsNnormals, List<Integer> indices, int bufferObjectsIdx){
         stopRendering.set(true);
+        //animator.resume();
         FloatBuffer VNBuffer = GLBuffers.newDirectFloatBuffer(vrtsNnormals.size() * 3);
         for (Point p : vrtsNnormals){
             VNBuffer.put(p.getFloatData());
@@ -1565,7 +1567,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         int vboOffset = 0;
         int eboOffset = 0;
         int faceCount = 0;
-        for (SphericalPatch a : convexPatchList){
+        for (SphericalPatch a : Surface.convexPatches){
             for (Point v : a.vertices){
                 Point n = new Point(Point.subtractPoints(v, a.sphere.center).makeUnit().getFloatData());
                 vrtsNnormals.add(v);
@@ -1583,7 +1585,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             faceCount += a.faces.size();
         }
         convexPatchesFaceCount = indices.size() / 3;
-        System.out.println(convexPatchList.size() + " convex patches");
+        //System.out.println(convexPatchList.size() + " convex patches");
         pushMeshToGPU(vrtsNnormals, indices, CONVEX);
         convexPushData2GPU.set(false);
         System.out.println("Number of triangles: " + faceCount);
@@ -1595,7 +1597,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         int vboOffset = 0;
         int eboOffset = 0;
         int faceCount = 0;
-        for (SphericalPatch cp : concavePatchList){
+        for (SphericalPatch cp : Surface.triangles){
             for (Point v : cp.vertices){
                 Point n = new Point(Point.subtractPoints(cp.sphere.center, v).makeUnit().getFloatData());
                 vrtsNnormals.add(v);
@@ -1613,7 +1615,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             faceCount += cp.faces.size();
         }
         concavePatchesFaceCount = indices.size() / 3;
-        System.out.println(concavePatchList.size() + " concave patches");
+        //System.out.println(concavePatchList.size() + " concave patches");
         pushMeshToGPU(vrtsNnormals, indices, CONCAVE);
         concavePushData2GPU.set(false);
         System.out.println("Number of triangles: " + faceCount);
@@ -1680,7 +1682,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     public void keyPressed(KeyEvent keyEvent) {
 
         if (keyEvent.getKeyChar() == ','){
-            if (!MeshRefinement.refinement.isRunning()){
+            /*if (!MeshRefinement.refinement.isRunning()){
                 MeshRefinement.refinement.start();
             }
             convexPushData2GPU.set(false);
@@ -1714,7 +1716,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             (new Thread(thread1)).start();
             (new Thread(thread2)).start();
             (new Thread(thread3)).start();
-            (new Thread(thread4)).start();
+            (new Thread(thread4)).start();*/
         }
 
         if (keyEvent.getKeyChar() == '.'){
@@ -2420,7 +2422,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         /*GLRunnable task = new GLRunnable() {
             @Override
             public boolean run(GLAutoDrawable glAutoDrawable) {*/
-
+        System.out.println("DELETING THE WHOLE THING");
                 IntBuffer buff = GLBuffers.newDirectIntBuffer(vaos.size());
                 stopRendering.set(true);
                 while (!stoppedRendering.get()){
@@ -2468,6 +2470,14 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 gl.glDeleteVertexArrays(2, lineVao, 0);
                 gl.glDeleteBuffers(2, lineVbo, 0);
                 gl.glDeleteBuffers(2, lineEbo, 0);
+
+                gl.glGenVertexArrays(3, meshVao, 0);
+                gl.glGenBuffers(3, meshVbo, 0);
+                gl.glGenBuffers(2, meshEbo, 0);
+
+                gl.glGenVertexArrays(2, lineVao, 0);
+                gl.glGenBuffers(2, lineVbo, 0);
+                gl.glGenBuffers(2, lineEbo, 0);
                 //return true;
         resourcesFreed.set(true);
         System.out.println("resources freed");

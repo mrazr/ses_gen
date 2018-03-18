@@ -56,6 +56,7 @@ public class AtomLoadingController {
                 MainPanel.atomView.stopRendering(true);
                 MainPanel.atomView.requestFreeResources();
                 while(!MainPanel.atomView.getResourcesFreed());
+
                 SurfaceParser.ses_start(folder);
                 return null;
             }

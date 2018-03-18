@@ -2,6 +2,7 @@ package cz.fi.muni.xmraz3;
 
 import com.jogamp.opengl.math.Quaternion;
 import com.jogamp.opengl.math.VectorUtil;
+import cz.fi.muni.xmraz3.gui.MainWindow;
 import cz.fi.muni.xmraz3.math.Plane;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Sphere;
@@ -16,11 +17,10 @@ import org.json.simple.parser.ParseException;
 import smile.neighbor.KDTree;
 
 import java.io.*;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.time.LocalDateTime;
+import java.util.*;
 
 /**
  * Created by radoslav on 27.2.2017.
@@ -59,9 +59,12 @@ public class SurfaceParser {
             @Override
             public void run() {
                 MeshRefinement.convexEdgeSplitMap = new ArrayList<>(SesConfig.atomCount);
+                MeshRefinement.convexVertexFaceMap = new ArrayList<>(SesConfig.atomCount);
                 for (int i = 0; i < SesConfig.atomCount; ++i){
                     MeshRefinement.convexEdgeSplitMap.add(new TreeMap<>());
+                    MeshRefinement.convexVertexFaceMap.add(new TreeMap<>());
                 }
+
             }
         };
         (new Thread(r1)).start();
@@ -69,8 +72,10 @@ public class SurfaceParser {
             @Override
             public void run() {
                 MeshRefinement.concaveEdgeSplitMap = new ArrayList<>(SesConfig.trianglesCount);
+                MeshRefinement.concaveVertexFaceMap = new ArrayList<>(SesConfig.trianglesCount);
                 for (int i = 0; i < SesConfig.trianglesCount; ++i){
                     MeshRefinement.concaveEdgeSplitMap.add(new TreeMap<>());
+                    MeshRefinement.concaveVertexFaceMap.add(new TreeMap<>());
                 }
             }
         };
@@ -94,6 +99,7 @@ public class SurfaceParser {
 
         try {
             SurfaceParser.parseTriangles(folder + "triangles.dat");
+
             constructProbeTree();
             Surface.probeTree.setIdenticalExcluded(true);
 
@@ -101,7 +107,36 @@ public class SurfaceParser {
             PatchUtil.processSelfIntersectingTori();
             PatchUtil.processSelfIntersectingConcavePatches();
             PatchUtil.processIntersectingConcavePatches();
+            MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
 
+            MeshRefinement.threads_done.set(0);
+            int step = SesConfig.atomCount / 4;
+            for (int i = 0; i < 4; ++i){
+                final int start = i;
+                final int _step = step;
+                Runnable r = new Runnable() {
+                    @Override
+                    public void run() {
+                        MeshRefinement.generateBaseMesh(start * _step, (start == 3) ? SesConfig.atomCount : (start + 1) * _step, Surface.convexPatches, start);
+                    }
+                };
+                (new Thread(r)).start();
+            }
+            while (!MeshRefinement.free.get()){}
+            MeshRefinement.threads_done.set(0);
+            System.out.println("starting to mesh concave");
+            step = SesConfig.trianglesCount / 4;
+            for (int i = 0; i < 4; ++i){
+                final int start = i;
+                final int _step = step;
+                Runnable r = new Runnable() {
+                    @Override
+                    public void run() {
+                        MeshRefinement.generateBaseMesh(start * _step, (start == 3) ? SesConfig.trianglesCount : (start + 1) * _step, Surface.triangles, start);
+                    }
+                };
+                (new Thread(r)).start();
+            }
             fillCommonVertices();
         } catch (Exception e){
             System.out.println(e.getMessage());
@@ -241,8 +276,26 @@ public class SurfaceParser {
                 constructConvexPatchArc(atom1, atom2, probe1, probe2, centerProbe);
             }
             for (SphericalPatch sp : Surface.convexPatches){
-                ArcUtil.linkArcs(sp);
+                if (sp.boundaries.size() == 0) {
+                    ArcUtil.linkArcs(sp);
+                }
                 for (Boundary b : sp.boundaries) {
+                    for (Arc a : b.arcs){
+                        if (a.refined != null){
+                            continue;
+                        }
+                        Arc op = a.opposite;
+                        if (op.owner.boundaries.size() == 0){
+                            ArcUtil.linkArcs(op.owner);
+                        }
+                        a.refined = ArcUtil.dbgCloneArc(a);
+                        a.refined.owner = sp;
+                        op.refined = ArcUtil.dbgCloneArc(op);
+                        op.refined.owner = op.owner;
+                        ArcUtil.refineOppositeArcs(a.refined, op.refined, SesConfig.edgeLimit, true);
+                        ArcUtil.generateEdgeSplits(a.refined, sp);
+                        ArcUtil.generateEdgeSplits(op.refined, op.owner);
+                    }
                     for (Boundary c : sp.boundaries) {
                         if (c == b) {
                             continue;
@@ -341,13 +394,13 @@ public class SurfaceParser {
                         ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, true, numOfDivs, false);
                         ArcUtil.buildEdges(greaterRadius);
 
-                        smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
+                        /*smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
                         greaterRadius.refined = ArcUtil.dbgCloneArc(greaterRadius);
 
                         smallerRadius.refined.owner = smallerRadius.owner;
                         greaterRadius.refined.owner = greaterRadius.owner;
 
-                        ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);
+                        ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);*/
 
                         System.out.println("refined circle loop: " + smallerRadius.vrts.size() + ", " + greaterRadius.vrts.size());
                     }
@@ -385,11 +438,11 @@ public class SurfaceParser {
         int numOfDivs = ArcUtil.getSubdivisionLevel(smallerRadius);
         ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, true, numOfDivs, false);
         ArcUtil.buildEdges(greaterRadius);
-        smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
+        /*smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
         smallerRadius.refined.owner = smallerRadius.owner;
         greaterRadius.refined = ArcUtil.dbgCloneArc(greaterRadius);
         greaterRadius.refined.owner = greaterRadius.owner;
-        ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);
+        ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);*/
         if (smallerRadius.vrts.size() != greaterRadius.vrts.size()){
             System.err.println("inconsistency detected");
         }
@@ -1284,6 +1337,51 @@ public class SurfaceParser {
                 bw.write(s);
                 bw.newLine();
                 s = "";
+            }
+            bw.flush();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void exportPatch(SphericalPatch sp){
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/home/radoslav/objs/patch" + sp.id + (Math.random() * 10) + ".obj"))) {
+            String line = "";
+            for (Point v : sp.vertices){
+                line = "v " + v.toString();
+                bw.write(line);
+                bw.newLine();
+                line = "vn " + Point.subtractPoints(v, sp.sphere.center).makeUnit().toString();
+                bw.write(line);
+                bw.newLine();
+            }
+            for (Face f : sp.faces){
+                int i1 = f.a + 1;
+                int i2 = f.b + 1;
+                int i3 = f.c + 1;
+                line = "f " + i1 + "//" + i1 + " " + i2 + "//" + i2 + " " + i3 + "//" + i3;
+                bw.write(line);
+                bw.newLine();
+            }
+            bw.flush();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void exportToroidalPatch(ToroidalPatch tp){
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("tori_" + tp.id + "-" + LocalDateTime.now().toString() + ".obj"))){
+            for (Point v : tp.vertices){
+                bw.write("v " + v.toString());
+                bw.newLine();
+            }
+            for (Vector n : tp.normals){
+                bw.write("vn " + n.toString());
+                bw.newLine();
+            }
+            for (Face f : tp.faces){
+                bw.write("f " + (f.a + 1) + "//" + (f.a + 1) + " " + (f.b + 1) + "//" + (f.b + 1) + " " + (f.c + 1) + "//" + (f.c + 1));
+                bw.newLine();
             }
             bw.flush();
         } catch (IOException e){

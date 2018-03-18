@@ -18,14 +18,15 @@ public class SphericalPatch {
     public List<Point> vertices;
     public List<Face> faces;
     public Map<Integer, Map<Integer, List<Face>>> edgeFacesMap;
+    public int arcPointCount = 0;
 
     public int id;
     public int nextVertexID = 0;
     public static int nextConvexID = 0;
     public static int nextConcaveID = 0;
-    boolean convexPatch = true;
-    public boolean boundariesLinked = false;
+    public boolean convexPatch = true;
     public boolean valid = true;
+    public boolean meshed = false;
 
     //opengl stuff
     public int[] vao = new int[2];

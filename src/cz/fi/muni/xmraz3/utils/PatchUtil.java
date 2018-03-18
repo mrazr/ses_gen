@@ -6,6 +6,7 @@ import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Sphere;
 import cz.fi.muni.xmraz3.math.Vector;
 import cz.fi.muni.xmraz3.mesh.*;
+import javafx.scene.shape.Mesh;
 import smile.neighbor.Neighbor;
 
 import java.util.*;
@@ -332,6 +333,8 @@ public class PatchUtil {
             rightMid.endEdge2 = new Edge(rightMid.vrts.size() - 2, rightMid.vrts.size() - 1);
             rightMid.endEdge2.p1 = rightMid.vrts.get(rightMid.vrts.size() - 2);
             rightMid.endEdge2.p2 = rightMid.end2;
+            rightMid.opposite = leftMid;
+            leftMid.opposite = rightMid;
 
             rightEnd.vrts.remove(0);
             rightEnd.vrts.add(0, rightMid.end2);
@@ -748,7 +751,7 @@ public class PatchUtil {
             }
             if (tp.tr1 != null){
                 List<Point> top = new ArrayList<>();
-                for (int i = 0; i < tp.tr1.base.vrts.size(); ++i){
+                for (int i = 0; i < tp.tr1.base.refined.vrts.size(); ++i){
                     top.add(tp.tr1.cuspPoint);
                 }
                 Arc left = new Arc(tp.tr1.left.center, tp.tr1.left.radius);
@@ -756,10 +759,10 @@ public class PatchUtil {
                 ArcUtil.reverseArc(left, true);
                 Arc topL = new Arc(tp.tr1.cuspPoint, 0);
                 topL.vrts.addAll(top);
-                meshToroidalPatch(tp, tp.tr1.base, topL, left, tp.tr1.right, true);
+                meshToroidalPatch(tp, tp.tr1.base.refined, topL, left, tp.tr1.right, true);
 
                 top.clear();
-                for (int i = 0; i < tp.tr2.base.vrts.size(); ++i){
+                for (int i = 0; i < tp.tr2.base.refined.vrts.size(); ++i){
                     top.add(tp.tr2.cuspPoint);
                 }
                 left = new Arc(tp.tr2.left.center, tp.tr2.left.radius);
@@ -767,13 +770,13 @@ public class PatchUtil {
                 ArcUtil.reverseArc(left, true);
                 topL.vrts.clear();
                 topL.vrts.addAll(top);
-                meshToroidalPatch(tp, tp.tr2.base, topL, left, tp.tr2.right, true);
+                meshToroidalPatch(tp, tp.tr2.base.refined, topL, left, tp.tr2.right, true);
                 return;
             }
-            Arc bottom = tp.convexPatchArcs.get(0);
+            Arc bottom = tp.convexPatchArcs.get(0).refined;
             Arc left = null;
             Arc right = null;
-            Arc top = tp.convexPatchArcs.get(1);
+            Arc top = tp.convexPatchArcs.get(1).refined;
 
             Vector a1toa2 = Point.subtractPoints(tp.convexPatchArcs.get(0).owner.sphere.center, tp.convexPatchArcs.get(1).owner.sphere.center).makeUnit();
             Vector a1toprobe = Point.subtractPoints(tp.probe1, tp.convexPatchArcs.get(0).owner.sphere.center);
@@ -846,14 +849,14 @@ public class PatchUtil {
                     left.vrts.add(bottom.end2);
                     left.vrts.add(top.end1);
                     left.setEndPoints(bottom.end2, top.end1, true);
-                    ArcUtil.refineArc(left, Surface.maxEdgeLen, true,3, false);
+                    ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
                     newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
                     right = new Arc(newCenter, SesConfig.probeRadius);
 
                     right.vrts.add(bottom.end1);
                     right.vrts.add(top.end2);
                     right.setEndPoints(bottom.end1, top.end2, true);
-                    ArcUtil.refineArc(right, Surface.maxEdgeLen, false,3, false);
+                    ArcUtil.refineArc(right, SesConfig.edgeLimit, false,3, false);
                     if (right.vrts.size() != left.vrts.size()){
                         System.out.println("weird");
                     }
@@ -869,9 +872,9 @@ public class PatchUtil {
                 if (probeToRotationAx - SesConfig.probeRadius < 0.0){
 
                 } else {
-                    left = (Point.subtractPoints(bottom.end2, tp.concavePatchArcs.get(0).end2).sqrtMagnitude() < 0.0001) ? tp.concavePatchArcs.get(0) : tp.concavePatchArcs.get(1);
+                    left = (Point.subtractPoints(bottom.end2, tp.concavePatchArcs.get(0).end2).sqrtMagnitude() < 0.0001) ? tp.concavePatchArcs.get(0).refined : tp.concavePatchArcs.get(1).refined;
                     ArcUtil.reverseArc(left, true);
-                    right = (left == tp.concavePatchArcs.get(0)) ? tp.concavePatchArcs.get(1) : tp.concavePatchArcs.get(0);
+                    right = (left == tp.concavePatchArcs.get(0).refined) ? tp.concavePatchArcs.get(1).refined : tp.concavePatchArcs.get(0).refined;
                     meshToroidalPatch(tp, bottom, top, left, right, false);
                     ArcUtil.reverseArc(left, true);
                 }
@@ -1749,7 +1752,27 @@ public class PatchUtil {
                     v._id = sp.nextVertexID++;
                     sp.vertices.add(v);
                 }
+                for (Arc a : b.arcs){
+                    a.owner = sp;
+                    if (a.opposite != null && a.refined == null){
+                        a.refined = ArcUtil.dbgCloneArc(a);
+                        a.refined.owner = a.owner;
+                        ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
+                        a.opposite.refined = ArcUtil.cloneArc(a.refined);
+                        ArcUtil.reverseArc(a.opposite.refined, false);
+                        a.opposite.refined.owner = a.opposite.owner;
+                    } else {
+                        a.refined = ArcUtil.dbgCloneArc(a);
+                        a.refined.owner = a.owner;
+                        try {
+                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
+                        } catch (Exception e){
+                            e.printStackTrace();
+                        }
+                    }
+                }
             }
+            int a = 8777;
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -2257,7 +2280,7 @@ public class PatchUtil {
         return true;
     }
 
-    public static void updateEdgeFacesMap(SphericalPatch sp, Face f){
+    public static void addFaceToEdgeFacesMap(SphericalPatch sp, Face f){
         int sID = (f.a > f.b) ? f.b : f.a;
         int bID = (sID == f.a) ? f.b : f.a;
 
@@ -2294,5 +2317,23 @@ public class PatchUtil {
             map2.put(bID, new ArrayList<>(2));
         }
         map2.get(bID).add(f);
+    }
+
+    public static void removeFaceFromEdgeFacesMap(SphericalPatch sp, Face f){
+        Map<Integer, Map<Integer, List<Face>>> map1 = sp.edgeFacesMap;
+        int sID = (f.a > f.b) ? f.b : f.a;
+        int bID = (f.a > f.b) ? f.a : f.b;
+
+        map1.get(sID).get(bID).remove(f);
+
+        sID = (f.b > f.c) ? f.c : f.b;
+        bID = (f.b > f.c) ? f.b : f.c;
+
+        map1.get(sID).get(bID).remove(f);
+
+        sID = (f.a > f.c) ? f.c : f.a;
+        bID = (f.a > f.c) ? f.a : f.c;
+
+        map1.get(sID).get(bID).remove(f);
     }
 }

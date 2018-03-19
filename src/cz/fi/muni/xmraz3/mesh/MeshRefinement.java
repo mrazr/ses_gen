@@ -2,6 +2,7 @@ package cz.fi.muni.xmraz3.mesh;
 
 import cz.fi.muni.xmraz3.SesConfig;
 import cz.fi.muni.xmraz3.Surface;
+import cz.fi.muni.xmraz3.SurfaceParser;
 import cz.fi.muni.xmraz3.gui.MainWindow;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.utils.ArcUtil;
@@ -104,6 +105,9 @@ public class MeshRefinement {
                 }
                 if (!face.divisible){
                     int fads = 43;
+                }
+                if (sp.id == 13 && arcPointsInFace(face, sp.vertices) > 1){
+                    int _sf = 43;
                 }
                 boolean arcFace = isArcFace(face, sp.vertices);
                 if (!face.divisible || (arcFace && !canSubdivideArcFace(face, sp))){
@@ -263,6 +267,9 @@ public class MeshRefinement {
                 if (f.valid){
                     sp.faces.add(f);
                 }
+            }
+            if (sp.convexPatch && sp.id == 855){
+                SurfaceParser.exportPatch(sp);
             }
         }
         System.out.println("REFINE COMPLETE, thd: " + threadIdx + " in " + (System.currentTimeMillis() - startTime) + " ms");
@@ -574,6 +581,11 @@ public class MeshRefinement {
                     do {
                         afm._mesh2();
                     } while (!afm.atomComplete);
+                    if (a.convexPatch && a.id == 855){
+                        SurfaceParser.exportCP(a, "/home/radoslav/objs/bla.obj");
+                        SurfaceParser.exportPatch(a);
+                    }
+                    a.dbFaces.addAll(a.faces);
                     if (afm.volpe){
                         System.out.println((a.convexPatch) ? "convex " : "concave" + i + " looped");
                     } else {

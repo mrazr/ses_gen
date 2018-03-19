@@ -1779,6 +1779,14 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             }
         }
 
+        if (keyEvent.getKeyChar() == 'h'){
+            SphericalPatch sp = Surface.convexPatches.get(convexPatchesSelect.get(0));
+            SurfaceParser.exportPatch(sp);
+            SurfaceParser.exportCP(sp, "/home/radoslav/objs/cp_" + sp.id + ".obj");
+            SurfaceParser.exportOldFaces(sp);
+            SurfaceParser.exportCP_(sp);
+        }
+
         if (keyEvent.getKeyChar() == ']'){
             //toriPushData2GPU.set(false);
             int step = Surface.rectangles.size() / 4;
@@ -1813,7 +1821,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             (new Thread(t4)).start();*/
         }
 
-        if (keyEvent.getKeyChar() == 'h'){
+        /*if (keyEvent.getKeyChar() == 'h'){
             Runnable t1 = new Runnable() {
                 @Override
                 public void run() {
@@ -1822,7 +1830,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             };
             concavePushData2GPU.set(true);
             (new Thread(t1)).start();
-        }
+        }*/
 
         if (keyEvent.getKeyChar() == '\\'){
             stopRendering.set(!stopRendering.get());

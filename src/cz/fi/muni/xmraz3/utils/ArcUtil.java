@@ -284,6 +284,9 @@ public class ArcUtil {
 
     public static double getAngleR(Arc a){
         double phi = Math.acos(a.toEnd1.dotProduct(a.toEnd2));
+        if (Math.abs(a.toEnd1.dotProduct(a.toEnd2) + 1) < 0.001){
+            return Math.PI;
+        }
         if (Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
             phi = 2 * Math.PI - phi;
         }
@@ -341,6 +344,7 @@ public class ArcUtil {
         a.normal = Vector.scaleVector(neighborToAtom, 1).makeUnit();
         a.end1 = end1;
         a.end2 = end2;
+        a.setEndPoints(a.end1, a.end2, false);
         a.endEdge1 = new Edge(0, 1);
         a.endEdge1.p1 = end1;
         a.endEdge1.p2 = mid;
@@ -352,8 +356,8 @@ public class ArcUtil {
         a.endEdge1.next = a.endEdge2;
         a.endEdge2.prev = a.endEdge1;
 
-        a.toEnd1 = Point.subtractPoints(end1, sp.sphere.center).makeUnit();
-        a.toEnd2 = Point.subtractPoints(end2, sp.sphere.center).makeUnit();
+        //a.toEnd1 = Point.subtractPoints(end1, sp.sphere.center).makeUnit();
+        //a.toEnd2 = Point.subtractPoints(end2, sp.sphere.center).makeUnit();
 
         a.vrts.add(end1);
         //a.vrts.add(mid);
@@ -568,7 +572,7 @@ public class ArcUtil {
         a.mid = newMid;
     }
 
-    private static final double PLANE_EPS = 0.002;
+    private static final double PLANE_EPS = 0.001;
     public static Arc findContainingArc(Point p, Plane circle, SphericalPatch sp, Arc exclude){
         for (Boundary b : sp.boundaries){
             for (Arc a : b.arcs){

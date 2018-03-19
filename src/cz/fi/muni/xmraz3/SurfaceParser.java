@@ -281,6 +281,9 @@ public class SurfaceParser {
                 }
                 for (Boundary b : sp.boundaries) {
                     for (Arc a : b.arcs){
+                        for (Point v : a.vrts){
+                            v.arcPoint = true;
+                        }
                         if (a.refined != null){
                             continue;
                         }
@@ -295,6 +298,10 @@ public class SurfaceParser {
                         ArcUtil.refineOppositeArcs(a.refined, op.refined, SesConfig.edgeLimit, true);
                         ArcUtil.generateEdgeSplits(a.refined, sp);
                         ArcUtil.generateEdgeSplits(op.refined, op.owner);
+                        a.vrts.clear();
+                        a.vrts.addAll(a.refined.vrts);
+                        op.vrts.clear();
+                        op.vrts.addAll(op.refined.vrts);
                     }
                     for (Boundary c : sp.boundaries) {
                         if (c == b) {
@@ -383,16 +390,20 @@ public class SurfaceParser {
                         tp.convexPatchArcs.add(j);
                         tp.circular = true;
 
+                        if (atom1.id == 811 || atom1.id == 5231 || atom2.id == 811 || atom2.id == 5231){
+                            int afd = 4;
+                        }
+
                         assignRollingPatchToAtoms(atom1, atom2, tp);
                         Arc smallerRadius = (a.owner.sphere.radius <= j.owner.sphere.radius) ? a : j;
                         Arc greaterRadius = (smallerRadius == a) ? j : a;
-                        //ArcUtil.refineArc(smallerRadius, Main.maxEdgeLen, true,2, false);
-                        ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, false,0, false);
-                        ArcUtil.buildEdges(smallerRadius);
-                        //int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
-                        int numOfDivs = ArcUtil.getSubdivisionLevel(smallerRadius);
-                        ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, true, numOfDivs, false);
+                        ArcUtil.refineArc(greaterRadius, 0, true,1, false);
+                        ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, false,0, false);
                         ArcUtil.buildEdges(greaterRadius);
+                        //int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
+                        int numOfDivs = ArcUtil.getSubdivisionLevel(greaterRadius);
+                        ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, true, numOfDivs, false);
+                        ArcUtil.buildEdges(smallerRadius);
 
                         /*smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
                         greaterRadius.refined = ArcUtil.dbgCloneArc(greaterRadius);
@@ -402,7 +413,7 @@ public class SurfaceParser {
 
                         ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);*/
 
-                        System.out.println("refined circle loop: " + smallerRadius.vrts.size() + ", " + greaterRadius.vrts.size());
+                        System.out.println("refined circle loop: " + atom1.id + ", " + atom2.id);
                     }
                 }
             }
@@ -1384,6 +1395,59 @@ public class SurfaceParser {
                 bw.newLine();
             }
             bw.flush();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void exportOldFaces(SphericalPatch sp){
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/home/radoslav/objs/patch" + sp.id + (Math.random() * 10) + ".obj"))) {
+            String line = "";
+            for (Point v : sp.vertices){
+                line = "v " + v.toString();
+                bw.write(line);
+                bw.newLine();
+                line = "vn " + Point.subtractPoints(v, sp.sphere.center).makeUnit().toString();
+                bw.write(line);
+                bw.newLine();
+            }
+            for (Face f : sp.dbFaces){
+                int i1 = f.a + 1;
+                int i2 = f.b + 1;
+                int i3 = f.c + 1;
+                line = "f " + i1 + "//" + i1 + " " + i2 + "//" + i2 + " " + i3 + "//" + i3;
+                bw.write(line);
+                bw.newLine();
+            }
+            bw.flush();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void exportCP_(SphericalPatch sp){
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/home/radoslav/objs/newB_" + sp.id + ".obj"))){
+            int off = 0;
+            for (Boundary b : sp.boundaries){
+                Boundary b_ = new Boundary();
+                for (Arc a : b.arcs){
+                    b_.arcs.add(a.refined);
+                }
+                ArcUtil.buildEdges(b_, true);
+                for (Point v : b_.vrts){
+                    bw.write("v " + v.toString());
+                    bw.newLine();
+                }
+                for (int i = 1; i <= b_.vrts.size(); ++i){
+                    if (i == b_.vrts.size()){
+                        bw.write("l " + (i + off) + " " + (1 + off));
+                    } else {
+                        bw.write("l " + (i + off) + " " + (i + 1 + off));
+                    }
+                    bw.newLine();
+                }
+                off += b_.vrts.size();
+            }
         } catch (IOException e){
             e.printStackTrace();
         }

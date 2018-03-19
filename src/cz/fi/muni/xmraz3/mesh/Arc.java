@@ -58,13 +58,13 @@ public class Arc {
     }
 
     public boolean isInside(Point p){
-        if (Math.abs(new Plane(this.center, this.normal).checkPointLocation(p)) > 0.005){
+        if (Math.abs(new Plane(this.center, this.normal).checkPointLocation(p)) > 0.001){
             return false;
         }
-        if (Point.distance(p, end1) < 0.0015 || Point.distance(p, end2) < 0.0015){
+        if (Point.distance(p, end1) < 0.001 || Point.distance(p, end2) < 0.001){
             return true;
         }
-        if (Math.abs(Point.distance(p, center) - radius) > 0.005){
+        if (Math.abs(Point.distance(p, center) - radius) > 0.001){
             return false;
         }
         Vector v = Point.subtractPoints(p, center).makeUnit();

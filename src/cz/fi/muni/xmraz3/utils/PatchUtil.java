@@ -749,6 +749,20 @@ public class PatchUtil {
                     }
                 }
             }
+            for (Arc a : tp.convexPatchArcs){
+                if (a.refined == null){
+                    a.refined = ArcUtil.dbgCloneArc(a);
+                    a.refined.owner = a.owner;
+                    ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false);
+                }
+            }
+            for (Arc a : tp.concavePatchArcs){
+                if (a.refined == null){
+                    a.refined = ArcUtil.dbgCloneArc(a);
+                    a.refined.owner = a.owner;
+                    ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false);
+                }
+            }
             if (tp.tr1 != null){
                 List<Point> top = new ArrayList<>();
                 for (int i = 0; i < tp.tr1.base.refined.vrts.size(); ++i){
@@ -801,8 +815,8 @@ public class PatchUtil {
                     Vector v;
                     left.vrts.add(bottomCusp);
                     left.setEndPoints(bottom.end2, bottomCusp, true);
-                    ArcUtil.refineArc(left, Surface.maxEdgeLen, true,3, false);
-                    ArcUtil.refineArc(left, Surface.maxEdgeLen, false,0, false);
+                    ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
+                    ArcUtil.refineArc(left, SesConfig.edgeLimit, false,0, false);
 
                     newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
 
@@ -814,7 +828,7 @@ public class PatchUtil {
                     right.vrts.add(bottomCusp);
                     right.setEndPoints(bottom.end1, bottomCusp, true);
                     int numOfDivs = (int)(Math.log10(left.vrts.size() - 1) / Math.log10(2));
-                    ArcUtil.refineArc(right, Surface.maxEdgeLen, true, numOfDivs, false);
+                    ArcUtil.refineArc(right, SesConfig.edgeLimit, true, numOfDivs, false);
                     meshToroidalPatch(tp, bottom, topForBottomRect, left, right, false);
 
                     Arc bottomForTopRect = new Arc(top.center, top.radius);
@@ -828,8 +842,8 @@ public class PatchUtil {
                     v = Point.subtractPoints(mid, left.center).makeUnit().multiply(left.radius);
                     left.vrts.add(topCusp);
                     left.setEndPoints(top.end2, topCusp, true);
-                    ArcUtil.refineArc(left, Surface.maxEdgeLen, true,3, false);
-                    ArcUtil.refineArc(left, Surface.maxEdgeLen, false, 0, false);
+                    ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
+                    ArcUtil.refineArc(left, SesConfig.edgeLimit, false, 0, false);
                     newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
                     right = new Arc(newCenter, SesConfig.probeRadius);
                     right.vrts.add(top.end1);
@@ -839,7 +853,7 @@ public class PatchUtil {
                     right.vrts.add(topCusp);
                     right.setEndPoints(top.end1, topCusp, true);
                     numOfDivs = (int)(Math.log10(left.vrts.size() - 1) / Math.log10(2));
-                    ArcUtil.refineArc(right, Surface.maxEdgeLen, true, numOfDivs, false);
+                    ArcUtil.refineArc(right, SesConfig.edgeLimit, true, numOfDivs, false);
                     meshToroidalPatch(tp, top, bottomForTopRect, left, right, false);
                     //System.out.println("finished meshing circ patch");
                 } else {
@@ -880,6 +894,7 @@ public class PatchUtil {
                 }
             }
         } catch (Exception e){
+            System.out.println("for tp" + tp.id);
             e.printStackTrace();
         }
     }
@@ -1196,6 +1211,28 @@ public class PatchUtil {
                     newA.vrts.add(in1);
                     newA.vrts.add(in2);
                     usedPoints.add(in2);
+                    if (a1.torus != null){
+                        if (a1.torus.tr1 != null){
+                            if (a1 == a1.torus.tr1.left){
+                                a1.torus.tr1.left = newA;
+                            } else if (a1 == a1.torus.tr1.right){
+                                a1.torus.tr1.right = newA;
+                            } else if (a1 == a1.torus.tr2.left){
+                                a1.torus.tr2.left = newA;
+                            } else if (a1 == a1.torus.tr2.right){
+                                a1.torus.tr2.right = newA;
+                            }
+                        } else {
+                            if (a1.torus.concavePatchArcs.get(0) == a1){
+                                a1.torus.concavePatchArcs.remove(a1);
+                                a1.torus.concavePatchArcs.add(newA);
+                            } else {
+                                a1.torus.concavePatchArcs.remove(a1);
+                                a1.torus.concavePatchArcs.add(newA);
+                            }
+                        }
+                        newA.torus = a1.torus;
+                    }
                     ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     toBridge = true;
                     in1 = in2;
@@ -1230,6 +1267,28 @@ public class PatchUtil {
                     } else {
                         ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     }
+                    if (a1.torus != null){
+                        if (a1.torus.tr1 != null){
+                            if (a1 == a1.torus.tr1.left){
+                                a1.torus.tr1.left = newA;
+                            } else if (a1 == a1.torus.tr1.right){
+                                a1.torus.tr1.right = newA;
+                            } else if (a1 == a1.torus.tr2.left){
+                                a1.torus.tr2.left = newA;
+                            } else if (a1 == a1.torus.tr2.right){
+                                a1.torus.tr2.right = newA;
+                            }
+                        } else {
+                            if (a1.torus.concavePatchArcs.get(0) == a1){
+                                a1.torus.concavePatchArcs.remove(a1);
+                                a1.torus.concavePatchArcs.add(newA);
+                            } else {
+                                a1.torus.concavePatchArcs.remove(a1);
+                                a1.torus.concavePatchArcs.add(newA);
+                            }
+                        }
+                        newA.torus = a1.torus;
+                    }
                     b.arcs.add(newA);
                 }
                 a = a.next;
@@ -1255,6 +1314,32 @@ public class PatchUtil {
                     } else {
                         ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     }
+                    if (a.torus != null){
+                        if (a.torus.tr1 != null){
+                            if (a == a.torus.tr1.left){
+                                a.torus.tr1.left = newA;
+                                a.cuspTriangle = a.torus.tr1;
+                            } else if (a == a.torus.tr1.right){
+                                a.torus.tr1.right = newA;
+                                a.cuspTriangle = a.torus.tr1;
+                            } else if (a == a.torus.tr2.left){
+                                a.torus.tr2.left = newA;
+                                a.cuspTriangle = a.torus.tr2;
+                            } else if (a == a.torus.tr2.right){
+                                a.torus.tr2.right = newA;
+                                a.cuspTriangle = a.torus.tr2;
+                            }
+                        } else {
+                            if (a.torus.concavePatchArcs.get(0) == a){
+                                a.torus.concavePatchArcs.remove(a);
+                                a.torus.concavePatchArcs.add(newA);
+                            } else {
+                                a.torus.concavePatchArcs.remove(a);
+                                a.torus.concavePatchArcs.add(newA);
+                            }
+                        }
+                        newA.torus = a.torus;
+                    }
                     b.arcs.add(newA);
                 }
                 a = a.next;
@@ -1278,6 +1363,32 @@ public class PatchUtil {
                     } else {
                         newA.cuspTriangle.right = newA;
                     }
+                }
+                if (a.torus != null){
+                    if (a.torus.tr1 != null){
+                        if (a == a.torus.tr1.left){
+                            a.torus.tr1.left = newA;
+                            a.cuspTriangle = a.torus.tr1;
+                        } else if (a == a.torus.tr1.right){
+                            a.torus.tr1.right = newA;
+                            a.cuspTriangle = a.torus.tr1;
+                        } else if (a == a.torus.tr2.left){
+                            a.torus.tr2.left = newA;
+                            a.cuspTriangle = a.torus.tr2;
+                        } else if (a == a.torus.tr2.right){
+                            a.torus.tr2.right = newA;
+                            a.cuspTriangle = a.torus.tr2;
+                        }
+                    } else {
+                        if (a.torus.concavePatchArcs.get(0) == a){
+                            a.torus.concavePatchArcs.remove(a);
+                            a.torus.concavePatchArcs.add(newA);
+                        } else {
+                            a.torus.concavePatchArcs.remove(a);
+                            a.torus.concavePatchArcs.add(newA);
+                        }
+                    }
+                    newA.torus = a.torus;
                 }
                 b.arcs.add(newA);
                 a = a.next;
@@ -1336,7 +1447,15 @@ public class PatchUtil {
                         System.out.println("wont split");
                     }*/
 
-
+                    boolean inside = a1.vrts.stream().allMatch(p -> (Point.distance(p, p1) < 0.001) || circle.checkPointLocation(p) > 0.0) &&
+                            a1.next.vrts.stream().allMatch(p -> Point.distance(p, p1) < 0.001 || circle.checkPointLocation(p) > 0.0) &&
+                            a1.prev.vrts.stream().allMatch(p -> Point.distance(p, p1) < 0.001 || circle.checkPointLocation(p) > 0.0) &&
+                            a2.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0) &&
+                            a2.next.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0) &&
+                            a2.prev.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0);
+                    if (inside){
+                        return;
+                    }
 
                     if (Point.distance(in1, a1.end2) < 0.001 && Point.distance(in2, a2.end2) < 0.001){
                         boolean allInside = true;
@@ -1649,6 +1768,9 @@ public class PatchUtil {
                 Plane p = new Plane(center, nV);
                 List<Point> intersectionPoints = new ArrayList<>();
                 findIntersectionPoints(sp, center, radius, intersectionPoints, null);
+                if (sp.id == 2337 && sp2.id == 2408){
+                    int fads = 32;
+                }
                 if (intersectionPoints.size() > 1) {
                     if (planes.get(sp.id).stream().noneMatch(plane -> plane.isIdenticalWith(p))) {
                         planes.get(sp.id).add(p);
@@ -1818,12 +1940,12 @@ public class PatchUtil {
                         Point in1 = Point.translatePoint(midTetiva, Vector.scaleVector(vInt, odv2));
                         Point in2 = Point.translatePoint(midTetiva, Vector.scaleVector(vInt, -odv2));
                         if (a.isInside(in1)){
-                            if (intersectionPoints.stream().noneMatch(v -> Point.distance(in1, v) < 0.005)){
+                            if (intersectionPoints.stream().noneMatch(v -> Point.distance(in1, v) < 0.01)){
                                 intersectionPoints.add(in1);
                             }
                         }
                         if (a.isInside(in2)) {
-                            if (intersectionPoints.stream().noneMatch(v -> Point.distance(in2, v) < 0.005)){
+                            if (intersectionPoints.stream().noneMatch(v -> Point.distance(in2, v) < 0.01)){
                                 intersectionPoints.add(in2);
                             }
                         }
@@ -1919,6 +2041,28 @@ public class PatchUtil {
                     } else {
                         ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     }
+                    if (arc.torus != null){
+                        if (arc.torus.tr1 != null){
+                            if (arc == arc.torus.tr1.left){
+                                arc.torus.tr1.left = newA;
+                            } else if (arc == arc.torus.tr1.right){
+                                arc.torus.tr1.right = newA;
+                            } else if (arc == arc.torus.tr2.left){
+                                arc.torus.tr2.left = newA;
+                            } else if (arc == arc.torus.tr2.right){
+                                arc.torus.tr2.right = newA;
+                            }
+                        } else {
+                            if (arc.torus.concavePatchArcs.get(0) == arc){
+                                arc.torus.concavePatchArcs.remove(arc);
+                                arc.torus.concavePatchArcs.add(newA);
+                            } else {
+                                arc.torus.concavePatchArcs.remove(arc);
+                                arc.torus.concavePatchArcs.add(newA);
+                            }
+                        }
+                        newA.torus = arc.torus;
+                    }
                 } else {
                     first = arc.end1;
                 }
@@ -1941,6 +2085,28 @@ public class PatchUtil {
                     ArcUtil.refineArc(newA2, 0, true, subdLevel, false);
                 } else {
                     ArcUtil.refineArc(newA2, Surface.maxEdgeLen, false, 0, false);
+                }
+                if (a.torus != null){
+                    if (a.torus.tr1 != null){
+                        if (a == a.torus.tr1.left){
+                            a.torus.tr1.left = newA2;
+                        } else if (a == a.torus.tr1.right){
+                            a.torus.tr1.right = newA2;
+                        } else if (a == a.torus.tr2.left){
+                            a.torus.tr2.left = newA2;
+                        } else if (a == a.torus.tr2.right){
+                            a.torus.tr2.right = newA2;
+                        }
+                    } else {
+                        if (a.torus.concavePatchArcs.get(0) == a){
+                            a.torus.concavePatchArcs.remove(a);
+                            a.torus.concavePatchArcs.add(newA2);
+                        } else {
+                            a.torus.concavePatchArcs.remove(a);
+                            a.torus.concavePatchArcs.add(newA2);
+                        }
+                    }
+                    newA2.torus = a.torus;
                 }
                 /*newA2.prev = newA;
                 newA.next = newA2;
@@ -1990,6 +2156,29 @@ public class PatchUtil {
                 } else {
                     ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                 }
+
+                if (a.torus != null){
+                    if (a.torus.tr1 != null){
+                        if (a == a.torus.tr1.left){
+                            a.torus.tr1.left = newA;
+                        } else if (a == a.torus.tr1.right){
+                            a.torus.tr1.right = newA;
+                        } else if (a == a.torus.tr2.left){
+                            a.torus.tr2.left = newA;
+                        } else if (a == a.torus.tr2.right){
+                            a.torus.tr2.right = newA;
+                        }
+                    } else {
+                        if (a.torus.concavePatchArcs.get(0) == a){
+                            a.torus.concavePatchArcs.remove(a);
+                            a.torus.concavePatchArcs.add(newA);
+                        } else {
+                            a.torus.concavePatchArcs.remove(a);
+                            a.torus.concavePatchArcs.add(newA);
+                        }
+                    }
+                    newA.torus = a.torus;
+                }
                 /*newA.prev = a.prev;
                 newA.prev.next = newA;*/
 
@@ -2010,6 +2199,28 @@ public class PatchUtil {
                         ArcUtil.refineArc(newA2, 0, true, subdLevel, false);
                     } else {
                         ArcUtil.refineArc(newA2, Surface.maxEdgeLen, false, 0, false);
+                    }
+                    if (arc.torus != null){
+                        if (arc.torus.tr1 != null){
+                            if (arc == arc.torus.tr1.left){
+                                arc.torus.tr1.left = newA2;
+                            } else if (arc == arc.torus.tr1.right){
+                                arc.torus.tr1.right = newA2;
+                            } else if (arc == arc.torus.tr2.left){
+                                arc.torus.tr2.left = newA2;
+                            } else if (arc == arc.torus.tr2.right){
+                                arc.torus.tr2.right = newA2;
+                            }
+                        } else {
+                            if (arc.torus.concavePatchArcs.get(0) == arc){
+                                arc.torus.concavePatchArcs.remove(arc);
+                                arc.torus.concavePatchArcs.add(newA2);
+                            } else {
+                                arc.torus.concavePatchArcs.remove(arc);
+                                arc.torus.concavePatchArcs.add(newA2);
+                            }
+                        }
+                        newA2.torus = arc.torus;
                     }
                 } else {
                     second = arc.end2;

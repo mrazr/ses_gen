@@ -162,7 +162,7 @@ public class AdvancingFrontMethod {
     public List<Long> looped = new ArrayList<>();
     public boolean volpe = false;
     public int vertexHighlight = 0;
-    private static int timeout = 500;
+    private static int timeout = 1000;
     public static int maxNumberOfRestarts = 0;
     private int currentTry = 0;
 
@@ -1850,6 +1850,9 @@ public class AdvancingFrontMethod {
                         pt = t;
                     }
                 }
+                /*if (!isValidTriangle(e.p1, e.p2, pt)){
+                    System.out.println("constructing invalid triangle for: " + patch.id);
+                }*/
                 //System.out.println("Selected " + pt);
                 //1st case in which the best candidate is the other point from neighbouring edge that is not shared with edge 'e'
                 /*if (pt.afmSelect == 1){
@@ -2326,5 +2329,11 @@ public class AdvancingFrontMethod {
         atomComplete = false;
         concavePatch = true;
         //cp.vertices.addAll(nodes);
+    }
+
+    public static boolean isValidTriangle(Point a, Point b, Point c){
+        Vector v1 = Point.subtractPoints(a, b).makeUnit();
+        Vector v2 = Point.subtractPoints(c, b).makeUnit();
+        return !(Math.abs(Math.abs(v1.dotProduct(v2)) - 1.0) < 0.001);
     }
 }

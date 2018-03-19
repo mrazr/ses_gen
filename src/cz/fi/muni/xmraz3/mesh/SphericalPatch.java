@@ -17,6 +17,7 @@ public class SphericalPatch {
     public List<Integer> intersectingPatches;
     public List<Point> vertices;
     public List<Face> faces;
+    public List<Face> dbFaces = new ArrayList<>();
     public Map<Integer, Map<Integer, List<Face>>> edgeFacesMap;
     public int arcPointCount = 0;
 

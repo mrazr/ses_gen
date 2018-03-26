@@ -257,8 +257,8 @@ public class ArcUtil {
     public static void buildEdges(Boundary b, boolean clear){
         if (clear) {
             b.vrts.clear();
+            linkArcs(b.arcs);
             for (Arc a : b.arcs) {
-                linkArcs(b.arcs);
                 a.bOwner = b;
                 a.owner = b.patch;
                 a.valid = true;
@@ -775,6 +775,41 @@ public class ArcUtil {
             return p1.arc;
         } else {
             return null;
+        }
+    }
+
+    public static void refineArcsOnConcavePatch(SphericalPatch sp){
+        for (Boundary b : sp.boundaries){
+            for (Arc a : b.arcs){
+                a.owner = sp;
+                if (a.opposite != null && a.refined == null){
+                    a.refined = ArcUtil.dbgCloneArc(a);
+                    a.refined.owner = a.owner;
+                    ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
+                    a.opposite.refined = ArcUtil.cloneArc(a.refined);
+                    ArcUtil.reverseArc(a.opposite.refined, false);
+                    a.opposite.refined.owner = a.opposite.owner;
+                    a.vrts.clear();
+                    a.vrts.addAll(a.refined.vrts);
+                    a.opposite.vrts.clear();
+                    a.opposite.vrts.addAll(a.opposite.refined.vrts);
+                } else {
+                    a.refined = ArcUtil.dbgCloneArc(a);
+                    a.refined.owner = a.owner;
+                    try {
+                        ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
+                    } catch (Exception e){
+                        e.printStackTrace();
+                    }
+                    a.vrts.clear();
+                    a.vrts.addAll(a.refined.vrts);
+                }
+            }
+            ArcUtil.buildEdges(b, true);
+            for (Point v : b.vrts){
+                v._id = sp.nextVertexID++;
+                sp.vertices.add(v);
+            }
         }
     }
 }

@@ -84,7 +84,7 @@ public class MeshRefinement {
         List<Face> newFaces = new ArrayList<>(1000);
         for (int i = threadIdx * step; i < ((threadIdx == 3) ? patches.size() : (threadIdx + 1) * step); ++i) {
             SphericalPatch sp = patches.get(i);
-            if (!sp.convexPatch) {
+            if (!sp.convexPatch || true) {
                 continue;
             }
             if (!sp.valid) {
@@ -110,12 +110,24 @@ public class MeshRefinement {
                     int _sf = 43;
                 }
                 boolean arcFace = isArcFace(face, sp.vertices);
-                if (!face.divisible || (arcFace && !canSubdivideArcFace(face, sp))){
-                    if (isSplit(a, b, sp)){
+                if (!face.divisible || (arcFace && !canSubdivideArcFace(face, sp)) || (face.forceRefine && isSmallTriangle(face, sp, 1.6 * SesConfig.edgeLimit))){
+                    if (isSplit(a, b, sp) || (Point.distance(a, b) - 1.6 * SesConfig.edgeLimit) > 0.0){
                         int sID = (a._id > b._id) ? b._id : a._id;
                         int bID = (a._id > b._id) ? a._id : b._id;
                         PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
-                        Point d = sp.vertices.get(splitMap.get(sID).get(bID));
+                        if (!splitMap.containsKey(sID)){
+                            splitMap.put(sID, new TreeMap<>());
+                        }
+                        Map<Integer, Integer> map = splitMap.get(sID);
+                        Point d;
+                        if (!map.containsKey(bID)){
+                            d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
+                            d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d._id = sp.nextVertexID++;
+                            sp.vertices.add(d);
+                            map.put(bID, d._id);
+                        }
+                        d = sp.vertices.get(splitMap.get(sID).get(bID));
                         Face nF = new Face(a._id, d._id, c._id);
                         PatchUtil.addFaceToEdgeFacesMap(sp, nF);
                         nF.divisible = false;
@@ -125,11 +137,23 @@ public class MeshRefinement {
                         nF.divisible = false;
                         facesToRefine.add(nF);
                         face.valid = false;
-                    } else if (isSplit(b, c, sp)){
+                    } else if (isSplit(b, c, sp) || (Point.distance(b, c) - 1.6 * SesConfig.edgeLimit) > 0.0){
                         int sID = (b._id > c._id) ? c._id : b._id;
                         int bID = (b._id > c._id) ? b._id : c._id;
                         PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
-                        Point d = sp.vertices.get(splitMap.get(sID).get(bID));
+                        if (!splitMap.containsKey(sID)){
+                            splitMap.put(sID, new TreeMap<>());
+                        }
+                        Map<Integer, Integer> map = splitMap.get(sID);
+                        Point d;
+                        if (!map.containsKey(bID)){
+                            d = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
+                            d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d._id = sp.nextVertexID++;
+                            sp.vertices.add(d);
+                            map.put(bID, d._id);
+                        }
+                        d = sp.vertices.get(splitMap.get(sID).get(bID));
                         Face nF = new Face(b._id, d._id, a._id);
                         PatchUtil.addFaceToEdgeFacesMap(sp, nF);
                         nF.divisible = false;
@@ -139,11 +163,23 @@ public class MeshRefinement {
                         PatchUtil.addFaceToEdgeFacesMap(sp, nF);
                         facesToRefine.add(nF);
                         face.valid = false;
-                    } else if (isSplit(c, a, sp)){
+                    } else if (isSplit(c, a, sp) || (Point.distance(c, a) - 1.6 * SesConfig.edgeLimit) > 0.0){
                         int sID = (a._id > c._id) ? c._id : a._id;
                         int bID = (a._id > c._id) ? a._id : c._id;
                         PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
-                        Point d = sp.vertices.get(splitMap.get(sID).get(bID));
+                        if (!splitMap.containsKey(sID)){
+                            splitMap.put(sID, new TreeMap<>());
+                        }
+                        Map<Integer, Integer> map = splitMap.get(sID);
+                        Point d;
+                        if (!map.containsKey(bID)){
+                            d = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
+                            d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d._id = sp.nextVertexID++;
+                            sp.vertices.add(d);
+                            map.put(bID, d._id);
+                        }
+                        d = sp.vertices.get(splitMap.get(sID).get(bID));
                         Face nF = new Face(c._id, d._id, b._id);
                         nF.divisible = false;
                         PatchUtil.addFaceToEdgeFacesMap(sp, nF);
@@ -571,25 +607,35 @@ public class MeshRefinement {
                 phase1Queue.add(a);
                 continue;
             }
+            /*if (!a.convexPatch){
+                continue;
+            }*/
+            if (!a.convexPatch && a.id == 85){
+                int j = 4;
+            }
             if (!a.meshed) {
                 if (a.boundaries.size() > 0) {
                     if (a.convexPatch) {
-                        afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f));
+                        afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
                     } else {
-                        afm._initializeConcaveAFM(a, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f));
+                        afm._initializeConcaveAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
                     }
                     do {
-                        afm._mesh2();
+                        //afm._mesh2();
+                        afm.newMesh();
                     } while (!afm.atomComplete);
-                    if (a.convexPatch && a.id == 855){
+                    /*if (a.convexPatch && a.id == 855){
                         SurfaceParser.exportCP(a, "/home/radoslav/objs/bla.obj");
                         SurfaceParser.exportPatch(a);
-                    }
+                    }*/
                     a.dbFaces.addAll(a.faces);
-                    if (afm.volpe){
-                        System.out.println((a.convexPatch) ? "convex " : "concave" + i + " looped");
+                    if (afm.loop){
+                        System.out.println((a.convexPatch) ? "convex " + i + "looped" : "concave" + i + " looped");
                     } else {
-                        optimizeMesh(a, Surface.maxEdgeLen);
+                        //optimizeMesh(a, Surface.maxEdgeLen);
+                    }
+                    if (!a.convexPatch && a.id == 225){
+                        System.out.println("A:");
                     }
                     a.meshed = true;
                 }
@@ -605,6 +651,7 @@ public class MeshRefinement {
             System.out.println("STARTING REFINING");
             threads_done.set(0);
             MeshRefinement.refinement.start(patches);
+            System.out.println(SesConfig.minAlpha);
         }
     }
 
@@ -816,5 +863,12 @@ public class MeshRefinement {
             return false;
         }
         return split.get(sID).containsKey(bID);
+    }
+
+    private static boolean isSmallTriangle(Face f, SphericalPatch sp, double minLen){
+        Point a = sp.vertices.get(f.a);
+        Point b = sp.vertices.get(f.b);
+        Point c = sp.vertices.get(f.c);
+        return (Point.distance(a, b) - minLen < 0.0 || Point.distance(b, c) - minLen < 0.0 || Point.distance(a, c) - minLen < 0.0);
     }
 }

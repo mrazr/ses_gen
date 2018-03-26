@@ -107,6 +107,9 @@ public class SurfaceParser {
             PatchUtil.processSelfIntersectingTori();
             PatchUtil.processSelfIntersectingConcavePatches();
             PatchUtil.processIntersectingConcavePatches();
+            for (SphericalPatch sp : Surface.triangles){
+                ArcUtil.refineArcsOnConcavePatch(sp);
+            }
             MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
 
             MeshRefinement.threads_done.set(0);

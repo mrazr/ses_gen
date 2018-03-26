@@ -1436,6 +1436,7 @@ public class PatchUtil {
                     }
                     if (a1.bOwner != a2.bOwner && a1.bOwner.nestedBoundaries.contains(a2.bOwner)) {
                         //System.out.println("about to merge nested boundaries");
+                        int c = 32;
                     }
 
                     //int spl = patchSplit(intersectionPoints, in1, in2, sp, circle);
@@ -1869,31 +1870,6 @@ public class PatchUtil {
                     }
                 }*/
             //System.out.println("");
-            for (Boundary b : sp.boundaries){
-                for (Point v : b.vrts){
-                    v._id = sp.nextVertexID++;
-                    sp.vertices.add(v);
-                }
-                for (Arc a : b.arcs){
-                    a.owner = sp;
-                    if (a.opposite != null && a.refined == null){
-                        a.refined = ArcUtil.dbgCloneArc(a);
-                        a.refined.owner = a.owner;
-                        ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
-                        a.opposite.refined = ArcUtil.cloneArc(a.refined);
-                        ArcUtil.reverseArc(a.opposite.refined, false);
-                        a.opposite.refined.owner = a.opposite.owner;
-                    } else {
-                        a.refined = ArcUtil.dbgCloneArc(a);
-                        a.refined.owner = a.owner;
-                        try {
-                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
-                        } catch (Exception e){
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }
             int a = 8777;
         } catch (Exception e){
             e.printStackTrace();
@@ -2546,5 +2522,9 @@ public class PatchUtil {
         bID = (f.a > f.c) ? f.a : f.c;
 
         map1.get(sID).get(bID).remove(f);
+    }
+
+    public static Vector computeTriangleNormal(Point a, Point b, Point c){
+        return Vector.getNormalVector(Point.subtractPoints(b, a).makeUnit(), Point.subtractPoints(c, a).makeUnit()).makeUnit();
     }
 }

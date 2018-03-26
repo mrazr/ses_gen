@@ -6,6 +6,6 @@ public class SesConfig {
     public static int trianglesCount;
     public static int toriCount;
     public static double minAlpha;
-    public static double distTolerance;
+    public static double distTolerance = 0.2 * 0.3;
     public static double edgeLimit = 0.3;
 }

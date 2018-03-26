@@ -36,8 +36,6 @@ import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -1203,7 +1201,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 long time = 0;
                 //System.out.println("Meshing atom " + i);
                 if (a.boundaries.size() > 0) {
-                    afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f));
+                    afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
                     //updaFaces = afm.soho(a.convexPatchBoundaries.get(0), Math.toRadians(75), 0.2, 0.3 * (Math.sqrt(3) / 2.f), false, noveBody);
                         /*do {
                             overallTime += System.currentTimeMillis() - time;
@@ -1227,7 +1225,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     do {
                         afm._mesh2();
                     } while (!afm.atomComplete);
-                    if (afm.volpe){
+                    if (afm.loop){
                         System.out.println("convex " + i + " looped");
                     }
                     //meshTime += (System.currentTimeMillis() - time);
@@ -1462,17 +1460,17 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 while (!afm.atomComplete) {
                     faces.clear();
                     verts.clear();
-                    afm._initializeConcaveAFM(cp, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f));
+                    afm._initializeConcaveAFM(cp, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
                     long time = System.currentTimeMillis();
                     afm._mesh2();
                     //meshTime += System.currentTimeMillis() - time;
                     //cpVrts = noveBody;
                     //trianglesCount += cpFaces.size();
                     concavePatchesMeshed[i] = true;
-                    if (afm.volpe){
+                    if (afm.loop){
                         System.out.println("concave " + i + " looped");
                     }
-                    //if (cpAfm.volpe) {
+                    //if (cpAfm.loop) {
                      //   looped.add(i);
                     //}
                     //cpUpdate.set(true);
@@ -1769,7 +1767,10 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             concaveFaceCountShow = 0;
             convexFaceCountShow = 0;
         }
-
+        if (keyEvent.getKeyCode() == KeyEvent.VK_F4){
+            concaveFaceCountShow = Surface.triangles.get(concavePatchesSelect.get(0)).faces.size();
+            convexFaceCountShow = Surface.convexPatches.get(convexPatchesSelect.get(0)).faces.size();
+        }
         if (keyEvent.getKeyCode() == KeyEvent.VK_F5){
             if (concavePatchesSelect.size() > 0) {
                 SurfaceParser.exportCP(Surface.triangles.get(concavePatchesSelect.get(0)), "/home/radoslav/objs/cp" + concavePatchesSelect.get(0).toString() + "_" + (int) (Math.random() * 100) + ".obj");
@@ -1783,6 +1784,14 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             SphericalPatch sp = Surface.convexPatches.get(convexPatchesSelect.get(0));
             SurfaceParser.exportPatch(sp);
             SurfaceParser.exportCP(sp, "/home/radoslav/objs/cp_" + sp.id + ".obj");
+            SurfaceParser.exportOldFaces(sp);
+            SurfaceParser.exportCP_(sp);
+        }
+
+        if (keyEvent.getKeyChar() == 'i'){
+            SphericalPatch sp = Surface.triangles.get(concavePatchesSelect.get(0));
+            SurfaceParser.exportPatch(sp);
+            SurfaceParser.exportCP(sp, "/home/radoslav/objs/concp_" + sp.id + ".obj");
             SurfaceParser.exportOldFaces(sp);
             SurfaceParser.exportCP_(sp);
         }

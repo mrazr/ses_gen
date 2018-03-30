@@ -84,10 +84,10 @@ public class MeshRefinement {
         List<Face> newFaces = new ArrayList<>(1000);
         for (int i = threadIdx * step; i < ((threadIdx == 3) ? patches.size() : (threadIdx + 1) * step); ++i) {
             SphericalPatch sp = patches.get(i);
-            if (!sp.convexPatch || true) {
+            /*if (!sp.convexPatch) {
                 continue;
-            }
-            if (!sp.valid) {
+            }*/
+            if (!sp.valid || true) {
                 continue;
             }
             facesToRefine.clear();
@@ -303,9 +303,6 @@ public class MeshRefinement {
                 if (f.valid){
                     sp.faces.add(f);
                 }
-            }
-            if (sp.convexPatch && sp.id == 855){
-                SurfaceParser.exportPatch(sp);
             }
         }
         System.out.println("REFINE COMPLETE, thd: " + threadIdx + " in " + (System.currentTimeMillis() - startTime) + " ms");
@@ -607,6 +604,9 @@ public class MeshRefinement {
                 phase1Queue.add(a);
                 continue;
             }
+            /*if (!a.convexPatch && !a.trimmed){
+                continue;
+            }*/
             /*if (!a.convexPatch){
                 continue;
             }*/
@@ -632,7 +632,7 @@ public class MeshRefinement {
                     if (afm.loop){
                         System.out.println((a.convexPatch) ? "convex " + i + "looped" : "concave" + i + " looped");
                     } else {
-                        //optimizeMesh(a, Surface.maxEdgeLen);
+                        optimizeMesh(a, 0.5 * Surface.maxEdgeLen);
                     }
                     if (!a.convexPatch && a.id == 225){
                         System.out.println("A:");

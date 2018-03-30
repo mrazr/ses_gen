@@ -82,7 +82,7 @@ public class Plane {
     }
 
     public boolean isIdenticalWith(Plane plane){
-        if (Math.abs(this.checkPointLocation(plane.p)) > 0.005){
+        if (Math.abs(this.checkPointLocation(plane.p)) > 0.01d){
             return false;
         }
         if (Math.abs(Math.abs(this.v.dotProduct(plane.v)) - 1) > 0.001){

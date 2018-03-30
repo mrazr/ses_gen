@@ -10,6 +10,7 @@ import javafx.scene.shape.Mesh;
 import smile.neighbor.Neighbor;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 public class PatchUtil {
 
@@ -43,7 +44,9 @@ public class PatchUtil {
             //Arc_ bottom = (leftL.end2 == tp.convexPatchArcs.get(0).end2) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
             Arc bottom = (Point.distance(leftL.end2, tp.convexPatchArcs.get(0).end2) < 0.001) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
             Arc top = (tp.convexPatchArcs.get(0) == bottom) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
-
+            if (leftL.owner.id == 1349){
+                int fff = 4;
+            }
             if (leftL.owner.intersectingPatches.contains(rightL.owner.id)){
                 Arc cpl1 = leftL.owner.boundaries.get(0).arcs.stream().filter(a -> a.intersecting).findFirst().get();
                 Arc cpl2 = rightL.owner.boundaries.get(0).arcs.stream().filter(a -> a.intersecting).findFirst().get();
@@ -110,7 +113,9 @@ public class PatchUtil {
                 tp.tr2 = tr2;
                 return;
             }
-
+            if (tp.id == 8871){
+                int f = 3;
+            }
             Point circle = new Point(0, 0, 0);
             double radius = computeIntersectionCircle(leftL.owner.sphere.center, rightL.owner.sphere.center, circle, SesConfig.probeRadius);
 
@@ -381,6 +386,15 @@ public class PatchUtil {
 
             SphericalPatch left = leftL.owner;
             SphericalPatch right = rightL.owner;
+            if (!left.trimmed){
+                left.trimmed = true;
+                Surface.trimmedTriangles++;
+            }
+
+            if (!right.trimmed){
+                right.trimmed = true;
+                Surface.trimmedTriangles++;
+            }
 
             if (left.intersectingPatches.contains(right.id) || right.intersectingPatches.contains(left.id)){
                 System.out.println("found al double trimming " + left.id + " " + right.id);
@@ -437,6 +451,8 @@ public class PatchUtil {
             tp.tr1.base = (Point.distance(leftStart.end1, tp.convexPatchArcs.get(0).end1) < 0.0001) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
             tp.tr1.left = rightEnd;
             tp.tr1.right = leftStart;
+            tp.tr1.left.opposite = tp.tr1.right;
+            tp.tr1.right.opposite = tp.tr1.left;
             rightEnd.cuspTriangle = leftStart.cuspTriangle = tp.tr1;
             if (rightEnd.vrts.size() != leftStart.vrts.size()){
                 System.out.println(" ");
@@ -446,70 +462,15 @@ public class PatchUtil {
             tp.tr2.base = (tp.tr1.base == tp.convexPatchArcs.get(0)) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
             tp.tr2.left = leftEnd;
             tp.tr2.right = rightStart;
+            tp.tr2.left.opposite = tp.tr2.right;
+            tp.tr2.right.opposite = tp.tr2.left;
             leftEnd.cuspTriangle = rightStart.cuspTriangle = tp.tr2;
             if (leftEnd.vrts.size() != rightStart.vrts.size()){
                 System.out.println(" ");
             }
             tp.tr2.cuspPoint = cusps[1];
             leftStart.torus = leftEnd.torus = rightStart.torus = rightEnd.torus = tp;
-            //Plane circlePlane = new Plane(cusps[0], circleN);
-            //List<Edge[]> nextIntersections = rp.getIntersectionPoints(leftEnd.next, bs[0], circlePlane);
-            //List<Edge[]> nextIntersections =
-            /*if (nextIntersections.size() > 0){
-                System.out.println(" ");
-            }*/
-
-            /*if (nextIntersections.size() > 0){
-                System.out.println(" ");
-            }*/
-            /*ConcavePatchArc s = leftEnd.next;
-            while (s != leftStart){
-                List<Edge[]> prieseky = Util.looploopIntersection(leftMid, circlePlane, s);
-                if (prieseky.size() > 0){
-                    System.out.println(" ");
-                }
-                s = s.next;
-            }
-            s = rightEnd.next;
-            while (s != rightStart){
-                List<Edge[]> prieseky = Util.looploopIntersection(rightMid, circlePlane, s);
-                if (prieseky.size() > 0){
-                    System.out.println(" ");
-                }
-                s = s.next;
-            }*/
-            /*if (nextIntersections.size() == 2){
-                Edge f = nextIntersections.get(0)[0];
-                Edge g = nextIntersections.get(0)[1];
-                Vector n = Vector.getNormalVector(circleN, Point.subtractPoints(g.p2, g.p1)).makeUnit();
-                Plane r = new Plane(g.p1, n);
-                Point proj1 = r.pointProjection(f.p1);
-                Point proj2 = r.pointProjection(f.p2);
-                Edge k = new Edge(0, 0);
-                k.p1 = proj1;
-                k.p2 = proj2;
-                Point i = Util.computeIntersection(g, k);
-                System.out.println(" ");
-                f = nextIntersections.get(1)[0];
-                g = nextIntersections.get(1)[1];
-                n = Vector.getNormalVector(circleN, Point.subtractPoints(g.p2, g.p1)).makeUnit();
-                r = new Plane(g.p1, n);
-                proj1 = r.pointProjection(f.p1);
-                proj2 = r.pointProjection(f.p2);
-                k.p1 = proj1;
-                k.p2 = proj2;
-                Point j = Util.computeIntersection(g, k);
-                System.out.println(" ");
-            }
-            nextIntersections = rp.getIntersectionPoints(leftStart.prev, bs[0], circlePlane);
-            nextIntersections = rp.getIntersectionPoints(rightEnd.next, bs[1], circlePlane);
-            if (nextIntersections.size() > 0){
-                System.out.println( " ");
-            }
-            nextIntersections = rp.getIntersectionPoints(rightStart.prev, bs[1], circlePlane);
-            if (nextIntersections.size() > 0){
-                System.out.println(" ");
-            }*/
+            tp.concavePatchArcs.clear();
         } catch (Exception e){
             System.err.println("tp id: " + tp.id);
             e.printStackTrace();
@@ -739,10 +700,10 @@ public class PatchUtil {
                 return;
             }*/
             if (!tp.circular){
-                if (tp.concavePatchArcs.size() < 2){
+                if (tp.concavePatchArcs.size() < 2 && (tp.tr1 == null || tp.tr2 == null)){
                     tp.valid = false;
                     return;
-                } else {
+                } else if (tp.concavePatchArcs.size() == 2){
                     if (!tp.concavePatchArcs.get(0).valid || !tp.concavePatchArcs.get(1).valid){
                         tp.valid = false;
                         return;
@@ -895,12 +856,16 @@ public class PatchUtil {
             }
         } catch (Exception e){
             System.out.println("for tp" + tp.id);
+            tp.valid = false;
             e.printStackTrace();
         }
     }
 
     private static void meshToroidalPatch(ToroidalPatch tp, Arc bottom, Arc top, Arc left, Arc right, boolean special){
         try {
+            if (tp.id == 8871){
+                int a = 32;
+            }
             List<Point> leftVArc = new ArrayList<>();
             leftVArc.addAll(left.vrts);
             List<Point> rightVArc = new ArrayList<>();
@@ -913,6 +878,7 @@ public class PatchUtil {
                 rightVArc.clear();
                 if (i == bottom.vrts.size() - 1) {
                     rightVArc.addAll(right.vrts);
+
                     for (Point bod : rightVArc){
                         if (bod == null){
                             System.out.println(" ");
@@ -1023,6 +989,7 @@ public class PatchUtil {
             }
         } catch (Exception e){
             e.printStackTrace();
+            tp.valid = false;
             System.err.println("tp id: " + tp.id);
         }
     }
@@ -1211,7 +1178,25 @@ public class PatchUtil {
                     newA.vrts.add(in1);
                     newA.vrts.add(in2);
                     usedPoints.add(in2);
-                    if (a1.torus != null){
+                    if (a1.opposite != null){
+                        newA.opposite = a1.opposite;
+                        newA.opposite.opposite = newA;
+                        if (a1.torus != null){
+                            Arc finalA = a1;
+                            a1.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
+                                @Override
+                                public boolean test(Arc arc) {
+                                    return arc.id == finalA.id;
+                                }
+                            });
+                            newA.torus = a1.torus;
+                            newA.torus.concavePatchArcs.add(newA);
+                        }
+                    }
+                    if (a1.cuspTriangle != null){
+                        System.out.println("found arc of cusp 1");
+                    }
+                    /*if (a1.torus != null){
                         if (a1.torus.tr1 != null){
                             if (a1 == a1.torus.tr1.left){
                                 a1.torus.tr1.left = newA;
@@ -1232,7 +1217,7 @@ public class PatchUtil {
                             }
                         }
                         newA.torus = a1.torus;
-                    }
+                    }*/
                     ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     toBridge = true;
                     in1 = in2;
@@ -1254,7 +1239,35 @@ public class PatchUtil {
                     newA.setNormal(a.normal);
                     newA.vrts.add(in1);
                     newA.vrts.add(a1.end2);
-                    if (a.cuspTriangle != null){
+                    /*if (a.cuspTriangle != null){
+                        System.out.println("found arc of cusp 2");
+                    }*/
+                    if (a.opposite != null){
+                        newA.opposite = a.opposite;
+                        newA.opposite.opposite = newA;
+                        if (a.torus != null){
+                            newA.torus = a.torus;
+                            if (a.cuspTriangle != null){
+                                newA.cuspTriangle = a.cuspTriangle;
+                                if (a == a.cuspTriangle.left){
+                                    newA.cuspTriangle.left = newA;
+                                } else {
+                                    newA.cuspTriangle.right = newA;
+                                }
+                            } else {
+                                Arc finalA = a;
+                                a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
+                                    @Override
+                                    public boolean test(Arc arc) {
+                                        return arc.id == finalA.id;
+                                    }
+                                });
+                                newA.torus.concavePatchArcs.add(newA);
+                            }
+                        }
+                    }
+
+                    /*if (a.cuspTriangle != null){
                         int subdLevel = ArcUtil.getSubdivisionLevel(a);
                         newA.cuspTriangle = a.cuspTriangle;
                         newA.torus = a.torus;
@@ -1288,7 +1301,7 @@ public class PatchUtil {
                             }
                         }
                         newA.torus = a1.torus;
-                    }
+                    }*/
                     b.arcs.add(newA);
                 }
                 a = a.next;
@@ -1301,7 +1314,34 @@ public class PatchUtil {
                     newA.setNormal(a.normal);
                     newA.vrts.add(a.end1);
                     newA.vrts.add(in2);
-                    if (a.cuspTriangle != null){
+                    /*if (a.cuspTriangle != null){
+                        System.out.println("found arc of cusp 3");
+                    }*/
+                    if (a.opposite != null){
+                        newA.opposite = a.opposite;
+                        newA.opposite.opposite = newA;
+                        if (a.torus != null){
+                            newA.torus = a.torus;
+                            if (a.cuspTriangle != null){
+                                newA.cuspTriangle = a.cuspTriangle;
+                                if (a == a.cuspTriangle.left){
+                                    newA.cuspTriangle.left = newA;
+                                } else {
+                                    newA.cuspTriangle.right = newA;
+                                }
+                            } else {
+                                Arc finalA = a;
+                                a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
+                                    @Override
+                                    public boolean test(Arc arc) {
+                                        return arc.id == finalA.id;
+                                    }
+                                });
+                                newA.torus.concavePatchArcs.add(newA);
+                            }
+                        }
+                    }
+                    /*if (a.cuspTriangle != null){
                         int subdLevel = ArcUtil.getSubdivisionLevel(a);
                         newA.cuspTriangle = a.cuspTriangle;
                         newA.torus = a.torus;
@@ -1339,7 +1379,7 @@ public class PatchUtil {
                             }
                         }
                         newA.torus = a.torus;
-                    }
+                    }*/
                     b.arcs.add(newA);
                 }
                 a = a.next;
@@ -1355,7 +1395,31 @@ public class PatchUtil {
                 }
             }else {
                 Arc newA = ArcUtil.dbgCloneArc(a);
-                if (a.cuspTriangle != null){
+                if (a.opposite != null){
+                    newA.opposite = a.opposite;
+                    newA.opposite.opposite = newA;
+                    if (a.torus != null){
+                        newA.torus = a.torus;
+                        if (a.cuspTriangle != null){
+                            newA.cuspTriangle = a.cuspTriangle;
+                            if (a == a.cuspTriangle.left){
+                                newA.cuspTriangle.left = newA;
+                            } else {
+                                newA.cuspTriangle.right = newA;
+                            }
+                        } else {
+                            Arc finalA = a;
+                            a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
+                                @Override
+                                public boolean test(Arc arc) {
+                                    return arc.id == finalA.id;
+                                }
+                            });
+                            newA.torus.concavePatchArcs.add(newA);
+                        }
+                    }
+                }
+                /*if (a.cuspTriangle != null){
                     newA.cuspTriangle = a.cuspTriangle;
                     newA.torus = a.torus;
                     if (newA.cuspTriangle.left == a){
@@ -1389,7 +1453,7 @@ public class PatchUtil {
                         }
                     }
                     newA.torus = a.torus;
-                }
+                }*/
                 b.arcs.add(newA);
                 a = a.next;
             }
@@ -1720,6 +1784,7 @@ public class PatchUtil {
     }
 
     private static Map<Integer, List<Plane>> planes = new TreeMap<>();
+    private static Map<Integer, Map<Integer, List<Point>>> moip = new TreeMap<>();
 
     private static void trimConcavePatch(SphericalPatch sp){
         try {
@@ -1734,6 +1799,21 @@ public class PatchUtil {
                     return (o1.distance - o2.distance > 0.0) ? -1 : 1;
                 }
             });
+            boolean trimmed = false;
+            int i = 0;
+            planes.put(sp.id, new ArrayList<>());
+            for (Boundary b : sp.boundaries){
+                for (Arc a : b.arcs){
+                    Plane p = new Plane(a.center, a.normal);
+                    planes.get(sp.id).add(p);
+                }
+            }
+            /*if (sp.id == 6580 || sp.id == 6574 || sp.id == 6577 || sp.id == 6605){
+                return;
+            }*/
+            if (!moip.containsKey(sp.id)){
+                moip.put(sp.id, new TreeMap<>());
+            }
             for (Neighbor<double[], SphericalPatch> n : neighbors) {
                 if (n.value == sp) {
                     continue;
@@ -1748,13 +1828,10 @@ public class PatchUtil {
                 Point center = new Point(0, 0, 0);
                 double radius = computeIntersectionCircle(sp.sphere.center, sp2.sphere.center, center, SesConfig.probeRadius);
                 Vector nV = Point.subtractPoints(sp.sphere.center, center).makeUnit();
-                if (!planes.containsKey(sp.id)) {
-                    planes.put(sp.id, new ArrayList<>());
-                }
                 /*if (!planes.containsKey(sp2.id)) {
                     planes.put(sp2.id, new ArrayList<>());
                 }*/
-                sp.intersectingPatches.add(sp2.id);
+
                 if (Point.distance(sp.sphere.center, sp2.sphere.center) < 0.008){
                     continue;
                 }
@@ -1767,9 +1844,35 @@ public class PatchUtil {
                     //System.out.println("am.");
                 }
                 Plane p = new Plane(center, nV);
-                List<Point> intersectionPoints = new ArrayList<>();
-                findIntersectionPoints(sp, center, radius, intersectionPoints, null);
-                if (sp.id == 2337 && sp2.id == 2408){
+                List<Point> intersectionPoints;
+                if (!moip.get(sp.id).containsKey(sp2.id)) {
+                    intersectionPoints = new ArrayList<>();
+                    findIntersectionPoints(sp, center, radius, intersectionPoints, null);
+                    if (!pointsLieOnPatch(sp2, intersectionPoints)){
+                        intersectionPoints.clear();
+                    }
+                    if (!moip.containsKey(sp2.id)){
+                        moip.put(sp2.id, new TreeMap<>());
+                    }
+                    moip.get(sp2.id).put(sp.id, intersectionPoints);
+                } else {
+                    intersectionPoints = moip.get(sp.id).get(sp2.id);
+                }
+
+                if (intersectionPoints.size() > 0){
+                    if (!pointsLieOnPatch(sp2, intersectionPoints)) {
+                        System.out.println("Found points lying on sp but not lying on sp2 " + sp.id + " " + sp2.id);
+                        continue;
+                    } else {
+                        if (!moip.containsKey(sp2.id)){
+                            moip.put(sp2.id, new TreeMap<>());
+
+                        }
+                        moip.get(sp2.id).put(sp.id, intersectionPoints);
+                    }
+                }
+
+                if (sp.id == 1349){
                     int fads = 32;
                 }
                 if (intersectionPoints.size() > 1) {
@@ -1777,6 +1880,12 @@ public class PatchUtil {
                         planes.get(sp.id).add(p);
                         //System.out.println("about to: " + sp.id);
                         generateNewBoundaries2(sp, intersectionPoints, p, radius);
+                        sp.intersectingPatches.add(sp2.id);
+                        i++;
+                        if (!sp.trimmed){
+                            sp.trimmed = true;
+                            Surface.trimmedTriangles++;
+                        }
                     }
                 } else if (intersectionPoints.size() == 0) {
                     //laterId.add(sp2.id);
@@ -1975,7 +2084,7 @@ public class PatchUtil {
                 return;
             }
             SphericalPatch sp = arc.owner;
-            if (sp.id == 658){
+            if (sp.id == 6014){
                 System.out.println("ligh");
             }
             List<Point> intersectionPoints = new ArrayList<>();
@@ -2526,5 +2635,18 @@ public class PatchUtil {
 
     public static Vector computeTriangleNormal(Point a, Point b, Point c){
         return Vector.getNormalVector(Point.subtractPoints(b, a).makeUnit(), Point.subtractPoints(c, a).makeUnit()).makeUnit();
+    }
+
+    private static boolean pointsLieOnPatch(SphericalPatch sp, List<Point> points){
+        for (Boundary b : sp.boundaries){
+            for (Arc a : b.arcs){
+                for (Point p : points){
+                    if (a.isInside(p)){
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

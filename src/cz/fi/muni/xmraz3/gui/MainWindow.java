@@ -1647,6 +1647,9 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         int vboOffset = 0;
         int faceCount = 0;
         for (ToroidalPatch tp : Surface.rectangles){
+            if (!tp.valid){
+                //continue;
+            }
             for (Point p : tp.vrts){
                 vrtsNormals.add(p);
             }
@@ -1768,8 +1771,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             convexFaceCountShow = 0;
         }
         if (keyEvent.getKeyCode() == KeyEvent.VK_F4){
-            concaveFaceCountShow = Surface.triangles.get(concavePatchesSelect.get(0)).faces.size();
-            convexFaceCountShow = Surface.convexPatches.get(convexPatchesSelect.get(0)).faces.size();
+            concaveFaceCountShow = (concavePatchesSelect.size() > 0) ? Surface.triangles.get(concavePatchesSelect.get(0)).faces.size() : 0;
+            convexFaceCountShow = (convexPatchesSelect.size() > 0) ? Surface.convexPatches.get(convexPatchesSelect.get(0)).faces.size(): 0;
         }
         if (keyEvent.getKeyCode() == KeyEvent.VK_F5){
             if (concavePatchesSelect.size() > 0) {

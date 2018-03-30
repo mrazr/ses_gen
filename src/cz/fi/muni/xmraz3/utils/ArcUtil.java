@@ -39,7 +39,8 @@ public class ArcUtil {
             } else if (!fixedCount && Math.PI - angle < 0.0){
                 refineArc(a, 0, true, 1, false);
             }
-            while ((!fixedCount && Point.subtractPoints(a.vrts.get(0), a.vrts.get(1)).sqrtMagnitude() > 1.2 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
+            //while ((!fixedCount && Point.subtractPoints(a.vrts.get(0), a.vrts.get(1)).sqrtMagnitude() > 1.2 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
+            while ((!fixedCount && getArcLength(a, a.vrts.get(0), a.vrts.get(1)) > 1.2 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
                 List<Point> newVerts = new ArrayList<>();
                 for (int i = 0; i < a.vrts.size() - ((fullCircle) ? 0 : 1); ++i) {
                     Point v1 = a.vrts.get(i);
@@ -106,7 +107,8 @@ public class ArcUtil {
             } else if (!fixedCount && Math.PI - angle < 0.0){
                 refineArc(a, 0, true, 1, false, edgeSplit);
             }
-            while ((!fixedCount && Point.subtractPoints(a.vrts.get(0), a.vrts.get(1)).sqrtMagnitude() > 1.6 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
+            //while ((!fixedCount && Point.subtractPoints(a.vrts.get(0), a.vrts.get(1)).sqrtMagnitude() > 1.6 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
+            while ((!fixedCount && getArcLength(a, a.vrts.get(0), a.vrts.get(1)) > 1.2 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
                 List<Point> newVerts = new ArrayList<>();
                 for (int i = 0; i < a.vrts.size() - ((fullCircle) ? 0 : 1); ++i) {
                     Point v1 = a.vrts.get(i);
@@ -385,7 +387,7 @@ public class ArcUtil {
                 int i = 0;
                 int iterator = 0;
                 //while (Math.abs(loopEnd.dotProduct(pivot) - 1) >= 0.00001) {
-                while (Point.subtractPoints(loopEnd, pivot).sqrtMagnitude() > Surface.scaleFactor * 0.0002) {
+                while (Point.subtractPoints(loopEnd, pivot).sqrtMagnitude() > 0.001) {
                     if (iterator > sp.arcs.size() + 10) {
                         System.err.println("Cycle detected for atom id:" + sp.id);
                         System.out.println("Iterator: " + iterator);
@@ -403,7 +405,7 @@ public class ArcUtil {
                     Arc lop = queue.get(i);
                     //Vector vLop = lop.toEnd1;
                     Point pLop = lop.end1;
-                    if (Point.subtractPoints(pLop, pivot).sqrtMagnitude() < Surface.scaleFactor * 0.0002) {
+                    if (Point.subtractPoints(pLop, pivot).sqrtMagnitude() < 0.001) {
                         boolean betterCand = false;
                         Arc tmp = lop;
                         for (int j = i + 1; j < queue.size(); ++j) {
@@ -786,23 +788,43 @@ public class ArcUtil {
                     a.refined = ArcUtil.dbgCloneArc(a);
                     a.refined.owner = a.owner;
                     ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
-                    a.opposite.refined = ArcUtil.cloneArc(a.refined);
-                    ArcUtil.reverseArc(a.opposite.refined, false);
+                    if (a.owner.intersectingPatches.contains(a.opposite.owner.id) && a.cuspTriangle == null) {
+                        a.opposite.refined = ArcUtil.cloneArc(a.refined);
+                        ArcUtil.reverseArc(a.opposite.refined, false);
+                    } else {
+                        int curr = getSubdivisionLevel(a.opposite);
+                        a.opposite.refined = dbgCloneArc(a.opposite);
+                        a.opposite.refined.owner = a.opposite.owner;
+                        refineArc(a.opposite.refined, SesConfig.edgeLimit, true, getSubdivisionLevel(a.refined) - curr, false, MeshRefinement.concaveEdgeSplitMap.get(a.opposite.owner.id));
+                        System.out.println("refining cusp triangle arcs");
+                    }
                     a.opposite.refined.owner = a.opposite.owner;
-                    a.vrts.clear();
-                    a.vrts.addAll(a.refined.vrts);
-                    a.opposite.vrts.clear();
-                    a.opposite.vrts.addAll(a.opposite.refined.vrts);
-                } else {
+                    if (a.refined.owner == null || a.opposite.refined.owner == null){
+                        int c = 4;
+                    }
+                    if (sp.trimmed) {
+                        a.vrts.clear();
+                        a.vrts.addAll(a.refined.vrts);
+                    }
+                    if (a.opposite.owner.trimmed) {
+                        a.opposite.vrts.clear();
+                        a.opposite.vrts.addAll(a.opposite.refined.vrts);
+                    }
+                } else if (a.refined == null){
                     a.refined = ArcUtil.dbgCloneArc(a);
                     a.refined.owner = a.owner;
+                    if (a.refined.owner == null){
+                        int c = 4;
+                    }
                     try {
                         ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
                     } catch (Exception e){
                         e.printStackTrace();
                     }
-                    a.vrts.clear();
-                    a.vrts.addAll(a.refined.vrts);
+                    if (sp.trimmed) {
+                        a.vrts.clear();
+                        a.vrts.addAll(a.refined.vrts);
+                    }
                 }
             }
             ArcUtil.buildEdges(b, true);
@@ -810,6 +832,21 @@ public class ArcUtil {
                 v._id = sp.nextVertexID++;
                 sp.vertices.add(v);
             }
+            for (Arc a : b.arcs){
+                for (Point p : a.vrts){
+                    p.arc = a;
+                }
+            }
         }
+    }
+
+    public static double getArcLength(Arc a, Point p1, Point p2){
+        Vector v1 = Point.subtractPoints(p1, a.center).makeUnit();
+        Vector v2 = Point.subtractPoints(p2, a.center).makeUnit();
+        Vector n = Vector.getNormalVector(v1, v2).makeUnit();
+        if (n.dotProduct(a.normal) < 0.0){
+            return a.radius * (2 * Math.PI - Math.acos(v1.dotProduct(v2)));
+        }
+        return a.radius * Math.acos(v1.dotProduct(v2));
     }
 }

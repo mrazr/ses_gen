@@ -2414,7 +2414,9 @@ public class AdvancingFrontMethod {
         }
         Long time = System.currentTimeMillis();
         int empty = 0;
+        boolean faceGenerated = false;
         while (facets.size() > 0){
+            faceGenerated = false;
             dontConsider.clear();
             if (System.currentTimeMillis() - time > timeout){
                 if (currentTry < maxNumberOfRestarts){
@@ -2574,6 +2576,7 @@ public class AdvancingFrontMethod {
                             e2.p2 = pTest;
                         }*/
                         generateFaceWithNewPoint(pTest);
+                        faceGenerated = true;
                     }
                 }
             }
@@ -2611,11 +2614,9 @@ public class AdvancingFrontMethod {
                     generateBridgeFace(pt);
                 }
             } else {
-                //System.err.println("empty candidates, try again");
-                //System.out.println("no good candidate for " + patch.id + " e: " + e.p1.toString() + "/" + e.p2.toString());
-                //loopDetected = true;
-                //break;
-                e = e.next;
+                if (!faceGenerated){
+                    e = e.next;
+                }
                 empty++;
             }
         }

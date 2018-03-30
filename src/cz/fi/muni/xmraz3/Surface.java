@@ -33,4 +33,5 @@ public class Surface {
     public static KDTree<SphericalPatch> probeTree;
     public static Point centerOfgravity = new Point(0., 0., 0.);
     public static double scaleFactor = 1.;
+    public static int trimmedTriangles = 0;
 }

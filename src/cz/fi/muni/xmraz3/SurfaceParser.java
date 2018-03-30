@@ -100,6 +100,9 @@ public class SurfaceParser {
         try {
             SurfaceParser.parseTriangles(folder + "triangles.dat");
 
+            System.out.println("Convex patches: " + Surface.convexPatches.size());
+            System.out.println("Triangles: " + Surface.triangles.size());
+
             constructProbeTree();
             Surface.probeTree.setIdenticalExcluded(true);
 
@@ -107,6 +110,7 @@ public class SurfaceParser {
             PatchUtil.processSelfIntersectingTori();
             PatchUtil.processSelfIntersectingConcavePatches();
             PatchUtil.processIntersectingConcavePatches();
+            System.out.println("Trimmed triangles: " + Surface.trimmedTriangles + " / " + Surface.triangles.size());
             for (SphericalPatch sp : Surface.triangles){
                 ArcUtil.refineArcsOnConcavePatch(sp);
             }
@@ -291,6 +295,9 @@ public class SurfaceParser {
                             continue;
                         }
                         Arc op = a.opposite;
+                        if (sp.id == 767 || sp.id == 772){
+                            int fgd = 3;
+                        }
                         if (op.owner.boundaries.size() == 0){
                             ArcUtil.linkArcs(op.owner);
                         }
@@ -372,6 +379,9 @@ public class SurfaceParser {
             //Vector a1Toa2 = Point.subtractPoints(atom2.sphere.center, atom1.sphere.center).makeUnit();
             Arc[] atom1Arcs = ArcUtil.makeNewArc(atom1, atom2, Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probe2), Sphere.getContactPoint(atom1.sphere, probeMid), probeMid.center, true);
             Arc[] atom2Arcs = ArcUtil.makeNewArc(atom2, atom1, Sphere.getContactPoint(atom2.sphere, probe1), Sphere.getContactPoint(atom2.sphere, probe2), Sphere.getContactPoint(atom2.sphere, probeMid), probeMid.center, true);
+            if (atom1.id == 767 && atom2.id == 772 || atom1.id == 772 && atom2.id == 767){
+                System.out.println("A");
+            }
             for (Arc a : atom1Arcs){
                 for (Arc j : atom2Arcs){
                     Vector midtomid = Point.subtractPoints(j.mid, a.mid).makeUnit();
@@ -484,6 +494,9 @@ public class SurfaceParser {
 
     private static void constructConcavePatchArcs(Sphere probe, int atom1, int atom2, int atom3){
         try {
+            if (Surface.triangles.size() == 1349 || Surface.triangles.size() == 1351){
+                int t = 3;
+            }
             SphericalPatch a1 = Surface.convexPatches.get(atom1);
             SphericalPatch a2 = Surface.convexPatches.get(atom2);
             SphericalPatch a3 = Surface.convexPatches.get(atom3);
@@ -527,6 +540,10 @@ public class SurfaceParser {
             } else {
                 tp.concavePatchArcs.add(cpl1);
                 cpl1.torus = tp;
+                if (tp.concavePatchArcs.size() == 2){
+                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
+                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
+                }
                 /*cpl1.vrts.clear();
                 Arc ar1 = (tp.convexPatchArcs.get(0).owner.id == atom1) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
                 Arc ar2 = (tp.convexPatchArcs.get(0) == ar1) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
@@ -615,6 +632,10 @@ public class SurfaceParser {
             } else {
                 tp.concavePatchArcs.add(cpl2);
                 cpl2.torus = tp;
+                if (tp.concavePatchArcs.size() == 2){
+                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
+                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
+                }
                 /*cpl2.vrts.clear();
                 Arc ar1 = (tp.convexPatchArcs.get(0).owner.id == atom3) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
                 Arc ar2 = (tp.convexPatchArcs.get(0) == ar1) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
@@ -706,6 +727,10 @@ public class SurfaceParser {
             } else {
                 tp.concavePatchArcs.add(cpl3);
                 cpl3.torus = tp;
+                if (tp.concavePatchArcs.size() == 2){
+                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
+                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
+                }
                 /*cpl3.vrts.clear();
                 Arc ar1 = (tp.convexPatchArcs.get(0).owner.id == atom2) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
                 Arc ar2 = (tp.convexPatchArcs.get(0) == ar1) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);

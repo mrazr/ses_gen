@@ -54,32 +54,7 @@ public class SurfaceParser {
     }
 
     public static void ses_start(String folder) {
-
-        Runnable r1 = new Runnable() {
-            @Override
-            public void run() {
-                MeshRefinement.convexEdgeSplitMap = new ArrayList<>(SesConfig.atomCount);
-                MeshRefinement.convexVertexFaceMap = new ArrayList<>(SesConfig.atomCount);
-                for (int i = 0; i < SesConfig.atomCount; ++i){
-                    MeshRefinement.convexEdgeSplitMap.add(new TreeMap<>());
-                    MeshRefinement.convexVertexFaceMap.add(new TreeMap<>());
-                }
-
-            }
-        };
-        (new Thread(r1)).start();
-        Runnable r2 = new Runnable() {
-            @Override
-            public void run() {
-                MeshRefinement.concaveEdgeSplitMap = new ArrayList<>(SesConfig.trianglesCount);
-                MeshRefinement.concaveVertexFaceMap = new ArrayList<>(SesConfig.trianglesCount);
-                for (int i = 0; i < SesConfig.trianglesCount; ++i){
-                    MeshRefinement.concaveEdgeSplitMap.add(new TreeMap<>());
-                    MeshRefinement.concaveVertexFaceMap.add(new TreeMap<>());
-                }
-            }
-        };
-        (new Thread(r2)).start();
+        MeshRefinement.reset();
         Surface.triangles.clear();
         Surface.rectangles.clear();
         Surface.atomsProcessed.set(0);
@@ -111,43 +86,49 @@ public class SurfaceParser {
             PatchUtil.processSelfIntersectingConcavePatches();
             PatchUtil.processIntersectingConcavePatches();
             System.out.println("Trimmed triangles: " + Surface.trimmedTriangles + " / " + Surface.triangles.size());
-            for (SphericalPatch sp : Surface.triangles){
-                ArcUtil.refineArcsOnConcavePatch(sp);
-            }
+            ArcUtil.refineArcsOnConvexPatches();
+            ArcUtil.nestConvexPatchBoundaries();
+            ArcUtil.refineArcsOnConcavePatches();
             MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
-
-            MeshRefinement.threads_done.set(0);
-            int step = SesConfig.atomCount / 4;
-            for (int i = 0; i < 4; ++i){
-                final int start = i;
-                final int _step = step;
-                Runnable r = new Runnable() {
-                    @Override
-                    public void run() {
-                        MeshRefinement.generateBaseMesh(start * _step, (start == 3) ? SesConfig.atomCount : (start + 1) * _step, Surface.convexPatches, start);
-                    }
-                };
-                (new Thread(r)).start();
-            }
-            while (!MeshRefinement.free.get()){}
-            MeshRefinement.threads_done.set(0);
-            System.out.println("starting to mesh concave");
-            step = SesConfig.trianglesCount / 4;
-            for (int i = 0; i < 4; ++i){
-                final int start = i;
-                final int _step = step;
-                Runnable r = new Runnable() {
-                    @Override
-                    public void run() {
-                        MeshRefinement.generateBaseMesh(start * _step, (start == 3) ? SesConfig.trianglesCount : (start + 1) * _step, Surface.triangles, start);
-                    }
-                };
-                (new Thread(r)).start();
-            }
+            MeshRefinement.startMeshing();
             fillCommonVertices();
         } catch (Exception e){
             System.out.println(e.getMessage());
         }
+    }
+
+    public static void remesh(){
+        MainWindow.mainWindow.requestFreeResources();
+        while (!MainWindow.mainWindow.getResourcesFreed()){}
+        MeshRefinement.reset();
+        for (SphericalPatch sp : Surface.convexPatches){
+            ArcUtil.resetArcs(sp);
+            sp.meshed = false;
+            sp.faces.clear();
+            sp.faceCount = 0;
+            //sp.vertices.clear();
+        }
+        System.out.println("convex reset done");
+        ArcUtil.refineArcsOnConvexPatches();
+        for (SphericalPatch sp : Surface.triangles){
+            ArcUtil.resetArcs(sp);
+            sp.meshed = false;
+            sp.faces.clear();
+            sp.faceCount = 0;
+        }
+        System.out.println("concave reset done");
+        ArcUtil.refineArcsOnConcavePatches();
+        MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
+        MeshRefinement.startMeshing();
+        for (ToroidalPatch tp : Surface.rectangles){
+            tp.vertices.clear();
+            tp.normals.clear();
+            tp.faces.clear();
+            tp.faceCount = 0;
+            tp.vrts.clear();
+            PatchUtil.meshToroidalPatch(tp);
+        }
+        MainWindow.mainWindow.pushTori();
     }
 
     private static void fillCommonVertices(){
@@ -282,50 +263,6 @@ public class SurfaceParser {
                 SphericalPatch atom2 = Surface.convexPatches.get(atom2Id);
                 constructConvexPatchArc(atom1, atom2, probe1, probe2, centerProbe);
             }
-            for (SphericalPatch sp : Surface.convexPatches){
-                if (sp.boundaries.size() == 0) {
-                    ArcUtil.linkArcs(sp);
-                }
-                for (Boundary b : sp.boundaries) {
-                    for (Arc a : b.arcs){
-                        for (Point v : a.vrts){
-                            v.arcPoint = true;
-                        }
-                        if (a.refined != null){
-                            continue;
-                        }
-                        Arc op = a.opposite;
-                        if (sp.id == 767 || sp.id == 772){
-                            int fgd = 3;
-                        }
-                        if (op.owner.boundaries.size() == 0){
-                            ArcUtil.linkArcs(op.owner);
-                        }
-                        a.refined = ArcUtil.dbgCloneArc(a);
-                        a.refined.owner = sp;
-                        op.refined = ArcUtil.dbgCloneArc(op);
-                        op.refined.owner = op.owner;
-                        ArcUtil.refineOppositeArcs(a.refined, op.refined, SesConfig.edgeLimit, true);
-                        ArcUtil.generateEdgeSplits(a.refined, sp);
-                        ArcUtil.generateEdgeSplits(op.refined, op.owner);
-                        a.vrts.clear();
-                        a.vrts.addAll(a.refined.vrts);
-                        op.vrts.clear();
-                        op.vrts.addAll(op.refined.vrts);
-                    }
-                    for (Boundary c : sp.boundaries) {
-                        if (c == b) {
-                            continue;
-                        }
-                        if (ArcUtil.checkIfNested(b, c)) {
-                            b.nestedBoundaries.add(c);
-                        }
-                    }
-                    ArcUtil.buildEdges(b, true);
-                }
-                //refine arcs - when refining an arc, its opposite arc will be refined as well as to have the same number of vertices on both of them
-                Surface.atomsProcessed.set(sp.id + 1);
-            }
         } catch (IOException e){
             e.printStackTrace();
         }
@@ -411,6 +348,7 @@ public class SurfaceParser {
                         Arc smallerRadius = (a.owner.sphere.radius <= j.owner.sphere.radius) ? a : j;
                         Arc greaterRadius = (smallerRadius == a) ? j : a;
                         ArcUtil.refineArc(greaterRadius, 0, true,1, false);
+                        greaterRadius.baseSubdivision = -1;
                         ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, false,0, false);
                         ArcUtil.buildEdges(greaterRadius);
                         //int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
@@ -479,6 +417,7 @@ public class SurfaceParser {
             Surface.selfIntersectingRects.add(tp);
         }
     }
+
     public static void assignRollingPatchToAtoms(SphericalPatch s1, SphericalPatch s2, ToroidalPatch tp){
         if (!s1.tori.containsKey(s2.id)){
             s1.tori.put(s2.id, new ArrayList<>());
@@ -494,7 +433,7 @@ public class SurfaceParser {
 
     private static void constructConcavePatchArcs(Sphere probe, int atom1, int atom2, int atom3){
         try {
-            if (Surface.triangles.size() == 1349 || Surface.triangles.size() == 1351){
+            if (Surface.triangles.size() == 6498 || Surface.triangles.size() == 1351){
                 int t = 3;
             }
             SphericalPatch a1 = Surface.convexPatches.get(atom1);

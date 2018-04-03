@@ -78,6 +78,9 @@ public class ArcUtil {
                 a.vrts = newVerts;
                 it++;
             }
+            if (a.baseSubdivision < 0){
+                a.baseSubdivision = getSubdivisionLevel(a);
+            }
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -156,14 +159,20 @@ public class ArcUtil {
             for (Point v : a.vrts){
                 v.arcPoint = true;
             }
+            if (a.baseSubdivision < 0){
+                a.baseSubdivision = getSubdivisionLevel(a);
+            }
         } catch (Exception e){
             e.printStackTrace();
         }
     }
 
-    public static void refineOppositeArcs(Arc a1, Arc a2, double maxlen, boolean meshRefine){
-        Arc shorter = (a1.radius - a2.radius > 0.0) ? a2 : a1;
-        Arc longer = (shorter == a2) ? a1 : a2;
+    public static void refineOppositeArcs(Arc a1, Arc a2, double maxlen, boolean meshRefine, boolean convex){
+        List<Map<Integer, Map<Integer, Integer>>> edgeSplit = (convex) ? MeshRefinement.convexEdgeSplitMap : MeshRefinement.concaveEdgeSplitMap;
+        /*Arc shorter = (a1.radius - a2.radius > 0.0) ? a2 : a1;
+        Arc longer = (shorter == a2) ? a1 : a2;*/
+        Arc longer = (getSubdivisionLevel(a1) >= getSubdivisionLevel(a2)) ? a1 : a2;
+        Arc shorter = (longer == a1) ? a2 : a1;
         if (!meshRefine) {
             int currentLevel = getSubdivisionLevel(shorter);
             refineArc(shorter, maxlen, false, 0, false);
@@ -180,10 +189,11 @@ public class ArcUtil {
                 v._id = a2.owner.nextVertexID++;
                 a2.owner.vertices.add(v);
             }*/
-            int currentLevel = getSubdivisionLevel(shorter);
-            refineArc(shorter, maxlen, false, 0, false, MeshRefinement.convexEdgeSplitMap.get(shorter.owner.id));
-            int numOfDivs = getSubdivisionLevel(shorter) - currentLevel;
-            refineArc(longer, 0, true, numOfDivs, false, MeshRefinement.convexEdgeSplitMap.get(longer.owner.id));
+            int currentLevel = getSubdivisionLevel(longer);
+            int subdivisionDifference = currentLevel - getSubdivisionLevel(shorter);
+            refineArc(longer, maxlen, false, 0, false, edgeSplit.get(longer.owner.id));
+            int numOfDivs = subdivisionDifference + getSubdivisionLevel(longer) - currentLevel;
+            refineArc(shorter, 0, true, numOfDivs, false, edgeSplit.get(shorter.owner.id));
             for (Point v : shorter.vrts){
                 v.arc = shorter;
             }
@@ -487,6 +497,9 @@ public class ArcUtil {
         a.end2 = a.vrts.get(a.vrts.size() - 1);
         a.toEnd1 = Point.subtractPoints(a.end1, a.center).makeUnit();
         a.toEnd2 = Point.subtractPoints(a.end2, a.center).makeUnit();
+        if (a.normal != null) {
+            a.normal.multiply(-1.0);
+        }
     }
 
     public static boolean checkIfNested(Boundary b1, Boundary b2){
@@ -647,6 +660,11 @@ public class ArcUtil {
             Arc next = (i == ordered.size() - 1) ? ordered.get(0) : ordered.get(i + 1);
             curr.next = next;
             next.prev = curr;
+            curr.vrts.remove(0);
+            curr.vrts.add(0, curr.end1);
+            curr.end2 = next.end1;
+            curr.vrts.remove(curr.vrts.size() - 1);
+            curr.vrts.add(next.end1);
         }
     }
 
@@ -666,6 +684,7 @@ public class ArcUtil {
         na.mid = a.mid;
         na.setNormal(a.normal);
         na.vrts.addAll(a.vrts);
+        na.baseSubdivision = a.baseSubdivision;
         return na;
     }
 
@@ -677,6 +696,7 @@ public class ArcUtil {
         a.vrts.forEach(v -> newA.vrts.add(new Point(v)));
         newA.setNormal(a.normal);
         newA.setEndPoints(newA.vrts.get(0), newA.vrts.get(newA.vrts.size() - 1), false);
+        newA.baseSubdivision = a.baseSubdivision;
         return newA;
     }
 
@@ -716,8 +736,8 @@ public class ArcUtil {
         return b;
     }
 
-    public static int getSubdivisionLevel(Arc a){
-        return (int)(Math.log10(a.vrts.size() - 1) / Math.log10(2));
+    public static byte getSubdivisionLevel(Arc a){
+        return (byte)(Math.log10(a.vrts.size() - 1) / Math.log10(2));
     }
 
     public static void markShared(Arc a){
@@ -753,11 +773,15 @@ public class ArcUtil {
         }
         if ((p1 == p1.arc.end1 || p1 == p1.arc.end2) && (p2 == p2.arc.end1 || p2 == p2.arc.end2)){
             Boundary b = p1.arc.bOwner;
-            for (Arc a : b.arcs){
-                if ((p1 == a.end1 && p2 == a.end2) || (p1 == a.end2 && p2 == a.end1)){
-                    //System.out.println("found the arc of " + a.vrts.size() + " vrts");
-                    return a;
+            try {
+                for (Arc a : b.arcs) {
+                    if ((p1 == a.end1 && p2 == a.end2) || (p1 == a.end2 && p2 == a.end1)) {
+                        //System.out.println("found the arc of " + a.vrts.size() + " vrts");
+                        return a;
+                    }
                 }
+            } catch (Exception e){
+                e.printStackTrace();
             }
             return null;
         }
@@ -780,67 +804,94 @@ public class ArcUtil {
         }
     }
 
-    public static void refineArcsOnConcavePatch(SphericalPatch sp){
-        for (Boundary b : sp.boundaries){
-            for (Arc a : b.arcs){
-                a.owner = sp;
-                if (a.opposite != null && a.refined == null){
-                    a.refined = ArcUtil.dbgCloneArc(a);
-                    a.refined.owner = a.owner;
-                    ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
-                    if (a.owner.intersectingPatches.contains(a.opposite.owner.id) && a.cuspTriangle == null) {
-                        a.opposite.refined = ArcUtil.cloneArc(a.refined);
-                        ArcUtil.reverseArc(a.opposite.refined, false);
-                    } else {
-                        int curr = getSubdivisionLevel(a.opposite);
-                        a.opposite.refined = dbgCloneArc(a.opposite);
+    public static void refineArcsOnConcavePatches(){
+        for (SphericalPatch sp : Surface.triangles) {
+            if (sp.id == 5238 || sp.id == 5255) {
+                System.out.println("object of interest");
+            }
+            sp.vertices.clear();
+            sp.nextVertexID = 0;
+            for (Boundary b : sp.boundaries) {
+                ArcUtil.buildEdges(b, true);
+                for (Point v : b.vrts) {
+                    v._id = sp.nextVertexID++;
+                    sp.vertices.add(v);
+                }
+                for (Arc a : b.arcs) {
+                    a.owner = sp;
+                    if (false && a.opposite != null && a.refined == null) {
+                        a.refined = ArcUtil.dbgCloneArc(a);
+                        a.refined.owner = a.owner;
+                        if (a.owner.intersectingPatches.contains(a.opposite.owner.id) && a.cuspTriangle == null) {
+                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
+                            a.opposite.refined = ArcUtil.cloneArc(a.refined);
+                            ArcUtil.reverseArc(a.opposite.refined, true);
+                            int c = 432;
+                        } else {
+                            //int curr = getSubdivisionLevel(a.opposite);
+                            a.opposite.refined = dbgCloneArc(a.opposite);
+                            a.opposite.refined.owner = a.opposite.owner;
+                            refineOppositeArcs(a.refined, a.opposite.refined, SesConfig.edgeLimit, true, false);
+                            //refineArc(a.opposite.refined, SesConfig.edgeLimit, true, getSubdivisionLevel(a.refined) - curr, false, MeshRefinement.concaveEdgeSplitMap.get(a.opposite.owner.id));
+                            //System.out.println("refining cusp triangle arcs");
+                        }
                         a.opposite.refined.owner = a.opposite.owner;
-                        refineArc(a.opposite.refined, SesConfig.edgeLimit, true, getSubdivisionLevel(a.refined) - curr, false, MeshRefinement.concaveEdgeSplitMap.get(a.opposite.owner.id));
-                        System.out.println("refining cusp triangle arcs");
+                        if (a.refined.owner == null || a.opposite.refined.owner == null) {
+                            int c = 4;
+                        }
+                        if (sp.trimmed) {
+                            a.vrts.clear();
+                            a.vrts.addAll(a.refined.vrts);
+                        }
+                        if (a.opposite.owner.trimmed) {
+                            a.opposite.vrts.clear();
+                            a.opposite.vrts.addAll(a.opposite.refined.vrts);
+                        }
+                    } else if (a.refined == null) {
+                        a.refined = ArcUtil.dbgCloneArc(a);
+                        a.refined.owner = a.owner;
+                        if (a.refined.owner == null) {
+                            int c = 4;
+                        }
+                        try {
+                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        if (sp.trimmed) {
+                            a.vrts.clear();
+                            a.vrts.addAll(a.refined.vrts);
+                        }
                     }
-                    a.opposite.refined.owner = a.opposite.owner;
-                    if (a.refined.owner == null || a.opposite.refined.owner == null){
-                        int c = 4;
-                    }
-                    if (sp.trimmed) {
-                        a.vrts.clear();
-                        a.vrts.addAll(a.refined.vrts);
-                    }
-                    if (a.opposite.owner.trimmed) {
-                        a.opposite.vrts.clear();
-                        a.opposite.vrts.addAll(a.opposite.refined.vrts);
-                    }
-                } else if (a.refined == null){
-                    a.refined = ArcUtil.dbgCloneArc(a);
-                    a.refined.owner = a.owner;
-                    if (a.refined.owner == null){
-                        int c = 4;
-                    }
-                    try {
-                        ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
-                    } catch (Exception e){
-                        e.printStackTrace();
-                    }
-                    if (sp.trimmed) {
-                        a.vrts.clear();
-                        a.vrts.addAll(a.refined.vrts);
+                    if (a.refined != null) {
+                        if (sp.trimmed) {
+                            a.vrts.clear();
+                            a.vrts.addAll(a.refined.vrts);
+                        }
+                        for (Point v : a.vrts) {
+                            if (v._id < 0) {
+                                v._id = sp.nextVertexID++;
+                                sp.vertices.add(v);
+                            }
+                        }
+                        generateEdgeSplits(a.refined, a.owner);
                     }
                 }
-            }
-            ArcUtil.buildEdges(b, true);
-            for (Point v : b.vrts){
+                ArcUtil.buildEdges(b, true);
+            /*for (Point v : b.vrts){
                 v._id = sp.nextVertexID++;
                 sp.vertices.add(v);
-            }
-            for (Arc a : b.arcs){
-                for (Point p : a.vrts){
-                    p.arc = a;
+            }*/
+                for (Arc a : b.arcs) {
+                    for (Point p : a.vrts) {
+                        p.arc = a;
+                    }
                 }
             }
         }
     }
 
-    public static double getArcLength(Arc a, Point p1, Point p2){
+    private static double getArcLength(Arc a, Point p1, Point p2){
         Vector v1 = Point.subtractPoints(p1, a.center).makeUnit();
         Vector v2 = Point.subtractPoints(p2, a.center).makeUnit();
         Vector n = Vector.getNormalVector(v1, v2).makeUnit();
@@ -848,5 +899,126 @@ public class ArcUtil {
             return a.radius * (2 * Math.PI - Math.acos(v1.dotProduct(v2)));
         }
         return a.radius * Math.acos(v1.dotProduct(v2));
+    }
+
+    public static void resetArcs(SphericalPatch sp){
+        sp.vertices.clear();
+        sp.nextVertexID = 0;
+        sp.arcPointCount = 0;
+        for (Boundary b : sp.boundaries){
+            for (Arc a : b.arcs){
+                if (a.bOwner == null){
+                    int sd = 3;
+                }
+                resetArc(a);
+                if (a.bOwner == null){
+                    int c = 4;
+                }
+            }
+            ArcUtil.buildEdges(b, true);
+            for (Point p : b.vrts){
+                p._id = sp.nextVertexID++;
+                sp.vertices.add(p);
+            }
+        }
+    }
+
+    private static void resetArc(Arc a){
+        if (a.baseSubdivision < 0){
+            int c = 32;
+        }
+        byte currLevel = getSubdivisionLevel(a);
+        if (a.baseSubdivision > currLevel){
+            int s = 2;
+        }
+        if (a.baseSubdivision == currLevel){
+            a.refined.vrts.clear();
+            a.refined = null;
+            return;
+        }
+        List<Point> tmp = new ArrayList<>(a.vrts);
+        a.vrts.clear();
+        int step = (int)Math.pow(2, currLevel - a.baseSubdivision);
+        for (int i = 0; i < tmp.size(); i += step){
+            a.vrts.add(tmp.get(i));
+        }
+        a.refined.vrts.clear();
+        a.refined = null;
+        if (getSubdivisionLevel(a) != a.baseSubdivision){
+            int c = 43;
+        }
+    }
+
+    public static void refineArcsOnConvexPatches(){
+        for (SphericalPatch sp : Surface.convexPatches){
+            if (sp.boundaries.size() == 0) {
+                ArcUtil.linkArcs(sp);
+            }
+            for (Boundary b : sp.boundaries) {
+                for (Arc a : b.arcs){
+                    for (Point v : a.vrts){
+                        v.arcPoint = true;
+                    }
+                    if (a.refined != null){
+                        continue;
+                    }
+                    Arc op = a.opposite;
+                    if (sp.id == 767 || sp.id == 772){
+                        int fgd = 3;
+                    }
+                    if (op.owner.boundaries.size() == 0){
+                        ArcUtil.linkArcs(op.owner);
+                    }
+                    a.refined = ArcUtil.dbgCloneArc(a);
+                    a.refined.owner = sp;
+                    op.refined = ArcUtil.dbgCloneArc(op);
+                    op.refined.owner = op.owner;
+                    ArcUtil.refineOppositeArcs(a.refined, op.refined, SesConfig.edgeLimit, true, true);
+                    ArcUtil.generateEdgeSplits(a.refined, sp);
+                    ArcUtil.generateEdgeSplits(op.refined, op.owner);
+                    a.vrts.clear();
+                    a.vrts.addAll(a.refined.vrts);
+                    op.vrts.clear();
+                    op.vrts.addAll(op.refined.vrts);
+                    for (Point v : a.vrts){
+                        v.arcPoint = true;
+                        v.arc = a;
+                    }
+                    for (Point v : op.vrts){
+                        v.arcPoint = true;
+                        v.arc = op;
+                    }
+                }
+                ArcUtil.buildEdges(b, true);
+            }
+            //refine arcs - when refining an arc, its opposite arc will be refined as well as to have the same number of vertices on both of them
+            Surface.atomsProcessed.set(sp.id + 1);
+        }
+    }
+
+    public static boolean inco(SphericalPatch sp){
+        for (Boundary b : sp.boundaries){
+            for (Arc a : b.arcs){
+                if (a.baseSubdivision > getSubdivisionLevel(a)){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static void nestConvexPatchBoundaries(){
+        for (SphericalPatch sp : Surface.convexPatches) {
+            for (Boundary b : sp.boundaries) {
+                for (Boundary c : sp.boundaries) {
+                    if (c == b) {
+                        continue;
+                    }
+                    if (ArcUtil.checkIfNested(b, c)) {
+                        b.nestedBoundaries.add(c);
+                    }
+                }
+            }
+        }
     }
 }

@@ -274,6 +274,10 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
 
 
     public void sendPatchesLists(List<SphericalPatch> convex, List<SphericalPatch> concave){
+        stopRendering.set(true);
+        while (!stoppedRendering.get()){
+            System.out.println("waiting for stop");
+        }
         GLRunnable task = new GLRunnable() {
             @Override
             public boolean run(GLAutoDrawable glAutoDrawable) {
@@ -1064,7 +1068,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             slerping = false;
             slerpParam = 0.f;
         }
-        if (mouseSelect){
+        if (!stopRendering.get() && mouseSelect){
             if (convexPatchesFaceCount == 0 || concavePatchesFaceCount == 0 || toriPatchesFaceCount == 0){
                 return;
             }
@@ -1627,7 +1631,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 return true;
             }
         };
-        window.invoke(false, r);
+        window.invoke(true, r);
     }
 
     public void pushConcave(){
@@ -1638,7 +1642,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 return true;
             }
         };
-        window.invoke(false, r);
+        window.invoke(true, r);
     }
 
     private void pushToriMesh2GPU(){
@@ -1677,6 +1681,17 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         toriPushData2GPU.set(false);
         toriMeshInitialized = true;
         System.out.println("Number of triangles: " + faceCount);
+    }
+
+    public void pushTori(){
+        GLRunnable r = new GLRunnable() {
+            @Override
+            public boolean run(GLAutoDrawable glAutoDrawable) {
+                pushToriMesh2GPU();
+                return true;
+            }
+        };
+        window.invoke(true, r);
     }
 
     @Override
@@ -2444,16 +2459,15 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             public boolean run(GLAutoDrawable glAutoDrawable) {*/
         System.out.println("DELETING THE WHOLE THING");
                 IntBuffer buff = GLBuffers.newDirectIntBuffer(vaos.size());
-                stopRendering.set(true);
-                while (!stoppedRendering.get()){
-                    System.out.println("waiting for stop");
-                }
+
                 /*if (convexPatches != null && convexPatches.size() > 0){
                     convexPatches = null;
                 }
                 if (concavePatchList != null && concavePatchList.size() > 0){
                     concavePatchList.clear();
                 }*/
+                convexPatchesSelect.clear();
+                concavePatchesSelect.clear();
                 convexPatchList = null;
                 concavePatchList = null;
                 if (vaos.size() > 0) {
@@ -2537,6 +2551,10 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     }
 
     public void requestFreeResources(){
+        stopRendering.set(true);
+        while (!stoppedRendering.get()){
+            System.out.println("waiting for stop");
+        }
         GLRunnable task = new GLRunnable() {
             @Override
             public boolean run(GLAutoDrawable glAutoDrawable) {

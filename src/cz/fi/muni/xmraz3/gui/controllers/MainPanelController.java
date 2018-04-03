@@ -147,6 +147,13 @@ public class MainPanelController {
                 }
             }
         });
+
+        btnTriangulate.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                SurfaceParser.remesh();
+            }
+        });
         //txtFolder.setPromptText("Directory with atoms, rectangles, triangles, info JSON files");
         txtFolder.setOnAction(new EventHandler<ActionEvent>() {
             @Override

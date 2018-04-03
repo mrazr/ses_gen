@@ -7,6 +7,7 @@ import cz.fi.muni.xmraz3.Surface;
 import cz.fi.muni.xmraz3.math.Plane;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Vector;
+import cz.fi.muni.xmraz3.utils.ArcUtil;
 import cz.fi.muni.xmraz3.utils.PatchUtil;
 
 import java.util.ArrayList;
@@ -2323,6 +2324,7 @@ public class AdvancingFrontMethod {
             vrtsOffset = 0;
         }
         Boundary b = cp.boundaries.get(0);
+        verbose = (cp.id == 1404);
         loopDetected = false;
         this.patch = cp;
         //meshFaceList = cp.faces;
@@ -2355,7 +2357,8 @@ public class AdvancingFrontMethod {
         processedBoundaries.add(b);
         processedBoundaries.addAll(b.nestedBoundaries);
         for (Boundary bb : bs) {
-            for (Point p : bb.vrts) {
+            Boundary b_ = bb;
+            for (Point p : b_.vrts) {
                 p.afmIdx = -1;
             }
             /*for (Arc l : b.arcs) {
@@ -2375,8 +2378,8 @@ public class AdvancingFrontMethod {
                 for (Point p : l.vrts) {
                     nodes.add(p);
                 }*/
-            facets.addAll(bb.lines);
-            for (Edge e : bb.lines) {
+            facets.addAll(b_.lines);
+            for (Edge e : b_.lines) {
                 if (e.p1.afmIdx < 0) {
                     e.p1.afmIdx = nodeEdgeMap.size();
                     nodeEdgeMap.add(new ArrayList<>());
@@ -2388,7 +2391,7 @@ public class AdvancingFrontMethod {
                 nodeEdgeMap.get(e.p1.afmIdx).add(e);
                 nodeEdgeMap.get(e.p2.afmIdx).add(e);
             }
-            nodes.addAll(bb.vrts);
+            nodes.addAll(b_.vrts);
             //newPoints.addAll(bb.vrts);
 
         }
@@ -2800,8 +2803,11 @@ public class AdvancingFrontMethod {
             }
         }
     }
-
+    private boolean verbose = false;
     private void generateFaceWithNewPoint(Point pTest){
+        if (verbose) {
+            System.out.println(patch.faces.size() + ". face by new face");
+        }
         pTest.afmIdx = nodeEdgeMap.size();
         nodeEdgeMap.add(new ArrayList<>());
         nodes.add(pTest);
@@ -2863,6 +2869,9 @@ public class AdvancingFrontMethod {
     }
 
     private void generateFaceWithPreviousEdge(){
+        if (verbose) {
+            System.out.println(patch.faces.size() + ". face constructed with prev edge");
+        }
         Edge newFacet = new Edge(e.prev.p1.afmIdx, e.p2.afmIdx);
         newFacet.p1 = e.prev.p1;
         newFacet.p2 = e.p2;
@@ -2924,6 +2933,9 @@ public class AdvancingFrontMethod {
     }
 
     private void generateFaceWithNextEdge(){
+        if (verbose) {
+            System.out.println(patch.faces.size() + ". face constructed with next edge");
+        }
         Edge newFacet = new Edge(e.p1.afmIdx, e.next.p2.afmIdx);
         newFacet.p1 = e.p1;
         newFacet.p2 = e.next.p2;
@@ -2985,6 +2997,9 @@ public class AdvancingFrontMethod {
     }
 
     private void generateBridgeFace(Point pt){
+        if (verbose) {
+            System.out.println(patch.faces.size() + ". face constructed with bridge edge");
+        }
         List<Edge> pointEdges = nodeEdgeMap.get(pt.afmIdx);
         if (pointEdges.size() != 2){
             List<Edge> relevantEdges = pointEdges.stream().filter(f -> f.loopID == activeLoop).collect(Collectors.toList());

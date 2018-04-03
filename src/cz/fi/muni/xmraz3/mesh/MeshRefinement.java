@@ -84,10 +84,10 @@ public class MeshRefinement {
         List<Face> newFaces = new ArrayList<>(1000);
         for (int i = threadIdx * step; i < ((threadIdx == 3) ? patches.size() : (threadIdx + 1) * step); ++i) {
             SphericalPatch sp = patches.get(i);
-            /*if (!sp.convexPatch) {
+            if (!sp.convexPatch) {
                 continue;
-            }*/
-            if (!sp.valid || true) {
+            }
+            if (!sp.valid) {
                 continue;
             }
             facesToRefine.clear();
@@ -870,5 +870,72 @@ public class MeshRefinement {
         Point b = sp.vertices.get(f.b);
         Point c = sp.vertices.get(f.c);
         return (Point.distance(a, b) - minLen < 0.0 || Point.distance(b, c) - minLen < 0.0 || Point.distance(a, c) - minLen < 0.0);
+    }
+
+    public static void reset(){
+        Runnable r1 = new Runnable() {
+            @Override
+            public void run() {
+                MeshRefinement.convexEdgeSplitMap = new ArrayList<>(SesConfig.atomCount);
+                MeshRefinement.convexVertexFaceMap = new ArrayList<>(SesConfig.atomCount);
+                for (int i = 0; i < SesConfig.atomCount; ++i){
+                    MeshRefinement.convexEdgeSplitMap.add(new TreeMap<>());
+                    MeshRefinement.convexVertexFaceMap.add(new TreeMap<>());
+                }
+
+            }
+        };
+        Thread t1 = new Thread(r1);
+        t1.start();
+        Runnable r2 = new Runnable() {
+            @Override
+            public void run() {
+                MeshRefinement.concaveEdgeSplitMap = new ArrayList<>(SesConfig.trianglesCount);
+                MeshRefinement.concaveVertexFaceMap = new ArrayList<>(SesConfig.trianglesCount);
+                for (int i = 0; i < SesConfig.trianglesCount; ++i){
+                    MeshRefinement.concaveEdgeSplitMap.add(new TreeMap<>());
+                    MeshRefinement.concaveVertexFaceMap.add(new TreeMap<>());
+                }
+            }
+        };
+        Thread t2 = new Thread(r2);
+        t2.start();
+        try {
+            t1.join();
+            t2.join();
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void startMeshing(){
+        MeshRefinement.threads_done.set(0);
+        int step = SesConfig.atomCount / 4;
+        for (int i = 0; i < 4; ++i){
+            final int start = i;
+            final int _step = step;
+            Runnable r = new Runnable() {
+                @Override
+                public void run() {
+                    MeshRefinement.generateBaseMesh(start * _step, (start == 3) ? SesConfig.atomCount : (start + 1) * _step, Surface.convexPatches, start);
+                }
+            };
+            (new Thread(r)).start();
+        }
+        while (!MeshRefinement.free.get()){}
+        MeshRefinement.threads_done.set(0);
+        System.out.println("starting to mesh concave");
+        step = SesConfig.trianglesCount / 4;
+        for (int i = 0; i < 4; ++i){
+            final int start = i;
+            final int _step = step;
+            Runnable r = new Runnable() {
+                @Override
+                public void run() {
+                    MeshRefinement.generateBaseMesh(start * _step, (start == 3) ? SesConfig.trianglesCount : (start + 1) * _step, Surface.triangles, start);
+                }
+            };
+            (new Thread(r)).start();
+        }
     }
 }

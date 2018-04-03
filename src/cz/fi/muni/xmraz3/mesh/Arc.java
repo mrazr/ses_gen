@@ -47,6 +47,7 @@ public class Arc {
     public boolean circularArc = false;
     public boolean halfCircle = false;
     public boolean intersecting = false;
+    public byte baseSubdivision = -1;
 
     public Arc(Point center, double radius){
         this.center = center;

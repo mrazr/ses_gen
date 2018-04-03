@@ -9,6 +9,7 @@ import cz.fi.muni.xmraz3.mesh.*;
 import javafx.scene.shape.Mesh;
 import smile.neighbor.Neighbor;
 
+import javax.sound.midi.Patch;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -150,7 +151,7 @@ public class PatchUtil {
 
             //Point[] cusps = Util.getCuspPoints(leftL.vrts, leftL.center, rightL.center, SesConfig.probeRadius);
 
-            if (leftL.owner.id == 2337 || rightL.owner.id == 2337){
+            if (leftL.owner.id == 6498 || rightL.owner.id == 6498){
                 System.out.println("americja");
             }
             Arc leftStart = new Arc(leftL.center, leftL.radius);
@@ -164,7 +165,7 @@ public class PatchUtil {
             leftStart.vrts.add(cusps[0]);
             //leftStart.refineLoop(Main.maxEdgeLen, 0.0, true, 1, false);
             //leftStart.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-            ArcUtil.refineArc(leftStart, Surface.maxEdgeLen, true,1, false);
+            //ArcUtil.refineArc(leftStart, Surface.maxEdgeLen, true,1, false);
             ArcUtil.refineArc(leftStart, Surface.maxEdgeLen, false, 0, false);
             leftStart.endEdge1 = new Edge(0, 1);
             leftStart.endEdge1.p1 = leftStart.end1;
@@ -187,7 +188,7 @@ public class PatchUtil {
             leftEnd.vrts.add(leftEnd.end2);
             //leftEnd.refineLoop(Main.maxEdgeLen, 0.0, true, 1, false);
             //leftEnd.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-            ArcUtil.refineArc(leftEnd, Surface.maxEdgeLen, true, 1, false);
+            //ArcUtil.refineArc(leftEnd, Surface.maxEdgeLen, true, 1, false);
             ArcUtil.refineArc(leftEnd, Surface.maxEdgeLen, false, 0, false);
             leftEnd.endEdge1 = new Edge(0, 1);
             leftEnd.endEdge1.p1 = leftEnd.end1;
@@ -210,7 +211,7 @@ public class PatchUtil {
             rightStart.vrts.add(cusps[1]);
             //rightStart.refineLoop(Main.maxEdgeLen, 0.0, true, 1, false);
             //rightStart.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-            ArcUtil.refineArc(rightStart, Surface.maxEdgeLen, true,1, false);
+            //ArcUtil.refineArc(rightStart, Surface.maxEdgeLen, true,1, false);
             ArcUtil.refineArc(rightStart, Surface.maxEdgeLen, false,0, false);
             rightStart.endEdge1 = new Edge(0, 1);
             rightStart.endEdge1.p1 = rightStart.end1;
@@ -233,7 +234,7 @@ public class PatchUtil {
             rightEnd.vrts.add(rightEnd.end2);
             //rightEnd.refineLoop(Main.maxEdgeLen, 0.0, true, 1, false);
             //rightEnd.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-            ArcUtil.refineArc(rightEnd, Surface.maxEdgeLen, true,1, false);
+            //ArcUtil.refineArc(rightEnd, Surface.maxEdgeLen, true,1, false);
             ArcUtil.refineArc(rightEnd, Surface.maxEdgeLen, false,0, false);
             rightEnd.endEdge1 = new Edge(0, 1);
             rightEnd.endEdge1.p1 = rightEnd.end1;
@@ -323,11 +324,12 @@ public class PatchUtil {
             //rightMid.end1 = cusps[0];
             //rightMid.end2 = cusps[1];
             //rightMid.setEndPoints(cusps[0], cusps[1], false);
-            rightMid.setNormal(Point.subtractPoints(rightMid.owner.sphere.center, circle).makeUnit());
+            rightMid.setNormal(leftMid.normal);
             //rightMid.vrts = ArcUtil.cloneArc(leftMid);
             //Util.reverserOrder(rightMid, true);
             ArcUtil.reverseArc(rightMid, true);
             ArcUtil.replaceMiddleVertex(rightMid, new Point(leftMid.mid));
+            rightMid.baseSubdivision = leftMid.baseSubdivision;
             rightMid.next = rightEnd;
             rightEnd.prev = rightMid;
             rightMid.prev = rightStart;
@@ -469,7 +471,7 @@ public class PatchUtil {
                 System.out.println(" ");
             }
             tp.tr2.cuspPoint = cusps[1];
-            leftStart.torus = leftEnd.torus = rightStart.torus = rightEnd.torus = tp;
+            leftStart.torus = leftEnd.torus = rightStart.torus = rightEnd.torus = null;
             tp.concavePatchArcs.clear();
         } catch (Exception e){
             System.err.println("tp id: " + tp.id);
@@ -651,8 +653,10 @@ public class PatchUtil {
                     a.vrts.add(a.end2);
                     a.mid = null;
                     //a.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
-                    ArcUtil.refineArc(a, Surface.maxEdgeLen, false,0, false);
                     a.setEndPoints(in, a.end2, false);
+                    ArcUtil.refineArc(a, Surface.maxEdgeLen, false,0, false);
+                    a.baseSubdivision = ArcUtil.getSubdivisionLevel(a);
+
                     a.valid = true;
                     arc.vrts.clear();
                     arc.vrts.add(arc.end1);
@@ -661,6 +665,7 @@ public class PatchUtil {
                     //arc.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
                     arc.setEndPoints(arc.end1, in, false);
                     ArcUtil.refineArc(arc, Surface.maxEdgeLen, false,0, false);
+                    arc.baseSubdivision = ArcUtil.getSubdivisionLevel(arc);
 
                     a.prev = arc;
                     arc.next = a;
@@ -847,7 +852,8 @@ public class PatchUtil {
                 if (probeToRotationAx - SesConfig.probeRadius < 0.0){
 
                 } else {
-                    left = (Point.subtractPoints(bottom.end2, tp.concavePatchArcs.get(0).end2).sqrtMagnitude() < 0.0001) ? tp.concavePatchArcs.get(0).refined : tp.concavePatchArcs.get(1).refined;
+                    //left = (Point.subtractPoints(bottom.end2, tp.concavePatchArcs.get(0).end2).sqrtMagnitude() < 0.0001) ? tp.concavePatchArcs.get(0).refined : tp.concavePatchArcs.get(1).refined;
+                    left = (Point.distance(bottom.end2, tp.concavePatchArcs.get(0).end2) < 0.0001) ? tp.concavePatchArcs.get(0).refined : tp.concavePatchArcs.get(1).refined;
                     ArcUtil.reverseArc(left, true);
                     right = (left == tp.concavePatchArcs.get(0).refined) ? tp.concavePatchArcs.get(1).refined : tp.concavePatchArcs.get(0).refined;
                     meshToroidalPatch(tp, bottom, top, left, right, false);
@@ -1119,7 +1125,7 @@ public class PatchUtil {
         return in1Arc.bOwner;
     }
 
-    private static void boundaryAlgorithm2(Plane circle, double radius, Point in1, Arc a1, Point in2, Arc a2, List<Point> intersectionPoints, List<Point> usedPoints, List<Boundary> toRemove, List<Boundary> newBS, SphericalPatch sp){
+    private static void boundaryAlgorithm2(Plane circle, double radius, Point in1, Arc a1, Point in2, Arc a2, List<Point> intersectionPoints, List<Point> usedPoints, List<Boundary> toRemove, List<Boundary> newBS, SphericalPatch sp, int otherPatch){
         Point pStart = in1;
         List<Boundary> toRemove2 = new ArrayList<>();
         Boundary b = new Boundary();
@@ -1134,14 +1140,30 @@ public class PatchUtil {
         //boolean forceBridge = (circle.checkPointLocation(a1.end1) < 0.0 && circle.checkPointLocation(a1.end2) < 0.0);
         do {
             if (toBridge){ //|| forceBridge){
-                Arc newA = new Arc(circle.p, radius);
-                newA.setEndPoints(in1, in2, false);
-                newA.setNormal(circle.v);
-                newA.vrts.add(in1);
-                newA.vrts.add(in2);
+                Arc newA = null; //retrieveBridgeArc(sp.id, otherPatch, in2, in1);
+                if (newA == null) {
+                    newA = new Arc(circle.p, radius);
+                    newA.setEndPoints(in1, in2, false);
+                    newA.setNormal(circle.v);
+                    newA.vrts.add(in1);
+                    newA.vrts.add(in2);
+                    ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
+                    putNewBridgeArc(sp.id, otherPatch, newA);
+                } else {
+                    Arc temp = newA;
+                    newA = ArcUtil.cloneArc(temp);
+                    ArcUtil.reverseArc(newA, true);
+                    newA.opposite = temp;
+                    temp.opposite = newA;
+                    /*newA = new Arc(circle.p, radius);
+                    newA.setEndPoints(in1, in2, false);
+                    newA.setNormal(circle.v);
+                    newA.vrts.add(in1);
+                    newA.vrts.add(in2);
+                    ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);*/
+                }
                 usedPoints.add(in1);
                 usedPoints.add(in2);
-                ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                // ArcUtil.markShared(newA);
                 b.arcs.add(newA);
                 toBridge = false;
@@ -1178,9 +1200,13 @@ public class PatchUtil {
                     newA.vrts.add(in1);
                     newA.vrts.add(in2);
                     usedPoints.add(in2);
+                    if (a1.torus != null){
+                        System.out.println("found torus 1");
+                    }
                     if (a1.opposite != null){
                         newA.opposite = a1.opposite;
                         newA.opposite.opposite = newA;
+                        //ArcUtil.refineArc(newA, 0, true, ArcUtil.getSubdivisionLevel(newA.opposite), false);
                         if (a1.torus != null){
                             Arc finalA = a1;
                             a1.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
@@ -1192,6 +1218,8 @@ public class PatchUtil {
                             newA.torus = a1.torus;
                             newA.torus.concavePatchArcs.add(newA);
                         }
+                    } else {
+                        //ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     }
                     if (a1.cuspTriangle != null){
                         System.out.println("found arc of cusp 1");
@@ -1239,32 +1267,42 @@ public class PatchUtil {
                     newA.setNormal(a.normal);
                     newA.vrts.add(in1);
                     newA.vrts.add(a1.end2);
+                    //ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     /*if (a.cuspTriangle != null){
                         System.out.println("found arc of cusp 2");
                     }*/
+                    ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
+                    if (a1.torus != null){
+                        System.out.println("found torus 2");
+                    }
                     if (a.opposite != null){
                         newA.opposite = a.opposite;
                         newA.opposite.opposite = newA;
+                        //ArcUtil.refineArc(newA, 0, true, ArcUtil.getSubdivisionLevel(newA.opposite), false);
                         if (a.torus != null){
                             newA.torus = a.torus;
-                            if (a.cuspTriangle != null){
-                                newA.cuspTriangle = a.cuspTriangle;
-                                if (a == a.cuspTriangle.left){
-                                    newA.cuspTriangle.left = newA;
-                                } else {
-                                    newA.cuspTriangle.right = newA;
+                            Arc finalA = a;
+                            a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
+                                @Override
+                                public boolean test(Arc arc) {
+                                    return arc.id == finalA.id;
                                 }
+                            });
+                            newA.torus.concavePatchArcs.add(newA);
+                        } else if (a.cuspTriangle != null){
+                            newA.cuspTriangle = a.cuspTriangle;
+                            if (a == a.cuspTriangle.left){
+                                newA.cuspTriangle.left = newA;
+                                newA.cuspTriangle.right.opposite = newA;
+                                newA.opposite = newA.cuspTriangle.right;
                             } else {
-                                Arc finalA = a;
-                                a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
-                                    @Override
-                                    public boolean test(Arc arc) {
-                                        return arc.id == finalA.id;
-                                    }
-                                });
-                                newA.torus.concavePatchArcs.add(newA);
+                                newA.cuspTriangle.right = newA;
+                                newA.cuspTriangle.left.opposite = newA;
+                                newA.opposite = newA.cuspTriangle.left;
                             }
                         }
+                    } else {
+                        //ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                     }
 
                     /*if (a.cuspTriangle != null){
@@ -1317,29 +1355,38 @@ public class PatchUtil {
                     /*if (a.cuspTriangle != null){
                         System.out.println("found arc of cusp 3");
                     }*/
+                    ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
+                    if (a.torus != null){
+                        System.out.println("found torus 3");
+                    }
                     if (a.opposite != null){
                         newA.opposite = a.opposite;
                         newA.opposite.opposite = newA;
+                        //ArcUtil.refineArc(newA, 0, true, ArcUtil.getSubdivisionLevel(newA.opposite), false);
                         if (a.torus != null){
                             newA.torus = a.torus;
-                            if (a.cuspTriangle != null){
-                                newA.cuspTriangle = a.cuspTriangle;
-                                if (a == a.cuspTriangle.left){
-                                    newA.cuspTriangle.left = newA;
-                                } else {
-                                    newA.cuspTriangle.right = newA;
+                            Arc finalA = a;
+                            a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
+                                @Override
+                                public boolean test(Arc arc) {
+                                    return arc.id == finalA.id;
                                 }
+                            });
+                            newA.torus.concavePatchArcs.add(newA);
+                        } else if (a.cuspTriangle != null){
+                            newA.cuspTriangle = a.cuspTriangle;
+                            if (a == a.cuspTriangle.left){
+                                newA.cuspTriangle.left = newA;
+                                newA.cuspTriangle.right.opposite = newA;
+                                newA.opposite = newA.cuspTriangle.right;
                             } else {
-                                Arc finalA = a;
-                                a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
-                                    @Override
-                                    public boolean test(Arc arc) {
-                                        return arc.id == finalA.id;
-                                    }
-                                });
-                                newA.torus.concavePatchArcs.add(newA);
+                                newA.cuspTriangle.right = newA;
+                                newA.cuspTriangle.left.opposite = newA;
+                                newA.opposite = newA.cuspTriangle.left;
                             }
                         }
+                    } else {
+
                     }
                     /*if (a.cuspTriangle != null){
                         int subdLevel = ArcUtil.getSubdivisionLevel(a);
@@ -1398,26 +1445,31 @@ public class PatchUtil {
                 if (a.opposite != null){
                     newA.opposite = a.opposite;
                     newA.opposite.opposite = newA;
+                    //ArcUtil.refineArc(newA, 0, true, ArcUtil.getSubdivisionLevel(newA.opposite), false);
                     if (a.torus != null){
                         newA.torus = a.torus;
-                        if (a.cuspTriangle != null){
-                            newA.cuspTriangle = a.cuspTriangle;
-                            if (a == a.cuspTriangle.left){
-                                newA.cuspTriangle.left = newA;
-                            } else {
-                                newA.cuspTriangle.right = newA;
+                        Arc finalA = a;
+                        a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
+                            @Override
+                            public boolean test(Arc arc) {
+                                return arc.id == finalA.id;
                             }
+                        });
+                        newA.torus.concavePatchArcs.add(newA);
+                    } else if (a.cuspTriangle != null){
+                        newA.cuspTriangle = a.cuspTriangle;
+                        if (a == a.cuspTriangle.left){
+                            newA.cuspTriangle.left = newA;
+                            newA.cuspTriangle.right.opposite = newA;
+                            newA.opposite = newA.cuspTriangle.right;
                         } else {
-                            Arc finalA = a;
-                            a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
-                                @Override
-                                public boolean test(Arc arc) {
-                                    return arc.id == finalA.id;
-                                }
-                            });
-                            newA.torus.concavePatchArcs.add(newA);
+                            newA.cuspTriangle.right = newA;
+                            newA.cuspTriangle.left.opposite = newA;
+                            newA.opposite = newA.cuspTriangle.left;
                         }
                     }
+                } else {
+                    //ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
                 }
                 /*if (a.cuspTriangle != null){
                     newA.cuspTriangle = a.cuspTriangle;
@@ -1471,7 +1523,7 @@ public class PatchUtil {
     }
 
     private static int id = -1002;
-    private static void generateNewBoundaries2(SphericalPatch sp, List<Point> intersectionPs, Plane circle, double radius){
+    private static void generateNewBoundaries2(SphericalPatch sp, List<Point> intersectionPs, Plane circle, double radius, int otherPatch, boolean force){
         try {
             if (intersectionPs.size() % 2 == 1){
                 return;
@@ -1518,7 +1570,7 @@ public class PatchUtil {
                             a2.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0) &&
                             a2.next.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0) &&
                             a2.prev.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0);
-                    if (inside){
+                    if (!force && inside){
                         return;
                     }
 
@@ -1553,7 +1605,7 @@ public class PatchUtil {
                     }*/
                     //System.out.println("to : " + sp.id);
                     //toRemove.add(boundaryAlgorithm2(circle, radius, in1, a1, in2, a2, ps, usedPoints, newBS, sp));
-                    boundaryAlgorithm2(circle, radius, in1, a1, in2, a2, ps, usedPoints, toRemove, newBS, sp);
+                    boundaryAlgorithm2(circle, radius, in1, a1, in2, a2, ps, usedPoints, toRemove, newBS, sp, otherPatch);
                     i += ps.size();
                     //System.out.println("did: " + sp.id);
                     //sp.boundaries.remove(a.bOwner);f
@@ -1785,6 +1837,8 @@ public class PatchUtil {
 
     private static Map<Integer, List<Plane>> planes = new TreeMap<>();
     private static Map<Integer, Map<Integer, List<Point>>> moip = new TreeMap<>();
+    private static Map<Integer, Map<Integer, PatchBridge>> bridgeArcs = new TreeMap<>();
+    private static Map<Integer, List<ArcDivide>> divides = new TreeMap<>();
 
     private static void trimConcavePatch(SphericalPatch sp){
         try {
@@ -1808,12 +1862,6 @@ public class PatchUtil {
                     planes.get(sp.id).add(p);
                 }
             }
-            /*if (sp.id == 6580 || sp.id == 6574 || sp.id == 6577 || sp.id == 6605){
-                return;
-            }*/
-            if (!moip.containsKey(sp.id)){
-                moip.put(sp.id, new TreeMap<>());
-            }
             for (Neighbor<double[], SphericalPatch> n : neighbors) {
                 if (n.value == sp) {
                     continue;
@@ -1822,9 +1870,6 @@ public class PatchUtil {
                 if (sp.intersectingPatches.contains(sp2.id)) {
                     continue;
                 }
-                /*if (sp.id == 97 || sp.id == 98 || sp.id == 99 || sp2.id == 97 || sp2.id == 98 || sp2.id == 99) {
-                    continue;
-                }*/
                 Point center = new Point(0, 0, 0);
                 double radius = computeIntersectionCircle(sp.sphere.center, sp2.sphere.center, center, SesConfig.probeRadius);
                 Vector nV = Point.subtractPoints(sp.sphere.center, center).makeUnit();
@@ -1835,17 +1880,11 @@ public class PatchUtil {
                 if (Point.distance(sp.sphere.center, sp2.sphere.center) < 0.008){
                     continue;
                 }
-                //sp2.intersectingPatches.add(sp.id);
-                if (sp2.id == 1187 && sp.id == 1196){
-                    //System.out.println("1299 and 1371");
-                }
-
-                if (sp.id == 1371){
-                    //System.out.println("am.");
-                }
                 Plane p = new Plane(center, nV);
-                List<Point> intersectionPoints;
-                if (!moip.get(sp.id).containsKey(sp2.id)) {
+                List<Point> intersectionPoints = new ArrayList<>();
+                List<Arc> exclude = new ArrayList<>();
+                findIntersectionPoints(sp, center, radius, intersectionPoints, exclude);
+                /*if (!moip.get(sp.id).containsKey(sp2.id)) {
                     intersectionPoints = new ArrayList<>();
                     findIntersectionPoints(sp, center, radius, intersectionPoints, null);
                     if (!pointsLieOnPatch(sp2, intersectionPoints)){
@@ -1857,11 +1896,11 @@ public class PatchUtil {
                     moip.get(sp2.id).put(sp.id, intersectionPoints);
                 } else {
                     intersectionPoints = moip.get(sp.id).get(sp2.id);
-                }
+                }*/
 
-                if (intersectionPoints.size() > 0){
+                /*if (intersectionPoints.size() > 0){
                     if (!pointsLieOnPatch(sp2, intersectionPoints)) {
-                        System.out.println("Found points lying on sp but not lying on sp2 " + sp.id + " " + sp2.id);
+                        //System.out.println("Found points lying on sp but not lying on sp2 " + sp.id + " " + sp2.id);
                         continue;
                     } else {
                         if (!moip.containsKey(sp2.id)){
@@ -1870,17 +1909,17 @@ public class PatchUtil {
                         }
                         moip.get(sp2.id).put(sp.id, intersectionPoints);
                     }
-                }
+                }*/
 
-                if (sp.id == 1349){
+                if (sp.id == 6102){
                     int fads = 32;
                 }
                 if (intersectionPoints.size() > 1) {
                     if (planes.get(sp.id).stream().noneMatch(plane -> plane.isIdenticalWith(p))) {
                         planes.get(sp.id).add(p);
-                        //System.out.println("about to: " + sp.id);
-                        generateNewBoundaries2(sp, intersectionPoints, p, radius);
+                        //System.out.println("about to: " + sp.id);\
                         sp.intersectingPatches.add(sp2.id);
+                        generateNewBoundaries2(sp, intersectionPoints, p, radius, sp2.id,false);
                         i++;
                         if (!sp.trimmed){
                             sp.trimmed = true;
@@ -1890,12 +1929,6 @@ public class PatchUtil {
                 } else if (intersectionPoints.size() == 0) {
                     //laterId.add(sp2.id);
                     //laterCirc.add(center);
-                    /*Intersection in = new Intersection();
-                    in.sp1 = sp;
-                    in.sp2 = sp2;
-                    in.circleRadius = radius;
-                    in.circle = p;
-                    possibleIntersections.add(in);*/
                     Boundary newB = ArcUtil.generateCircularBoundary(p, radius);
                     boolean nest = false;
                     List<Boundary> removeFromSP = new ArrayList<>();
@@ -1985,13 +2018,16 @@ public class PatchUtil {
         }
     }
 
-    private static void findIntersectionPoints(SphericalPatch sp, Point circle, double radius, List<Point> intersectionPoints, Arc exclude){
+    private static void findIntersectionPoints(SphericalPatch sp, Point circle, double radius, List<Point> intersectionPoints, List<Arc> exclude){
         Vector n = Point.subtractPoints(sp.sphere.center, circle).makeUnit();
         Plane p = new Plane(circle, n);
         for (Boundary b : sp.boundaries){
             for (Arc a : b.arcs){
-                if (exclude != null && (a == exclude || a == exclude.next || a == exclude.prev)){
+                /*if (a.torus != null || exclude != null && (a == exclude || a == exclude.next || a == exclude.prev)){
                         continue;
+                }*/
+                if (a.torus != null || exclude.size() > 0 && (exclude.stream().anyMatch(a_ -> a_ == a || a_.next == a || a_.prev == a))){
+                    continue;
                 }
                 //boolean allInside = a.vrts.stream().allMatch(v -> p.checkPointLocation(v) > 0.0);
                 /*boolean allInside = p.checkPointLocation(a.end1) > 0.0 && p.checkPointLocation(a.mid) > 0.0 && p.checkPointLocation(a.end2) > 0.0;
@@ -2084,11 +2120,13 @@ public class PatchUtil {
                 return;
             }
             SphericalPatch sp = arc.owner;
-            if (sp.id == 6014){
+            if (sp.id == 1158){
                 System.out.println("ligh");
             }
             List<Point> intersectionPoints = new ArrayList<>();
-            findIntersectionPoints(sp, arc.center, arc.radius, intersectionPoints, arc);
+            List<Arc> exclude = new ArrayList<>();
+            exclude.add(arc);
+            findIntersectionPoints(sp, arc.center, arc.radius, intersectionPoints, exclude);
             List<Point> invalid = new ArrayList<>();
             for (Point v : intersectionPoints){
                 if (Point.distance(v, arc.prev.end1) < 0.0015 || Point.distance(v, arc.next.end2) < 0.0015){
@@ -2648,5 +2686,59 @@ public class PatchUtil {
             }
         }
         return false;
+    }
+
+    private static void trimConcavePatch(SphericalPatch sp, SphericalPatch sp2, boolean force){
+        Point center = new Point(0, 0, 0);
+        double radius = computeIntersectionCircle(sp.sphere.center, sp2.sphere.center, center, SesConfig.probeRadius);
+        Vector nV = Point.subtractPoints(sp.sphere.center, center).makeUnit();
+        Plane p = new Plane(center, nV);
+        List<Point> intersectionPoints = new ArrayList<>();
+        List<Arc> excludeArcs = new ArrayList<>();
+        if (divides.containsKey(sp.id)){
+            divides.get(sp.id).stream().forEach(arcDivide -> {
+                intersectionPoints.add(arcDivide.intersection);
+                excludeArcs.add(arcDivide.newArc);
+            });
+        }
+        findIntersectionPoints(sp, center, radius, intersectionPoints, excludeArcs);
+        if (intersectionPoints.size() > 1){
+            sp.intersectingPatches.add(sp2.id);
+            generateNewBoundaries2(sp, intersectionPoints, p, radius, sp2.id, force);
+        }
+    }
+
+    private static void putNewBridgeArc(int sp1, int sp2, Arc a){
+        int small = Math.min(sp1, sp2);
+        int big = Math.max(sp1, sp2);
+        if (!bridgeArcs.containsKey(small)){
+            bridgeArcs.put(small, new TreeMap<>());
+        }
+        Map<Integer, PatchBridge> map = bridgeArcs.get(small);
+        if (!map.containsKey(big)){
+            map.put(big, new PatchBridge());
+        }
+        PatchBridge pb = map.get(big);
+        pb.intersections.add(a.end1);
+        pb.intersections.add(a.end2);
+        pb.bridges.add(a);
+    }
+
+    private static Arc retrieveBridgeArc(int sp1, int sp2, Point in1, Point in2){
+        int small = Math.min(sp1, sp2);
+        int big = Math.max(sp1, sp2);
+        if (!bridgeArcs.containsKey(small)){
+            return null;
+        }
+        Map<Integer, PatchBridge> map = bridgeArcs.get(small);
+        if (!map.containsKey(big)){
+            return null;
+        }
+        PatchBridge pb = map.get(big);
+        Optional<Arc> arc = pb.bridges.stream().filter(a -> Point.distance(a.end1, in1) < 0.001 && Point.distance(a.end2, in2) < 0.001).findFirst();
+        if (arc.isPresent()){
+            return arc.get();
+        }
+        return null;
     }
 }

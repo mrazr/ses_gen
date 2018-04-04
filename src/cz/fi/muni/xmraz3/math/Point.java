@@ -1,5 +1,6 @@
 package cz.fi.muni.xmraz3.math;
 
+import cz.fi.muni.xmraz3.mesh.Arc;
 import cz.fi.muni.xmraz3.mesh.Edge;
 import cz.fi.muni.xmraz3.Surface;
 import org.json.simple.JSONObject;
@@ -18,7 +19,10 @@ public class Point {
     public int idx = -1;
     public boolean common = true;
     public int ownIdx = -1;
-    public static double scaleFactor = 5;
+    public int _id = -1;
+    //public static double scaleFactor = 5;
+    public boolean arcPoint = false;
+    public Arc arc;
 
     public double getX() {
         return x;
@@ -138,9 +142,9 @@ public class Point {
         return result;
     }
 
-    public void scale(){
+    /*public void scale(){
         x *= scaleFactor;
         y *= scaleFactor;
         z *= scaleFactor;
-    }
+    }*/
 }

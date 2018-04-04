@@ -19,7 +19,7 @@ import static com.jogamp.opengl.GL2ES2.*;
 
 public class GLUtil {
 
-    public static int createShaderProgram(String vert, String frag){
+    public static int createShaderProgram(InputStream vert, InputStream frag){
         GL4 gl = (GL4) GLContext.getCurrentGL();
 
         /*String vshaders[] =
@@ -140,9 +140,9 @@ public class GLUtil {
         }
     }
 
-    private static String[] readShaderSource(String file){
+    private static String[] readShaderSource(InputStream stream){
         List<String> lines;
-        try(BufferedReader br = new BufferedReader(new FileReader(file))){
+        try(BufferedReader br = new BufferedReader(new InputStreamReader(stream))){
             lines = br.lines().map(e -> e.concat("\n")).collect(Collectors.toList());
         } catch (IOException e){
             e.printStackTrace();
@@ -170,12 +170,12 @@ public class GLUtil {
         return r;
     }
 
-    public static int[] loadSphere(String file, GL4 gl){
+    public static int[] loadSphere(InputStream stream, GL4 gl){
         int[] glObjects = new int[3];
         glObjects[0] = -1;
         glObjects[1] = -1;
         glObjects[2] = 0; //this one indicates number of vertices - it will be used in glDrawArrays calls
-        try(BufferedReader br = new BufferedReader(new FileReader(file))){
+        try(BufferedReader br = new BufferedReader(new InputStreamReader(stream))){
             List<Point> vrts = new ArrayList<>();
             List<Point> normals = new ArrayList<>();
             List<Face> faceVrts = new ArrayList<>();

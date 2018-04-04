@@ -10,7 +10,6 @@ import java.util.TreeMap;
 
 public class SphericalPatch {
     public Sphere sphere;
-
     public List<Arc> arcs;
     public List<Boundary> boundaries;
     public Map<Integer, List<ToroidalPatch>> tori;
@@ -18,12 +17,18 @@ public class SphericalPatch {
     public List<Integer> intersectingPatches;
     public List<Point> vertices;
     public List<Face> faces;
+    public List<Face> dbFaces = new ArrayList<>();
+    public Map<Integer, Map<Integer, List<Face>>> edgeFacesMap;
+    public int arcPointCount = 0;
 
     public int id;
+    public int nextVertexID = 0;
     public static int nextConvexID = 0;
     public static int nextConcaveID = 0;
-    boolean convexPatch = true;
+    public boolean convexPatch = true;
     public boolean valid = true;
+    public boolean meshed = false;
+    public boolean trimmed = false;
 
     //opengl stuff
     public int[] vao = new int[2];
@@ -54,6 +59,8 @@ public class SphericalPatch {
         tori = new TreeMap<>();
         vertices = new ArrayList<>();
         faces = new ArrayList<>();
+        convexPatch = convex;
+        edgeFacesMap = new TreeMap<>();
     }
 
     public SphericalPatch(Boundary b){

@@ -35,6 +35,8 @@ public class Arc {
 
     public Arc opposite;
 
+    public Arc refined = null;
+
     public ToroidalPatch torus;
     public CuspTriangle cuspTriangle;
     public Boundary bOwner;
@@ -45,6 +47,7 @@ public class Arc {
     public boolean circularArc = false;
     public boolean halfCircle = false;
     public boolean intersecting = false;
+    public byte baseSubdivision = -1;
 
     public Arc(Point center, double radius){
         this.center = center;
@@ -56,13 +59,13 @@ public class Arc {
     }
 
     public boolean isInside(Point p){
-        if (Math.abs(new Plane(this.center, this.normal).checkPointLocation(p)) > 0.005){
+        if (Math.abs(new Plane(this.center, this.normal).checkPointLocation(p)) > 0.001){
             return false;
         }
-        if (Point.distance(p, end1) < 0.0015 || Point.distance(p, end2) < 0.0015){
+        if (Point.distance(p, end1) < 0.001 || Point.distance(p, end2) < 0.001){
             return true;
         }
-        if (Math.abs(Point.distance(p, center) - radius) > 0.005){
+        if (Math.abs(Point.distance(p, center) - radius) > 0.001){
             return false;
         }
         Vector v = Point.subtractPoints(p, center).makeUnit();

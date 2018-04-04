@@ -2,6 +2,7 @@ package cz.fi.muni.xmraz3;
 
 import com.jogamp.opengl.math.Quaternion;
 import com.jogamp.opengl.math.VectorUtil;
+import cz.fi.muni.xmraz3.gui.MainWindow;
 import cz.fi.muni.xmraz3.math.Plane;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Sphere;
@@ -16,14 +17,33 @@ import org.json.simple.parser.ParseException;
 import smile.neighbor.KDTree;
 
 import java.io.*;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.*;
 
 /**
  * Created by radoslav on 27.2.2017.
  */
 public class SurfaceParser {
+
+    private static Map<Integer, Map<Integer, List<SphericalPatch>>> missingArcs = new TreeMap<>();
+
+    private static void updateMissingArcs(int atom1, int atom2, SphericalPatch triangle){
+        int smaller = (atom1 > atom2) ? atom2 : atom1;
+        int bigger = (smaller == atom1) ? atom2 : atom1;
+        if (!missingArcs.containsKey(smaller)){
+            missingArcs.put(smaller, new TreeMap<>());
+        }
+        Map<Integer, List<SphericalPatch>> mapList = missingArcs.get(smaller);
+        if (!mapList.containsKey(bigger)){
+            mapList.put(bigger, new ArrayList<>());
+        }
+        mapList.get(bigger).add(triangle);
+    }
 
     private static void constructProbeTree(){
         double[][] keys = new double[Surface.triangles.size()][3];
@@ -37,6 +57,7 @@ public class SurfaceParser {
     }
 
     public static void ses_start(String folder) {
+        MeshRefinement.reset();
         Surface.triangles.clear();
         Surface.rectangles.clear();
         Surface.atomsProcessed.set(0);
@@ -45,27 +66,73 @@ public class SurfaceParser {
         Surface.numoftriangles = 0;
         SphericalPatch.nextConcaveID = SphericalPatch.nextConvexID = 0;
         ToroidalPatch.nextID = 0;
-        Surface.convexPatches = SurfaceParser.parseAtoms(folder + "atoms.dat");
+        Surface.triangles.ensureCapacity(SesConfig.trianglesCount);
+        Surface.rectangles.ensureCapacity(SesConfig.toriCount);
+        Surface.convexPatches = SurfaceParser.parseAtoms(Paths.get(folder).resolve("atoms.dat").toString());
         Surface.centerOfgravity.x /= SesConfig.atomCount;
         Surface.centerOfgravity.y /= SesConfig.atomCount;
         Surface.centerOfgravity.z /= SesConfig.atomCount;
         Surface.probeRadius.set(Double.doubleToLongBits(SesConfig.probeRadius));
-        SurfaceParser.parseConvexAndToriPatches(folder + "rectangles.dat");
+        SurfaceParser.parseConvexAndToriPatches(Paths.get(folder).resolve("rectangles.dat").toString());
 
         try {
-            SurfaceParser.parseTriangles(folder + "triangles.dat");
+            SurfaceParser.parseTriangles(Paths.get(folder).resolve("triangles.dat").toString());
+
+            System.out.println("Convex patches: " + Surface.convexPatches.size());
+            System.out.println("Triangles: " + Surface.triangles.size());
+
             constructProbeTree();
             Surface.probeTree.setIdenticalExcluded(true);
-
 
             PatchUtil.processSelfIntersectingTori();
             PatchUtil.processSelfIntersectingConcavePatches();
             PatchUtil.processIntersectingConcavePatches();
-
+            if (SesConfig.useGUI) {
+                MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
+            }
+            System.out.println("Trimmed triangles: " + Surface.trimmedTriangles + " / " + Surface.triangles.size());
+            ArcUtil.refineArcsOnConvexPatches();
+            ArcUtil.nestConvexPatchBoundaries();
+            ArcUtil.refineArcsOnConcavePatches();
+            MeshRefinement.startMeshing();
+            if (SesConfig.objFile != null || SesConfig.stlFile != null){
+                while (!MeshRefinement.finished.get()){}
+                if (SesConfig.objFile != null){
+                    exportOBJ(SesConfig.objFile, (char)7);
+                }
+                if (SesConfig.stlFile != null){
+                    exportSTLText(SesConfig.stlFile);
+                }
+            }
             fillCommonVertices();
         } catch (Exception e){
             System.out.println(e.getMessage());
         }
+    }
+
+    public static void remesh(){
+        MainWindow.mainWindow.requestFreeResources();
+        while (!MainWindow.mainWindow.getResourcesFreed()){}
+        MeshRefinement.reset();
+        for (SphericalPatch sp : Surface.convexPatches){
+            ArcUtil.resetArcs(sp);
+            sp.meshed = false;
+            sp.faces.clear();
+            sp.faceCount = 0;
+            //sp.vertices.clear();
+        }
+        System.out.println("convex reset done");
+        ArcUtil.refineArcsOnConvexPatches();
+        for (SphericalPatch sp : Surface.triangles){
+            ArcUtil.resetArcs(sp);
+            sp.meshed = false;
+            sp.faces.clear();
+            sp.faceCount = 0;
+        }
+        System.out.println("concave reset done");
+        ArcUtil.refineArcsOnConcavePatches();
+        MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
+        MeshRefinement.startMeshing();
     }
 
     private static void fillCommonVertices(){
@@ -118,7 +185,7 @@ public class SurfaceParser {
         try {
             JSONParser parser = new JSONParser();
             JSONObject obj = (JSONObject)parser.parse(raw);
-            SesConfig.probeRadius = Surface.scaleFactor * (double)obj.get("ProbeRadius");
+            SesConfig.probeRadius = (double)obj.get("ProbeRadius");
             SesConfig.atomCount = ((Long)obj.get("AtomsCount")).intValue();
             SesConfig.toriCount = ((Long)obj.get("TorusCount")).intValue();
             SesConfig.trianglesCount = ((Long)obj.get("TrianglesCount")).intValue();
@@ -185,6 +252,7 @@ public class SurfaceParser {
     }
 
     public static void parseConvexAndToriPatches(String filename){
+        System.out.println("RECTANGLES: " + filename);
         int atom1Id, atom2Id;
         try (DataInputStream in = new DataInputStream(new FileInputStream(filename))){
             byte[] buffer = new byte[SesConfig.toriCount * 44];
@@ -200,36 +268,22 @@ public class SurfaceParser {
                 SphericalPatch atom2 = Surface.convexPatches.get(atom2Id);
                 constructConvexPatchArc(atom1, atom2, probe1, probe2, centerProbe);
             }
-            for (SphericalPatch sp : Surface.convexPatches){
-                ArcUtil.linkArcs(sp);
-                for (Boundary b : sp.boundaries) {
-                    for (Boundary c : sp.boundaries) {
-                        if (c == b) {
-                            continue;
-                        }
-                        if (ArcUtil.checkIfNested(b, c)) {
-                            b.nestedBoundaries.add(c);
-                        }
-                    }
-                    ArcUtil.buildEdges(b, true);
-                }
-                Surface.atomsProcessed.set(sp.id + 1);
-            }
         } catch (IOException e){
             e.printStackTrace();
         }
     }
 
-    public static List<SphericalPatch> parseAtoms(String filename){
+    public static ArrayList<SphericalPatch> parseAtoms(String filename){
+        System.out.println("ATOMS: " + filename);
         double x, y, z, r;
-        int id;
-        List<SphericalPatch> n = new ArrayList<>();
+        int id = -1;
+        ArrayList<SphericalPatch> n = new ArrayList<>(SesConfig.atomCount);
         try (DataInputStream in = new DataInputStream(new FileInputStream(filename))){
             byte[] buffer = new byte[SesConfig.atomCount * 20];
             in.read(buffer, 0, buffer.length);
             ByteBuffer data = ByteBuffer.wrap(buffer);
             for (int i = 0; i < SesConfig.atomCount; i++){
-                id = data.getInt();
+                id = data.getInt(); //dont delete
                 x = data.getFloat();
                 y = data.getFloat();
                 z = data.getFloat();
@@ -243,6 +297,7 @@ public class SurfaceParser {
     }
 
     public static void parseTriangles(String filename){
+        System.out.println("TRIANGLES: " + filename);
         double x, y, z;
         int a1, a2, a3;
         try (DataInputStream in = new DataInputStream(new FileInputStream(filename))){
@@ -268,6 +323,9 @@ public class SurfaceParser {
             //Vector a1Toa2 = Point.subtractPoints(atom2.sphere.center, atom1.sphere.center).makeUnit();
             Arc[] atom1Arcs = ArcUtil.makeNewArc(atom1, atom2, Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probe2), Sphere.getContactPoint(atom1.sphere, probeMid), probeMid.center, true);
             Arc[] atom2Arcs = ArcUtil.makeNewArc(atom2, atom1, Sphere.getContactPoint(atom2.sphere, probe1), Sphere.getContactPoint(atom2.sphere, probe2), Sphere.getContactPoint(atom2.sphere, probeMid), probeMid.center, true);
+            if (atom1.id == 767 && atom2.id == 772 || atom1.id == 772 && atom2.id == 767){
+                System.out.println("A");
+            }
             for (Arc a : atom1Arcs){
                 for (Arc j : atom2Arcs){
                     Vector midtomid = Point.subtractPoints(j.mid, a.mid).makeUnit();
@@ -289,16 +347,31 @@ public class SurfaceParser {
                         tp.convexPatchArcs.add(j);
                         tp.circular = true;
 
+                        if (atom1.id == 811 || atom1.id == 5231 || atom2.id == 811 || atom2.id == 5231){
+                            int afd = 4;
+                        }
+
                         assignRollingPatchToAtoms(atom1, atom2, tp);
                         Arc smallerRadius = (a.owner.sphere.radius <= j.owner.sphere.radius) ? a : j;
                         Arc greaterRadius = (smallerRadius == a) ? j : a;
-                        //ArcUtil.refineArc(smallerRadius, Main.maxEdgeLen, true,2, false);
-                        ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, false,0, false);
-                        ArcUtil.buildEdges(smallerRadius);
-                        int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
-                        ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, true, numOfDivs, false);
+                        ArcUtil.refineArc(greaterRadius, 0, true,1, false);
+                        greaterRadius.baseSubdivision = -1;
+                        ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, false,0, false);
                         ArcUtil.buildEdges(greaterRadius);
-                        System.out.println("refined circle loop: " + smallerRadius.vrts.size() + ", " + greaterRadius.vrts.size());
+                        //int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
+                        int numOfDivs = ArcUtil.getSubdivisionLevel(greaterRadius);
+                        ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, true, numOfDivs, false);
+                        ArcUtil.buildEdges(smallerRadius);
+
+                        /*smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
+                        greaterRadius.refined = ArcUtil.dbgCloneArc(greaterRadius);
+
+                        smallerRadius.refined.owner = smallerRadius.owner;
+                        greaterRadius.refined.owner = greaterRadius.owner;
+
+                        ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);*/
+
+                        System.out.println("refined circle loop: " + atom1.id + ", " + atom2.id);
                     }
                 }
             }
@@ -330,15 +403,21 @@ public class SurfaceParser {
         //ArcUtil.refineArc(smallerRadius, Main.maxEdgeLen, 2, false);
         ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, false,0, false);
         ArcUtil.buildEdges(smallerRadius);
-        int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
+        //int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
+        int numOfDivs = ArcUtil.getSubdivisionLevel(smallerRadius);
         ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, true, numOfDivs, false);
         ArcUtil.buildEdges(greaterRadius);
+        /*smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
+        smallerRadius.refined.owner = smallerRadius.owner;
+        greaterRadius.refined = ArcUtil.dbgCloneArc(greaterRadius);
+        greaterRadius.refined.owner = greaterRadius.owner;
+        ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);*/
         if (smallerRadius.vrts.size() != greaterRadius.vrts.size()){
             System.err.println("inconsistency detected");
         }
         tp.width = Point.distance(Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probeMid)) + Point.distance(Sphere.getContactPoint(atom1.sphere, probeMid), Sphere.getContactPoint(atom1.sphere, probe2));
         if (tp.width < 0.005){
-            Surface.smallRectangles.add(tp);
+            //Surface.smallRectangles.add(tp);
             //System.err.println("added small rectangle to data structure");
         }
         if (PatchUtil.getProbeAxisDistance(probe1.center, atom1.sphere.center, atom2.sphere.center) - SesConfig.probeRadius < 0.0){
@@ -361,6 +440,9 @@ public class SurfaceParser {
 
     private static void constructConcavePatchArcs(Sphere probe, int atom1, int atom2, int atom3){
         try {
+            if (Surface.triangles.size() == 6498 || Surface.triangles.size() == 1351){
+                int t = 3;
+            }
             SphericalPatch a1 = Surface.convexPatches.get(atom1);
             SphericalPatch a2 = Surface.convexPatches.get(atom2);
             SphericalPatch a3 = Surface.convexPatches.get(atom3);
@@ -372,6 +454,7 @@ public class SurfaceParser {
             Point mid = Point.getMidPoint(a1touch, a2touch);
             Vector probeMid = Point.subtractPoints(mid, probe.center).makeUnit().multiply(probe.radius);
             mid = Point.translatePoint(probe.center, probeMid);
+            SphericalPatch cpatch = new SphericalPatch(probe, false);
             Arc cpl1 = new Arc(probe.center, probe.radius);
             cpl1.vrts.add(a1touch);
             cpl1.vrts.add(mid);
@@ -399,9 +482,14 @@ public class SurfaceParser {
             }
             if (tp == null) {
                 System.out.println("corresponding rolling patch not found");
+                updateMissingArcs(atom1, atom2, cpatch);
             } else {
                 tp.concavePatchArcs.add(cpl1);
                 cpl1.torus = tp;
+                if (tp.concavePatchArcs.size() == 2){
+                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
+                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
+                }
                 /*cpl1.vrts.clear();
                 Arc ar1 = (tp.convexPatchArcs.get(0).owner.id == atom1) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
                 Arc ar2 = (tp.convexPatchArcs.get(0) == ar1) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
@@ -486,9 +574,14 @@ public class SurfaceParser {
             if (tp == null) {
                 System.out.println("corresponding rolling patch not found");
                 //continue;
+                updateMissingArcs(atom1, atom3, cpatch);
             } else {
                 tp.concavePatchArcs.add(cpl2);
                 cpl2.torus = tp;
+                if (tp.concavePatchArcs.size() == 2){
+                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
+                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
+                }
                 /*cpl2.vrts.clear();
                 Arc ar1 = (tp.convexPatchArcs.get(0).owner.id == atom3) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
                 Arc ar2 = (tp.convexPatchArcs.get(0) == ar1) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
@@ -563,6 +656,9 @@ public class SurfaceParser {
             if (a2.tori.get(atom3) == null) {
                System.out.println("corresponding rolling patch not found for " + atom2 + " " + atom3);
                 //continue;
+                if (atom1 == 224 || atom2 == 224 || atom3 == 224){
+                    System.out.println("for atom 224");
+                }
             } else {
                 for (ToroidalPatch tor : a2.tori.get(atom3)) {
                     if (Point.subtractPoints(probe.center, tor.probe1).sqrtMagnitude() < Surface.scaleFactor * 0.005 || Point.subtractPoints(probe.center, tor.probe2).sqrtMagnitude() < Surface.scaleFactor * 0.005) {
@@ -573,9 +669,14 @@ public class SurfaceParser {
             if (tp == null) {
                 //System.out.println("corresponding rolling patch not found");
                 //continue;
+                updateMissingArcs(atom2, atom3, cpatch);
             } else {
                 tp.concavePatchArcs.add(cpl3);
                 cpl3.torus = tp;
+                if (tp.concavePatchArcs.size() == 2){
+                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
+                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
+                }
                 /*cpl3.vrts.clear();
                 Arc ar1 = (tp.convexPatchArcs.get(0).owner.id == atom2) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
                 Arc ar2 = (tp.convexPatchArcs.get(0) == ar1) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
@@ -670,7 +771,7 @@ public class SurfaceParser {
                     }
                 }
             } while (Point.subtractPoints(start, pivot).sqrtMagnitude() >= 0.0001);
-            SphericalPatch cpatch = new SphericalPatch(probe, false);
+
             if (ghost) {
                 /*if (cpl1.torus.id == 0) {
                     System.out.println("fdsa");
@@ -1223,6 +1324,104 @@ public class SurfaceParser {
                 s = "";
             }
             bw.flush();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void exportPatch(SphericalPatch sp){
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/home/radoslav/objs/patch" + sp.id + (Math.random() * 10) + ".obj"))) {
+            String line = "";
+            for (Point v : sp.vertices){
+                line = "v " + v.toString();
+                bw.write(line);
+                bw.newLine();
+                line = "vn " + Point.subtractPoints(v, sp.sphere.center).makeUnit().toString();
+                bw.write(line);
+                bw.newLine();
+            }
+            for (Face f : sp.faces){
+                int i1 = f.a + 1;
+                int i2 = f.b + 1;
+                int i3 = f.c + 1;
+                line = "f " + i1 + "//" + i1 + " " + i2 + "//" + i2 + " " + i3 + "//" + i3;
+                bw.write(line);
+                bw.newLine();
+            }
+            bw.flush();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void exportToroidalPatch(ToroidalPatch tp){
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("tori_" + tp.id + "-" + LocalDateTime.now().toString() + ".obj"))){
+            for (Point v : tp.vertices){
+                bw.write("v " + v.toString());
+                bw.newLine();
+            }
+            for (Vector n : tp.normals){
+                bw.write("vn " + n.toString());
+                bw.newLine();
+            }
+            for (Face f : tp.faces){
+                bw.write("f " + (f.a + 1) + "//" + (f.a + 1) + " " + (f.b + 1) + "//" + (f.b + 1) + " " + (f.c + 1) + "//" + (f.c + 1));
+                bw.newLine();
+            }
+            bw.flush();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void exportOldFaces(SphericalPatch sp){
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/home/radoslav/objs/patch" + sp.id + (Math.random() * 10) + ".obj"))) {
+            String line = "";
+            for (Point v : sp.vertices){
+                line = "v " + v.toString();
+                bw.write(line);
+                bw.newLine();
+                line = "vn " + Point.subtractPoints(v, sp.sphere.center).makeUnit().toString();
+                bw.write(line);
+                bw.newLine();
+            }
+            for (Face f : sp.dbFaces){
+                int i1 = f.a + 1;
+                int i2 = f.b + 1;
+                int i3 = f.c + 1;
+                line = "f " + i1 + "//" + i1 + " " + i2 + "//" + i2 + " " + i3 + "//" + i3;
+                bw.write(line);
+                bw.newLine();
+            }
+            bw.flush();
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void exportCP_(SphericalPatch sp){
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/home/radoslav/objs/newB_" + sp.id + ".obj"))){
+            int off = 0;
+            for (Boundary b : sp.boundaries){
+                Boundary b_ = new Boundary();
+                for (Arc a : b.arcs){
+                    b_.arcs.add(a.refined);
+                }
+                ArcUtil.buildEdges(b_, true);
+                for (Point v : b_.vrts){
+                    bw.write("v " + v.toString());
+                    bw.newLine();
+                }
+                for (int i = 1; i <= b_.vrts.size(); ++i){
+                    if (i == b_.vrts.size()){
+                        bw.write("l " + (i + off) + " " + (1 + off));
+                    } else {
+                        bw.write("l " + (i + off) + " " + (i + 1 + off));
+                    }
+                    bw.newLine();
+                }
+                off += b_.vrts.size();
+            }
         } catch (IOException e){
             e.printStackTrace();
         }

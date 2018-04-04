@@ -48,14 +48,21 @@ public class AtomLoadingController {
                         updateMessage("Progress: " + newValue.longValue() + " / " + Surface.convexPatches.size());
                     }
                 });
+                System.out.println("A");
                 if (MainPanel.atomView == null){
                     MainPanel.atomView = new MainWindow();
+                    System.out.println("Ab");
                     MainPanel.atomView.setup();
+                    System.out.println("Ac");
                     MainPanel.atomView.controlPanel = MainPanelController.root;
                 }
+                System.out.println("B");
                 MainPanel.atomView.stopRendering(true);
+                System.out.println("C");
                 MainPanel.atomView.requestFreeResources();
+                System.out.println("WAITING FOR FREE");
                 while(!MainPanel.atomView.getResourcesFreed());
+                System.out.println("DONE");
                 SurfaceParser.ses_start(folder);
                 return null;
             }

@@ -123,6 +123,16 @@ public class Vector {
         return proj;
     }
 
+    public static Vector projectionOntoPlane(Vector v, Vector n){
+        Vector n_ = new Vector(n);
+        Vector v_ = new Vector(v);
+        v_.makeUnit();
+        n_.makeUnit();
+        n_.multiply(n_.dotProduct(v_));
+        n_.multiply(-1.0);
+        return addVectors(v_, n_);
+    }
+
     public void add(Vector v){
         this.x += v.x;
         this.y += v.y;

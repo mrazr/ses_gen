@@ -30,6 +30,7 @@ import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 import java.io.File;
 import java.io.IOException;
@@ -147,6 +148,15 @@ public class MainPanelController {
                 }
             }
         });
+
+        btnTriangulate.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                btnTriangulate.disableProperty().set(true);
+                SesConfig.edgeLimit = spinnerEdgeLength.getValue();
+                SurfaceParser.remesh();
+            }
+        });
         //txtFolder.setPromptText("Directory with atoms, rectangles, triangles, info JSON files");
         txtFolder.setOnAction(new EventHandler<ActionEvent>() {
             @Override
@@ -164,6 +174,7 @@ public class MainPanelController {
                     scrMainPane.requestFocus();
                     return;
                 }
+                SesConfig.inputFolder = txtFolder.getText();
                 startParsingJSON(txtFolder.getText());
             }
         });
@@ -277,12 +288,18 @@ public class MainPanelController {
             @Override
             public void changed(ObservableValue<? extends Double> observable, Double oldValue, Double newValue) {
                 if (newValue > 0.01 && newValue < 4){
-                    Surface.maxEdgeLen = newValue;
-                    SesConfig.distTolerance = 0.4 * Surface.maxEdgeLen;
+                    //Surface.maxEdgeLen = newValue;
+                    //SesConfig.distTolerance = 0.4 * Surface.maxEdgeLen;
+                    //SesConfig.edgeLimit = newValue;
+                    if (Math.abs(SesConfig.edgeLimit - newValue) > 0.0){
+                        btnTriangulate.disableProperty().set(false);
+                    } else {
+                        btnTriangulate.disableProperty().set(true);
+                    }
                 }
             }
         });
-        SpinnerValueFactory<Double> edgeLenFactory = new SpinnerValueFactory.DoubleSpinnerValueFactory(0.01, 4.0, 0.9, 0.05);
+        SpinnerValueFactory<Double> edgeLenFactory = new SpinnerValueFactory.DoubleSpinnerValueFactory(0.2, 0.9, SesConfig.edgeLimit, 0.05);
         spinnerEdgeLength.setValueFactory(edgeLenFactory);
         SpinnerValueFactory<Double> maxAngleFactory = new SpinnerValueFactory.DoubleSpinnerValueFactory(20, 175, 75, 5);
         spinnerEdgeAngle.setValueFactory(maxAngleFactory);
@@ -423,6 +440,15 @@ public class MainPanelController {
                 }
             }
         });
+        root.setOnShown(new EventHandler<WindowEvent>() {
+            @Override
+            public void handle(WindowEvent event) {
+                if (SesConfig.inputFolder != null && SesConfig.inputFolder.length() > 0){
+                    txtFolder.setText(SesConfig.inputFolder);
+                    startParsingJSON(SesConfig.inputFolder);
+                }
+            }
+        });
     }
 
     public void setCheckPinned(boolean v){
@@ -430,8 +456,10 @@ public class MainPanelController {
     }
 
     private void startParsingJSON(String folder){
+        btnTriangulate.disableProperty().set(true);
+        SesConfig.edgeLimit = spinnerEdgeLength.getValue();
         FXMLLoader loader = new FXMLLoader();
-        loader.setLocation(MainPanelController.class.getResource("../layout/AtomLoadingView.fxml"));
+        loader.setLocation(MainPanel.class.getResource("layout/AtomLoadingView.fxml"));
         try {
             String raw = SurfaceParser.loadFile(folder + "/info.json");
             SurfaceParser.parseSesConfig(raw);
@@ -456,7 +484,7 @@ public class MainPanelController {
                     sldProbeAlpha.setDisable(false);
                     chkShowProbe.setDisable(false);
                     //MainPanel.atomView.setup();
-                    MainPanel.atomView.sendPatchesLists(Surface.convexPatches, Surface.triangles);
+                    //MainPanel.atomView.sendPatchesLists(Surface.convexPatches, Surface.triangles);
                     //MainPanel.atomView.sendConvexPatchList(Main.convexPatches);
                     //MainPanel.atomView.sendConcavePatchList(Main.triangles);
                     MainPanel.atomView.selectedConcaveP.addListener(new ChangeListener<Number>() {

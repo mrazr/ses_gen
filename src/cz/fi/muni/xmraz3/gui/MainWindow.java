@@ -1508,7 +1508,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < end; ++i){
             ToroidalPatch tp = Surface.rectangles.get(i);
-            PatchUtil.meshToroidalPatch(tp);
+            MeshRefinement.meshToroidalPatch(tp);
         }
         long endTime = System.currentTimeMillis();
         System.out.println("Tori meshed in " + (endTime - startTime) + " ms");

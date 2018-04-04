@@ -19,6 +19,9 @@ import smile.neighbor.KDTree;
 import java.io.*;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -65,15 +68,16 @@ public class SurfaceParser {
         ToroidalPatch.nextID = 0;
         Surface.triangles.ensureCapacity(SesConfig.trianglesCount);
         Surface.rectangles.ensureCapacity(SesConfig.toriCount);
-        Surface.convexPatches = SurfaceParser.parseAtoms(folder + "atoms.dat");
+        Surface.convexPatches = SurfaceParser.parseAtoms(Paths.get(folder).resolve("atoms.dat").toString());
         Surface.centerOfgravity.x /= SesConfig.atomCount;
         Surface.centerOfgravity.y /= SesConfig.atomCount;
         Surface.centerOfgravity.z /= SesConfig.atomCount;
         Surface.probeRadius.set(Double.doubleToLongBits(SesConfig.probeRadius));
-        SurfaceParser.parseConvexAndToriPatches(folder + "rectangles.dat");
+        System.out.println("EDGE: " + SesConfig.edgeLimit);
+        SurfaceParser.parseConvexAndToriPatches(Paths.get(folder).resolve("rectangles.dat").toString());
 
         try {
-            SurfaceParser.parseTriangles(folder + "triangles.dat");
+            SurfaceParser.parseTriangles(Paths.get(folder).resolve("triangles.dat").toString());
 
             System.out.println("Convex patches: " + Surface.convexPatches.size());
             System.out.println("Triangles: " + Surface.triangles.size());
@@ -89,8 +93,19 @@ public class SurfaceParser {
             ArcUtil.refineArcsOnConvexPatches();
             ArcUtil.nestConvexPatchBoundaries();
             ArcUtil.refineArcsOnConcavePatches();
-            MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
+            if (SesConfig.useGUI) {
+                MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
+            }
             MeshRefinement.startMeshing();
+            if (SesConfig.objFile != null || SesConfig.stlFile != null){
+                while (!MeshRefinement.finished.get()){}
+                if (SesConfig.objFile != null){
+                    exportOBJ(SesConfig.objFile, (char)7);
+                }
+                if (SesConfig.stlFile != null){
+                    exportSTLText(SesConfig.stlFile);
+                }
+            }
             fillCommonVertices();
         } catch (Exception e){
             System.out.println(e.getMessage());
@@ -120,15 +135,6 @@ public class SurfaceParser {
         ArcUtil.refineArcsOnConcavePatches();
         MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
         MeshRefinement.startMeshing();
-        for (ToroidalPatch tp : Surface.rectangles){
-            tp.vertices.clear();
-            tp.normals.clear();
-            tp.faces.clear();
-            tp.faceCount = 0;
-            tp.vrts.clear();
-            PatchUtil.meshToroidalPatch(tp);
-        }
-        MainWindow.mainWindow.pushTori();
     }
 
     private static void fillCommonVertices(){
@@ -181,7 +187,7 @@ public class SurfaceParser {
         try {
             JSONParser parser = new JSONParser();
             JSONObject obj = (JSONObject)parser.parse(raw);
-            SesConfig.probeRadius = Surface.scaleFactor * (double)obj.get("ProbeRadius");
+            SesConfig.probeRadius = (double)obj.get("ProbeRadius");
             SesConfig.atomCount = ((Long)obj.get("AtomsCount")).intValue();
             SesConfig.toriCount = ((Long)obj.get("TorusCount")).intValue();
             SesConfig.trianglesCount = ((Long)obj.get("TrianglesCount")).intValue();

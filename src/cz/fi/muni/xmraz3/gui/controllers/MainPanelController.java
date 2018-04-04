@@ -30,6 +30,7 @@ import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 import java.io.File;
 import java.io.IOException;
@@ -151,6 +152,8 @@ public class MainPanelController {
         btnTriangulate.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
+                btnTriangulate.disableProperty().set(true);
+                SesConfig.edgeLimit = spinnerEdgeLength.getValue();
                 SurfaceParser.remesh();
             }
         });
@@ -171,6 +174,7 @@ public class MainPanelController {
                     scrMainPane.requestFocus();
                     return;
                 }
+                SesConfig.inputFolder = txtFolder.getText();
                 startParsingJSON(txtFolder.getText());
             }
         });
@@ -286,11 +290,16 @@ public class MainPanelController {
                 if (newValue > 0.01 && newValue < 4){
                     //Surface.maxEdgeLen = newValue;
                     //SesConfig.distTolerance = 0.4 * Surface.maxEdgeLen;
-                    SesConfig.edgeLimit = newValue;
+                    //SesConfig.edgeLimit = newValue;
+                    if (Math.abs(SesConfig.edgeLimit - newValue) > 0.0){
+                        btnTriangulate.disableProperty().set(false);
+                    } else {
+                        btnTriangulate.disableProperty().set(true);
+                    }
                 }
             }
         });
-        SpinnerValueFactory<Double> edgeLenFactory = new SpinnerValueFactory.DoubleSpinnerValueFactory(0.1, 4.0, 0.3, 0.05);
+        SpinnerValueFactory<Double> edgeLenFactory = new SpinnerValueFactory.DoubleSpinnerValueFactory(0.2, 0.9, SesConfig.edgeLimit, 0.05);
         spinnerEdgeLength.setValueFactory(edgeLenFactory);
         SpinnerValueFactory<Double> maxAngleFactory = new SpinnerValueFactory.DoubleSpinnerValueFactory(20, 175, 75, 5);
         spinnerEdgeAngle.setValueFactory(maxAngleFactory);
@@ -431,6 +440,15 @@ public class MainPanelController {
                 }
             }
         });
+        root.setOnShown(new EventHandler<WindowEvent>() {
+            @Override
+            public void handle(WindowEvent event) {
+                if (SesConfig.inputFolder != null && SesConfig.inputFolder.length() > 0){
+                    txtFolder.setText(SesConfig.inputFolder);
+                    startParsingJSON(SesConfig.inputFolder);
+                }
+            }
+        });
     }
 
     public void setCheckPinned(boolean v){
@@ -438,6 +456,9 @@ public class MainPanelController {
     }
 
     private void startParsingJSON(String folder){
+        btnTriangulate.disableProperty().set(true);
+        SesConfig.edgeLimit = spinnerEdgeLength.getValue();
+        System.out.println("DSDF: " + SesConfig.edgeLimit);
         FXMLLoader loader = new FXMLLoader();
         loader.setLocation(MainPanelController.class.getResource("../layout/AtomLoadingView.fxml"));
         try {

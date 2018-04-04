@@ -20,9 +20,9 @@ public class MainPanel extends Application {
 
     public static MainWindow atomView;
     public static boolean pinnedToView = false;
-    public static void main(String[] args) {
+    /*public static void main(String[] args) {
         launch(args);
-    }
+    }*/
     public static MainPanelController controlPanel;
     @Override
     public void start(Stage primaryStage) {
@@ -84,5 +84,7 @@ public class MainPanel extends Application {
         controlPanel.setCheckPinned(false);
         MainPanel.atomView.isPinned.setValue(false);
     }
-
+    public static void startGUI(String[] args){
+        launch(args);
+    }
 }

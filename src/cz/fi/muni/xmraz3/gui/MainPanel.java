@@ -20,9 +20,6 @@ public class MainPanel extends Application {
 
     public static MainWindow atomView;
     public static boolean pinnedToView = false;
-    /*public static void main(String[] args) {
-        launch(args);
-    }*/
     public static MainPanelController controlPanel;
     @Override
     public void start(Stage primaryStage) {

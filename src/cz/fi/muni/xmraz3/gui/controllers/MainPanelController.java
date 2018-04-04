@@ -458,9 +458,8 @@ public class MainPanelController {
     private void startParsingJSON(String folder){
         btnTriangulate.disableProperty().set(true);
         SesConfig.edgeLimit = spinnerEdgeLength.getValue();
-        System.out.println("DSDF: " + SesConfig.edgeLimit);
         FXMLLoader loader = new FXMLLoader();
-        loader.setLocation(MainPanelController.class.getResource("../layout/AtomLoadingView.fxml"));
+        loader.setLocation(MainPanel.class.getResource("layout/AtomLoadingView.fxml"));
         try {
             String raw = SurfaceParser.loadFile(folder + "/info.json");
             SurfaceParser.parseSesConfig(raw);

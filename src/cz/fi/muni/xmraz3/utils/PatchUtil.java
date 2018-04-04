@@ -6,10 +6,8 @@ import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Sphere;
 import cz.fi.muni.xmraz3.math.Vector;
 import cz.fi.muni.xmraz3.mesh.*;
-import javafx.scene.shape.Mesh;
 import smile.neighbor.Neighbor;
 
-import javax.sound.midi.Patch;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -696,8 +694,6 @@ public class PatchUtil {
         pointOfIntersection.clear();
         lastPoI = null;
     }
-
-
 
     public static double computeIntersectionCircle(Point probe1, Point probe2, Point result, double probeRadius){
         Vector halfway = Point.subtractPoints(probe1, probe2).multiply(0.5f);

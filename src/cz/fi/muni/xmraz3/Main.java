@@ -5,6 +5,8 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import cz.fi.muni.xmraz3.gui.MainPanel;
 
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,6 +37,10 @@ public class Main {
         if (SesConfig.useGUI){
             MainPanel.startGUI(args);
         } else {
+            if (SesConfig.inputFolder == null){
+                jc.usage();
+                return;
+            }
             String raw = SurfaceParser.loadFile(Paths.get(SesConfig.inputFolder).resolve("info.json").toString());
             SurfaceParser.parseSesConfig(raw);
             SurfaceParser.ses_start(SesConfig.inputFolder);

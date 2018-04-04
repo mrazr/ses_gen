@@ -73,7 +73,6 @@ public class SurfaceParser {
         Surface.centerOfgravity.y /= SesConfig.atomCount;
         Surface.centerOfgravity.z /= SesConfig.atomCount;
         Surface.probeRadius.set(Double.doubleToLongBits(SesConfig.probeRadius));
-        System.out.println("EDGE: " + SesConfig.edgeLimit);
         SurfaceParser.parseConvexAndToriPatches(Paths.get(folder).resolve("rectangles.dat").toString());
 
         try {
@@ -85,17 +84,16 @@ public class SurfaceParser {
             constructProbeTree();
             Surface.probeTree.setIdenticalExcluded(true);
 
-
             PatchUtil.processSelfIntersectingTori();
             PatchUtil.processSelfIntersectingConcavePatches();
             PatchUtil.processIntersectingConcavePatches();
+            if (SesConfig.useGUI) {
+                MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
+            }
             System.out.println("Trimmed triangles: " + Surface.trimmedTriangles + " / " + Surface.triangles.size());
             ArcUtil.refineArcsOnConvexPatches();
             ArcUtil.nestConvexPatchBoundaries();
             ArcUtil.refineArcsOnConcavePatches();
-            if (SesConfig.useGUI) {
-                MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
-            }
             MeshRefinement.startMeshing();
             if (SesConfig.objFile != null || SesConfig.stlFile != null){
                 while (!MeshRefinement.finished.get()){}
@@ -254,6 +252,7 @@ public class SurfaceParser {
     }
 
     public static void parseConvexAndToriPatches(String filename){
+        System.out.println("RECTANGLES: " + filename);
         int atom1Id, atom2Id;
         try (DataInputStream in = new DataInputStream(new FileInputStream(filename))){
             byte[] buffer = new byte[SesConfig.toriCount * 44];
@@ -275,6 +274,7 @@ public class SurfaceParser {
     }
 
     public static ArrayList<SphericalPatch> parseAtoms(String filename){
+        System.out.println("ATOMS: " + filename);
         double x, y, z, r;
         int id = -1;
         ArrayList<SphericalPatch> n = new ArrayList<>(SesConfig.atomCount);
@@ -297,6 +297,7 @@ public class SurfaceParser {
     }
 
     public static void parseTriangles(String filename){
+        System.out.println("TRIANGLES: " + filename);
         double x, y, z;
         int a1, a2, a3;
         try (DataInputStream in = new DataInputStream(new FileInputStream(filename))){

@@ -312,12 +312,12 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         for (SphericalPatch a : convexPatchList){
             a.lineOffset = indexOffset;
             for (Boundary b : a.boundaries){
-                Boundary b_ = new Boundary();
-                b_.patch = a;
-                for (Arc _a : b.arcs){
+                Boundary b_ = b;
+                //b_.patch = a;
+                /*for (Arc _a : b.arcs){
                     b_.arcs.add(_a.refined);
                 }
-                ArcUtil.buildEdges(b_, true);
+                ArcUtil.buildEdges(b_, true);*/
                 a.lineCount += b_.lines.size();
                 for (Point p : b_.vrts){
                     vertices.add(p);
@@ -434,7 +434,13 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     }
 
     public void setup(){
-        GLProfile profile = GLProfile.get(GLProfile.GL4);
+        GLProfile profile = null;
+        try{
+            profile = GLProfile.get(GLProfile.GL4);
+        } catch (Exception e){
+            e.printStackTrace();
+            System.exit(-1);
+        }
         GLCapabilities caps = new GLCapabilities(profile);
         window = GLWindow.create(caps);
         window.setSize(800, 600);
@@ -488,7 +494,6 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         window.addKeyListener(this);
         window.setVisible(true);
         window.setResizable(true);
-
         //slerping = true;
         Screen sc = window.getScreen();
         MonitorDevice mon = sc.getPrimaryMonitor();
@@ -592,7 +597,11 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     @Override
     public void init(GLAutoDrawable glAutoDrawable) {
         gl = GLContext.getCurrentGL().getGL4();
-        mainProgram = GLUtil.createShaderProgram("./resources/shaders/main.vert", "./resources/shaders/main.frag");
+        //System.out.println(getClass().getClassLoader().getResource("resources/shaders/main.vert").toString());
+        mainProgram = GLUtil.createShaderProgram(getClass().getClassLoader().getResourceAsStream("resources/shaders/main.vert"), getClass().getClassLoader().getResourceAsStream("resources/shaders/main.frag"));
+        //mainProgram = GLUtil.createShaderProgram("resources/shaders/main.vert", "resources/shaders/main.frag");
+        //mainProgram = GLUtil.createShaderProgram(MainWindow.class.getResource("main.vert").toString(), MainWindow.class.getResource("main.frag").toString());
+        //mainProgram = GLUtil.createShaderProgram("main.vert", "main.frag");
         uniMeshColorLoc = gl.glGetUniformLocation(mainProgram, "col");
         uniProjMatLoc = gl.glGetUniformLocation(mainProgram, "projMat");
         uniViewMatLoc = gl.glGetUniformLocation(mainProgram, "viewMat");
@@ -606,12 +615,12 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         uniSelectedMeshCountLoc = gl.glGetUniformLocation(mainProgram, "selectedMeshCount");
         uniMvInverseLoc = gl.glGetUniformLocation(mainProgram, "mvInverse");
         //rectProgram = Util.createShaderProgram("rect.vert", "rect.frag");
-        selProgram = GLUtil.createShaderProgram("./resources/shaders/sel2.vert", "./resources/shaders/sel.frag");
+        selProgram = GLUtil.createShaderProgram(getClass().getClassLoader().getResourceAsStream("resources/shaders/sel2.vert"), getClass().getClassLoader().getResourceAsStream("resources/shaders/sel.frag"));
+        //selProgram = GLUtil.createShaderProgram("./resources/shaders/sel2.vert", "./resources/shaders/sel.frag");
         uniEnd = gl.glGetUniformLocation(selProgram, "end");
         uniStart = gl.glGetUniformLocation(selProgram, "start");
         uniGlobalOffset = gl.glGetUniformLocation(selProgram, "globalOffset");
         uniVertexOffsets = gl.glGetUniformLocation(selProgram, "u_offset_Tex");
-
         right = VectorUtil.crossVec3(right, direction, up);
         up = VectorUtil.normalizeVec3(up);
         right = VectorUtil.normalizeVec3(right);
@@ -661,8 +670,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         gl.glFramebufferRenderbuffer(GL.GL_FRAMEBUFFER, GL4.GL_DEPTH_ATTACHMENT, GL4.GL_RENDERBUFFER, rbDep[0]);
         gl.glBindRenderbuffer(GL.GL_RENDERBUFFER, 0);
         gl.glBindFramebuffer(GL4.GL_FRAMEBUFFER, 0);
-
-        int[] bobjects = GLUtil.loadSphere("./resources/misc/sphere3.obj", gl);
+        int[] bobjects = GLUtil.loadSphere(getClass().getClassLoader().getResourceAsStream("resources/misc/sphere3.obj"), gl);
         this.probeVao[0] = bobjects[0];
         this.probeVbo[0] = bobjects[1];
         this.probeFaceCount = bobjects[2];
@@ -2457,7 +2465,6 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         /*GLRunnable task = new GLRunnable() {
             @Override
             public boolean run(GLAutoDrawable glAutoDrawable) {*/
-        System.out.println("DELETING THE WHOLE THING");
                 IntBuffer buff = GLBuffers.newDirectIntBuffer(vaos.size());
 
                 /*if (convexPatches != null && convexPatches.size() > 0){

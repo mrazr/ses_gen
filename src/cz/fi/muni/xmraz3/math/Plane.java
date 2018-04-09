@@ -28,6 +28,14 @@ public class Plane {
         return null;
     }
 
+    public boolean assignIntersectionVectorTo(Vector v, Plane pi){
+        if (Math.abs(pi.v.dotProduct(this.v) - 1) > 0.00001){
+            v.assignNormalVectorOf(this.v, pi.v).makeUnit();
+            return true;
+        }
+        return false;
+    }
+
     public static boolean getIntersectionLine(Plane p1, Plane p2, Vector vInt, Point pInt){
         Vector dir = p1.getIntersetionVector(p2);
         if (dir == null){

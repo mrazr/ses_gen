@@ -19,7 +19,7 @@ public class PatchUtil {
         axis.multiply(toProbe.dotProduct(axis));
         return Vector.addVectors(toProbe, axis.multiply(-1)).sqrtMagnitude();
     }
-
+    private static Vector circleN = new Vector(0, 0, 0);
     public static void torProcessSelfIntersection(ToroidalPatch tp){
         try {
             if (!tp.circular) {
@@ -120,9 +120,9 @@ public class PatchUtil {
 
 
             //Boundary[] bs = ConcavePatchUtil.generateCircularBoundary(leftL.owner, rightL.owner, circle, radius);
-            Vector circleN = Point.subtractPoints(leftL.owner.sphere.center, circle).makeUnit();
-
-            Plane cPlane = new Plane(circle, circleN);
+            //Vector circleN = Point.subtractPoints(leftL.owner.sphere.center, circle).makeUnit();
+            circleN.changeVector(leftL.owner.sphere.center, circle).makeUnit();
+            //Plane cPlane = new Plane(circle, circleN);
             //Point[] ccc = Util.getCusps(cPlane, circle, radius, leftL.lines);
             //Point[] cusps = Util.getCuspPoints(leftL.vrts, leftL.center, rightL.center, SesConfig.probeRadius);
             Point[] cusps = new Point[2];
@@ -138,10 +138,10 @@ public class PatchUtil {
                 cusps[0] = tmp;
             }
 
-            Vector cusp1To0 = Point.subtractPoints(cusps[0], cusps[1]).makeUnit();
-            Vector perpendi = Vector.getNormalVector(circleN, cusp1To0).makeUnit();
-            Plane p = new Plane(cusps[1], perpendi);
-            Plane ro = new Plane(circle, perpendi);
+            //Vector cusp1To0 = Point.subtractPoints(cusps[0], cusps[1]).makeUnit();
+            //Vector perpendi = Vector.getNormalVector(circleN, cusp1To0).makeUnit();
+            //Plane p = new Plane(cusps[1], perpendi);
+            //Plane ro = new Plane(circle, perpendi);
 
             /*if (Math.abs(Math.abs(Point.subtractPoints(tp.convexPatchArcs.get(0).owner.sphere.center, tp.convexPatchArcs.get(1).owner.sphere.center).makeUnit().dotProduct(cusp1To0)) - 1) > 0.001){
                 System.out.println("not parallel vectors bro");

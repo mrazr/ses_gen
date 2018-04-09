@@ -9,7 +9,7 @@ public class SesConfig {
     public static int atomCount;
     public static int trianglesCount;
     public static int toriCount;
-    public static double minAlpha = 120.0;
+    public static double minAlpha = 130.0;
     public static double distTolerance = 0.2 * 0.3;
 
     @Parameter(names = {"--help", "-h"}, help = true, description = "Show this info")

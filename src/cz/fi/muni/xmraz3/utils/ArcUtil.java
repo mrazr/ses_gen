@@ -294,6 +294,38 @@ public class ArcUtil {
         }
     }
 
+    public static void buildEdges(Boundary b, boolean clear, double edgeLength){
+        if (clear) {
+            b.vrts.clear();
+            linkArcs(b.arcs);
+            for (Arc a : b.arcs) {
+                a.bOwner = b;
+                a.owner = b.patch;
+                a.valid = true;
+                int step = a.vrts.size() - 1;
+                while (getArcLength(a, a.vrts.get(0), a.vrts.get(step)) > 1.6 * edgeLength || step > 1){
+                    step /= 2;
+                }
+                for (int i = 0; i < a.vrts.size() - 1; i += step) {
+                    b.vrts.add(a.vrts.get(i));
+                }
+            }
+        }
+        b.lines.clear();
+        for (int i = 0; i < b.vrts.size(); ++i){
+            Edge e = new Edge(i, (i == b.vrts.size() - 1) ? 0 : i + 1);
+            e.p1 = b.vrts.get(i);
+            e.p2 = b.vrts.get((i == b.vrts.size() - 1) ? 0 : i + 1);
+            b.lines.add(e);
+        }
+        for (int i = 0; i < b.lines.size(); ++i){
+            Edge first = b.lines.get(i);
+            Edge second = b.lines.get((i == b.lines.size() - 1) ? 0 : i + 1);
+            first.next = second;
+            second.prev = first;
+        }
+    }
+
     public static double getAngleR(Arc a){
         double phi = Math.acos(a.toEnd1.dotProduct(a.toEnd2));
         if (Math.abs(a.toEnd1.dotProduct(a.toEnd2) + 1) < 0.001){
@@ -635,17 +667,21 @@ public class ArcUtil {
         }
         return null;
     }
-
+    private static Vector toStart = new Vector(0, 0, 0);
+    private static Vector toP = new Vector(0, 0, 0);
+    private static Vector v1 = new Vector(0, 0, 0);
     public static Point findClosestPointOnCircle(List<Point> points, Point start, boolean includeStart, Point center, Vector normal, boolean next){
         double angle = 2 * Math.PI;
         Point closest = null;
-        Vector toStart = Point.subtractPoints(start, center).makeUnit();
+        //Vector toStart = Point.subtractPoints(start, center).makeUnit();
+        toStart.changeVector(start, center).makeUnit();
         for (Point p : points){
             if (includeStart && Point.distance(start, p) < 0.001){
                 return p;
             }
-            Vector toP = Point.subtractPoints(p, center).makeUnit();
-            double alpha = (Vector.getNormalVector(toStart, toP).multiply(next ? 1 : -1).dotProduct(normal) > 0.0) ? Math.acos(toStart.dotProduct(toP)) : (2 * Math.PI - Math.acos(toStart.dotProduct(toP)));
+            //Vector toP = Point.subtractPoints(p, center).makeUnit();
+            toP.changeVector(p, center).makeUnit();
+            double alpha = (v1.assignNormalVectorOf(toStart, toP).multiply(next ? 1 : -1).dotProduct(normal) > 0.0) ? Math.acos(toStart.dotProduct(toP)) : (2 * Math.PI - Math.acos(toStart.dotProduct(toP)));
             if (angle - alpha > 0.0){
                 angle = alpha;
                 closest = p;
@@ -740,9 +776,9 @@ public class ArcUtil {
         return (byte)(Math.log10(a.vrts.size() - 1) / Math.log10(2));
     }
 
-    public static void markShared(Arc a){
+    /*public static void markShared(Arc a){
         a.vrts.stream().forEach(v -> v.isShared = true);
-    }
+    }*/
 
     public static void generateEdgeSplits(Arc a, SphericalPatch sp){
         Map<Integer, Map<Integer, Integer>> edgeSplit = (sp.convexPatch) ? MeshRefinement.convexEdgeSplitMap.get(sp.id) : MeshRefinement.concaveEdgeSplitMap.get(sp.id);

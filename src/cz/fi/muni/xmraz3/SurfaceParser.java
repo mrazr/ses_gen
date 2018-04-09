@@ -145,7 +145,7 @@ public class SurfaceParser {
                     Surface.commonVrts.add(p);
                     Vector n = Point.subtractPoints(p, a.sphere.center).makeUnit();
                     Surface.normals.add(n);
-                    p.common = true;
+                    //p.common = true;
                 }
             }
         }
@@ -155,7 +155,7 @@ public class SurfaceParser {
                 Surface.commonVrts.add(p);
                 Vector n = Point.subtractPoints(cp.sphere.center, p).makeUnit();
                 Surface.normals.add(n);
-                p.common = true;
+                //p.common = true;
             }
         }
     }

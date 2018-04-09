@@ -36,7 +36,7 @@ public class MeshRefinement {
 
     public static AtomicBoolean free = new AtomicBoolean(true);
     public static AtomicBoolean finished = new AtomicBoolean(false);
-
+    private static Vector[] v;
     public static boolean isFree(){
         return free.get();
     }
@@ -79,13 +79,13 @@ public class MeshRefinement {
             } while (!facesToRefine.isEmpty());
         }
     }
-
     private static void _meshRefine(List<SphericalPatch> patches, int threadIdx){
         threads_working.getAndIncrement();
         long startTime = System.currentTimeMillis();
         int step = patches.size() / THREAD_COUNT;
         Queue<Face> facesToRefine = new LinkedList<>();
         List<Face> newFaces = new ArrayList<>(1000);
+        Vector u = v[threadIdx];
         for (int i = threadIdx * step; i < ((threadIdx == 3) ? patches.size() : (threadIdx + 1) * step); ++i) {
             SphericalPatch sp = patches.get(i);
             if (!sp.convexPatch) {
@@ -125,8 +125,12 @@ public class MeshRefinement {
                         Map<Integer, Integer> map = splitMap.get(sID);
                         Point d;
                         if (!map.containsKey(bID)){
-                            d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
-                            d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d = Point.translatePoint(a, u.changeVector(b, a).multiply(0.5f));
+                            //d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
+                            //v.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius);
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            //d = Point.translatePoint(sp.sphere.center, v);
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                             d._id = sp.nextVertexID++;
                             sp.vertices.add(d);
                             map.put(bID, d._id);
@@ -151,8 +155,10 @@ public class MeshRefinement {
                         Map<Integer, Integer> map = splitMap.get(sID);
                         Point d;
                         if (!map.containsKey(bID)){
-                            d = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
-                            d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d = Point.translatePoint(b, u.changeVector(c, b).multiply(0.5f));
+                            //d = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                             d._id = sp.nextVertexID++;
                             sp.vertices.add(d);
                             map.put(bID, d._id);
@@ -177,8 +183,10 @@ public class MeshRefinement {
                         Map<Integer, Integer> map = splitMap.get(sID);
                         Point d;
                         if (!map.containsKey(bID)){
-                            d = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
-                            d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            //d = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
+                            d = Point.translatePoint(a, u.changeVector(c, a).multiply(0.5f));
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                             d._id = sp.nextVertexID++;
                             sp.vertices.add(d);
                             map.put(bID, d._id);
@@ -210,8 +218,10 @@ public class MeshRefinement {
                     Map<Integer, Integer> map = splitMap.get(sID);
                     Point d;
                     if (!map.containsKey(bID)){
-                        d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
-                        d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        //d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
+                        //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        d = Point.translatePoint(a, u.changeVector(b, a).multiply(0.5f));
+                        d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                         sp.vertices.add(d);
                         d._id = sp.nextVertexID++;
                         map.put(bID, d._id);
@@ -236,8 +246,10 @@ public class MeshRefinement {
                     map = splitMap.get(sID);
                     Point e;
                     if (!map.containsKey(bID)){
-                        e = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
-                        e = Point.translatePoint(sp.sphere.center, Point.subtractPoints(e, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        //e = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
+                        //e = Point.translatePoint(sp.sphere.center, Point.subtractPoints(e, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        e = Point.translatePoint(b, u.changeVector(c, b).multiply(0.5f));
+                        e.assignTranslation(sp.sphere.center, u.changeVector(e, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                         sp.vertices.add(e);
                         e._id = sp.nextVertexID++;
                         map.put(bID, e._id);
@@ -262,8 +274,10 @@ public class MeshRefinement {
                     map = splitMap.get(sID);
                     Point f;
                     if (!map.containsKey(bID)){
-                        f = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
-                        f = Point.translatePoint(sp.sphere.center, Point.subtractPoints(f, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        //f = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
+                        //f = Point.translatePoint(sp.sphere.center, Point.subtractPoints(f, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        f = Point.translatePoint(a, u.changeVector(c, a).multiply(0.5f));
+                        f.assignTranslation(sp.sphere.center, u.changeVector(f, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                         sp.vertices.add(f);
                         f._id = sp.nextVertexID++;
                         map.put(bID, f._id);
@@ -309,6 +323,7 @@ public class MeshRefinement {
                 }
             }
         }
+
         System.out.println("REFINE COMPLETE, thd: " + threadIdx + " in " + (System.currentTimeMillis() - startTime) + " ms");
         //threads_working.decrementAndGet();
         threads_done.incrementAndGet();
@@ -598,7 +613,13 @@ public class MeshRefinement {
         return false;
     }
 
-    private MeshRefinement(){}
+    private MeshRefinement(){
+        v = new Vector[4];
+        v[0] = new Vector(0, 0, 0);
+        v[1] = new Vector(0, 0, 0);
+        v[2] = new Vector(0, 0, 0);
+        v[3] = new Vector(0, 0, 0);
+    }
 
     public static void generateBaseMesh(int start, int end, List<SphericalPatch> patches, int threadId) {
         free.set(false);
@@ -625,9 +646,9 @@ public class MeshRefinement {
             if (!a.meshed) {
                 if (a.boundaries.size() > 0) {
                     if (a.convexPatch) {
-                        afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
+                        afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit, Surface.maxEdgeLen);
                     } else {
-                        afm._initializeConcaveAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
+                        afm._initializeConcaveAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit, Surface.maxEdgeLen);
                     }
                     do {
                         //afm._mesh2();
@@ -641,7 +662,7 @@ public class MeshRefinement {
                     if (afm.loop){
                         System.out.println((a.convexPatch) ? "convex " + i + "looped" : "concave" + i + " looped");
                     } else {
-                        optimizeMesh(a, 0.5 * Surface.maxEdgeLen);
+                        optimizeMesh(a, 0.5 * Surface.maxEdgeLen, threadId);
                     }
                     if (!a.convexPatch && a.id == 225){
                         System.out.println("A:");
@@ -663,7 +684,7 @@ public class MeshRefinement {
         }
     }
 
-    private static void optimizeMesh(SphericalPatch sp, double len){
+    private static void optimizeMesh(SphericalPatch sp, double len, int threadId){
         Queue<Face> toOptimize = new LinkedList<>(sp.faces);
         List<Face> facesToUpdate = new ArrayList<>();
         List<Point> vertices = new ArrayList<>(sp.vertices);
@@ -675,6 +696,7 @@ public class MeshRefinement {
             sp.vertices.remove(sp.arcPointCount);
         }
         //System.out.println("starting: " + sp.id);
+        Vector u = v[threadId];
         while (!toOptimize.isEmpty()){
             Face f = toOptimize.poll();
             Point a = vertices.get(f.a);
@@ -711,8 +733,9 @@ public class MeshRefinement {
                 d.arcPoint = true;
 
             } else {
-                d = Point.translatePoint(v1, Point.subtractPoints(v2, v1).multiply(0.5f));
-                d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                d = Point.translatePoint(v1, u.changeVector(v2, v1).multiply(0.5f));
+                //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                 d._id = vertices.size();
                 vertices.add(d);
             }

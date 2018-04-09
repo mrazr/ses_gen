@@ -960,13 +960,13 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             up[1], up[2]);
             //projection.glMultMatrixf(view.glGetMatrixf());
             view.glMultMatrixf(projection.glGetMatrixf());*/
-            Matrix3D vMat = new Matrix3D();
+            /*Matrix3D vMat = new Matrix3D();
             vMat.translate(-cameraPos[0], -cameraPos[1], -cameraPos[2]);
             Matrix3D mMat = new Matrix3D();
             mMat.translate(modelX, modelY,modelZ);
             Matrix3D mvMat = new Matrix3D();
             mvMat.concatenate(vMat);
-            mvMat.concatenate(mMat);
+            mvMat.concatenate(mMat);*/
 
             PMVMatrix look = new PMVMatrix();
             look.glLoadIdentity();
@@ -993,14 +993,14 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             int lightColor_loc = gl.glGetUniformLocation(mainProgram, "lightColor");
             int lightPos_loc = gl.glGetUniformLocation(mainProgram, "lightPos");
             int alpha_loc = gl.glGetUniformLocation(mainProgram, "alpha");
-            Matrix4 mat = new Matrix4();
+            //Matrix4 mat = new Matrix4();
             //gl.glBindVertexArray(vao[0]);
             gl.glUniformMatrix4fv(uniProjMatLoc, 1, false, pMat.getFloatValues(), 0);
             gl.glUniformMatrix4fv(uniViewMatLoc, 1, false, look.glGetMatrixf());
             gl.glUniformMatrix4fv(uniModelMatLoc, 1, false, modelMAT.glGetMatrixf());
             gl.glUniformMatrix4fv(uniMvInverseLoc, 1, false, modelMAT.glGetMvitMatrixf());
             gl.glUniform3f(lightColor_loc, 1.f, 1.f, 1.f);
-            Point p = new Point(lightPos.getX(), lightPos.getY(), lightPos.getZ());
+            //Point p = new Point(lightPos.getX(), lightPos.getY(), lightPos.getZ());
             //float[] light = new float[3];
             //light =
             gl.glUniform3f(lightPos_loc, (float)lightPos.getX(), (float)lightPos.getY(), (float)lightPos.getZ());
@@ -1195,82 +1195,6 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         }
     }
 
-    private void meshConvexPatches(int start, int end, boolean waitForOthers) {
-        stopRendering.set(true);
-        List<Point> verts = new ArrayList<>();
-        List<Face> faces = new ArrayList<>();
-        AdvancingFrontMethod afm = new AdvancingFrontMethod();
-        long startTime = System.currentTimeMillis();
-        for (int i = start; i < end; ++i) {
-            SphericalPatch a = convexPatchList.get(i);
-            if (!a.valid){
-                MeshRefinement.refinement.enqueue(a);
-                continue;
-            }
-            if (!atomsMeshed[i]) {
-                //selectedAtom.set(i);
-                //List<Point> noveBody = new ArrayList<>();
-                long time = 0;
-                //System.out.println("Meshing atom " + i);
-                if (a.boundaries.size() > 0) {
-                    afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
-                    //updaFaces = afm.soho(a.convexPatchBoundaries.get(0), Math.toRadians(75), 0.2, 0.3 * (Math.sqrt(3) / 2.f), false, noveBody);
-                        /*do {
-                            overallTime += System.currentTimeMillis() - time;
-                            updaVrts.clear();
-                            updaFaces.clear();
-
-                            afm.mesh(noveBody, updaFaces, false);
-                            //System.out.println("Done meshing atom " + i);
-                            updaVrts = noveBody;
-                            //update =
-                            //update2.set(true);
-                            atomsMeshed[i] = true;
-                            time = System.currentTimeMillis();
-                            /*while (update2.get()) {
-                                //System.out.println("Waiting for gl");
-                            }
-                        } while (!afm.atomComplete);*/
-                    verts.clear();
-                    faces.clear();
-                    //time = System.currentTimeMillis();
-                    do {
-                        afm._mesh2();
-                    } while (!afm.atomComplete);
-                    if (afm.loop){
-                        System.out.println("convex " + i + " looped");
-                    }
-                    //meshTime += (System.currentTimeMillis() - time);
-                    atomsMeshed[i] = true;
-                    //update2.getAndSet(true);
-                    //trianglesCount += updaFaces.size();
-                    //while (update2.get()) {
-                        //System.out.println(".");
-                    //}
-                }
-                MeshRefinement.refinement.enqueue(a);
-            }
-        }
-        long endTime = System.currentTimeMillis();
-        System.out.println("Meshed in " + (endTime - startTime) + " ms");
-        convexMeshThreadsCounter.getAndIncrement();
-        if (waitForOthers && false){
-            while (convexMeshThreadsCounter.get() < 4){}
-            GLRunnable task = new GLRunnable() {
-                @Override
-                public boolean run(GLAutoDrawable glAutoDrawable) {
-                    pushConvexPatchesToGPU();
-                    convexMeshInitialized = true;
-                    return true;
-                }
-            };
-            window.invoke(false, task);
-        } else {
-            //convexPushData2GPU.set(true);
-
-        }
-    }
-
     private void drawConvex(){
         gl.glUniform3fv(uniNormalColorLoc, 1, convexPatchCol, 0);
         gl.glUniform3fv(uniSelectedColorLoc, 1, selectedPatchCol, 0);
@@ -1449,65 +1373,6 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             gl.glBindVertexArray(meshVao[TORUS]);
             gl.glDrawArrays(GL4.GL_TRIANGLES, 0, 3 * toriPatchesFaceCount);
             gl.glBindVertexArray(0);
-        }
-    }
-
-    private void meshConcavePatches(int start, int end, boolean waitForOthers){
-        stopRendering.set(true);
-        List<Point> verts = new ArrayList<>();
-        List<Face> faces = new ArrayList<>();
-        AdvancingFrontMethod afm = new AdvancingFrontMethod();
-        long startTime = System.currentTimeMillis();
-        for (int i = start; i < end; ++i) {
-            if (!concavePatchesMeshed[i]) {
-                SphericalPatch cp = concavePatchList.get(i);
-                if (!cp.valid){
-                    //MeshRefinement.refinement.enqueue(cp);
-                    continue;
-                }
-                //selectedConcaveP.set(i);
-                //List<Point> noveBody = new ArrayList<>();
-                //cpFaces = cpAfm.soho(cp.b, Math.toRadians(70), 0.2, 0.3 * (Math.sqrt(3)/2.f), false, noveBody);
-                afm.atomComplete = false;
-                while (!afm.atomComplete) {
-                    faces.clear();
-                    verts.clear();
-                    afm._initializeConcaveAFM(cp, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
-                    long time = System.currentTimeMillis();
-                    afm._mesh2();
-                    //meshTime += System.currentTimeMillis() - time;
-                    //cpVrts = noveBody;
-                    //trianglesCount += cpFaces.size();
-                    concavePatchesMeshed[i] = true;
-                    if (afm.loop){
-                        System.out.println("concave " + i + " looped");
-                    }
-                    //if (cpAfm.loop) {
-                     //   looped.add(i);
-                    //}
-                    //cpUpdate.set(true);
-                    //while (cpUpdate.get()) ;
-                }
-                //MeshRefinement.refinement.enqueue(cp);
-            }
-        }
-        long endTime = System.currentTimeMillis();
-        System.out.println("Concave meshed in " + (endTime - startTime) + " ms");
-        concaveMeshThreadsCounter.getAndIncrement();
-        if (waitForOthers){
-            while (concaveMeshThreadsCounter.get() < 4){}
-            GLRunnable task = new GLRunnable() {
-                @Override
-                public boolean run(GLAutoDrawable glAutoDrawable) {
-                    pushConcavePatchesToGPU();
-                    concaveMeshInitialized = true;
-                    return true;
-                }
-            };
-            window.invoke(false, task);
-            stopRendering.set(false);
-        } else {
-            //concavePushData2GPU.set(true);
         }
     }
 
@@ -1744,7 +1609,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         }
 
         if (keyEvent.getKeyChar() == '.'){
-            if (!MeshRefinement.refinement.isRunning()){
+            /*if (!MeshRefinement.refinement.isRunning()){
                 //MeshRefinement.refinement.start();
             }
             concavePushData2GPU.set(false);
@@ -1777,7 +1642,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             (new Thread(task1)).start();
             (new Thread(task2)).start();
             (new Thread(task3)).start();
-            (new Thread(task4)).start();
+            (new Thread(task4)).start();*/
         }
 
         if (keyEvent.getKeyCode() == KeyEvent.VK_F1){

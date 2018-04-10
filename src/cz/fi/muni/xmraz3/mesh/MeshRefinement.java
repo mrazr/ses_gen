@@ -946,7 +946,7 @@ public class MeshRefinement {
             tp.vertices.clear();
             tp.normals.clear();
             tp.faces.clear();
-            tp.faceCount = 0;
+            //tp.faceCount = 0;
             tp.vrts.clear();
             meshToroidalPatch(tp);
         }
@@ -1044,38 +1044,43 @@ public class MeshRefinement {
             Arc right = null;
             Arc top = tp.convexPatchArcs.get(1).refined;
 
-            cz.fi.muni.xmraz3.math.Vector a1toa2 = Point.subtractPoints(tp.convexPatchArcs.get(0).owner.sphere.center, tp.convexPatchArcs.get(1).owner.sphere.center).makeUnit();
-            cz.fi.muni.xmraz3.math.Vector a1toprobe = Point.subtractPoints(tp.probe1, tp.convexPatchArcs.get(0).owner.sphere.center);
-            a1toa2.multiply(a1toa2.dotProduct(a1toprobe));
-            Point centerOfRot = Point.translatePoint(tp.convexPatchArcs.get(0).owner.sphere.center, a1toa2);
-            cz.fi.muni.xmraz3.math.Vector vr = Point.subtractPoints(tp.probe1, centerOfRot);
+            //Vector a1toa2 = Point.subtractPoints(tp.convexPatchArcs.get(0).owner.sphere.center, tp.convexPatchArcs.get(1).owner.sphere.center).makeUnit();
+            atom1ToAtom2.changeVector(tp.convexPatchArcs.get(0).owner.sphere.center, tp.convexPatchArcs.get(1).owner.sphere.center).makeUnit();
+            //Vector a1toprobe = Point.subtractPoints(tp.probe1, tp.convexPatchArcs.get(0).owner.sphere.center);
+            toProbe.changeVector(tp.probe1, tp.convexPatchArcs.get(0).owner.sphere.center);
+            //a1toa2.multiply(a1toa2.dotProduct(a1toprobe));
+            atom1ToAtom2.multiply(atom1ToAtom2.dotProduct(toProbe));
+            //Point centerOfRot = Point.translatePoint(tp.convexPatchArcs.get(0).owner.sphere.center, a1toa2);
+            //Vector vr = Point.subtractPoints(tp.probe1, centerOfRot);
+            centerOfRotation.assignTranslation(tp.convexPatchArcs.get(0).owner.sphere.center, atom1ToAtom2);
             if (tp.concavePatchArcs.size() == 0){
-                if (vr.sqrtMagnitude() < SesConfig.probeRadius) {
+                if (Point.distance(tp.probe1, centerOfRotation) < SesConfig.probeRadius) {
                     //System.err.println("beginning to mesh circ patch");
-                    Point centerOfRect = Point.translatePoint(tp.probe1, Point.subtractPoints(tp.probe2, tp.probe1).multiply(0.5f));
-                    double centerToCuspLength = Math.sqrt(Math.pow(SesConfig.probeRadius, 2) - Math.pow(Point.subtractPoints(tp.probe1, tp.probe2).sqrtMagnitude() / 2.f, 2));
-                    Point bottomCusp = Point.translatePoint(centerOfRect, Point.subtractPoints(bottom.owner.sphere.center, top.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
-                    Point topCusp = Point.translatePoint(centerOfRect, Point.subtractPoints(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
+                    //Point centerOfRect = Point.translatePoint(tp.probe1, Point.subtractPoints(tp.probe2, tp.probe1).multiply(0.5f));
+                    centerOfTorus.assignTranslation(tp.probe1, v1.changeVector(tp.probe2, tp.probe1).multiply(0.5f));
+                    double centerToCuspLength = Math.sqrt(Math.pow(SesConfig.probeRadius, 2) - Math.pow(Point.distance(tp.probe1, tp.probe2) / 2.f, 2));
+                    Point bottomCusp = Point.translatePoint(centerOfTorus, v1.changeVector(bottom.owner.sphere.center, top.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
+                    Point topCusp = Point.translatePoint(centerOfTorus, v1.changeVector(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
                     Arc topForBottomRect = new Arc(bottom.center, bottom.radius);
                     for (Point p : bottom.vrts) {
                         topForBottomRect.vrts.add(bottomCusp);
                     }
-                    Point newCenter = (Point.subtractPoints(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)).sqrtMagnitude() < 0.0001) ? tp.probe1 : tp.probe2;
+                    Point newCenter = (Point.distance(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)) < 0.0001) ? tp.probe1 : tp.probe2;
                     left = new Arc(newCenter, SesConfig.probeRadius);
                     left.vrts.add(bottom.end2);
                     Point mid;
-                    cz.fi.muni.xmraz3.math.Vector v;
+                    Vector v;
                     left.vrts.add(bottomCusp);
                     left.setEndPoints(bottom.end2, bottomCusp, true);
                     ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
                     ArcUtil.refineArc(left, SesConfig.edgeLimit, false,0, false);
 
-                    newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
+                    newCenter = (Point.distance(left.center, tp.probe1) < 0.0001) ? tp.probe2 : tp.probe1;
 
                     right = new Arc(newCenter, SesConfig.probeRadius);
                     right.vrts.add(bottom.end1);
-                    mid = Point.translatePoint(right.vrts.get(0), Point.subtractPoints(bottomCusp, right.vrts.get(0)).multiply(0.5f));
-                    v = Point.subtractPoints(mid, right.center).makeUnit().multiply(right.radius);
+                    //mid = Point.translatePoint(right.vrts.get(0), Point.subtractPoints(bottomCusp, right.vrts.get(0)).multiply(0.5f));
+                    //v = Point.subtractPoints(mid, right.center).makeUnit().multiply(right.radius);
 
                     right.vrts.add(bottomCusp);
                     right.setEndPoints(bottom.end1, bottomCusp, true);
@@ -1087,11 +1092,11 @@ public class MeshRefinement {
                     for (Point p : top.vrts){
                         bottomForTopRect.vrts.add(topCusp);
                     }
-                    newCenter = (Point.subtractPoints(top.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), top.owner.sphere)).sqrtMagnitude() < 0.0001) ? tp.probe1 : tp.probe2;
+                    newCenter = (Point.distance(top.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), top.owner.sphere)) < 0.0001) ? tp.probe1 : tp.probe2;
                     left = new Arc(newCenter, SesConfig.probeRadius);
                     left.vrts.add(top.end2);
-                    mid = Point.translatePoint(left.vrts.get(0), Point.subtractPoints(topCusp, left.vrts.get(0)).multiply(0.5f));
-                    v = Point.subtractPoints(mid, left.center).makeUnit().multiply(left.radius);
+                    //mid = Point.translatePoint(left.vrts.get(0), Point.subtractPoints(topCusp, left.vrts.get(0)).multiply(0.5f));
+                    //v = Point.subtractPoints(mid, left.center).makeUnit().multiply(left.radius);
                     left.vrts.add(topCusp);
                     left.setEndPoints(top.end2, topCusp, true);
                     ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
@@ -1099,8 +1104,8 @@ public class MeshRefinement {
                     newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
                     right = new Arc(newCenter, SesConfig.probeRadius);
                     right.vrts.add(top.end1);
-                    mid = Point.translatePoint(right.vrts.get(0), Point.subtractPoints(topCusp, right.vrts.get(0)).multiply(0.5f));
-                    v = Point.subtractPoints(mid, right.center).makeUnit().multiply(right.radius);
+                    //mid = Point.translatePoint(right.vrts.get(0), Point.subtractPoints(topCusp, right.vrts.get(0)).multiply(0.5f));
+                    //v = Point.subtractPoints(mid, right.center).makeUnit().multiply(right.radius);
 
                     right.vrts.add(topCusp);
                     right.setEndPoints(top.end1, topCusp, true);
@@ -1110,13 +1115,13 @@ public class MeshRefinement {
                     //System.out.println("finished meshing circ patch");
                 } else {
 
-                    Point newCenter = (Point.subtractPoints(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)).sqrtMagnitude() < 0.0001) ? tp.probe1 : tp.probe2;
+                    Point newCenter = (Point.distance(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)) < 0.0001) ? tp.probe1 : tp.probe2;
                     left = new Arc(newCenter, SesConfig.probeRadius);
                     left.vrts.add(bottom.end2);
                     left.vrts.add(top.end1);
                     left.setEndPoints(bottom.end2, top.end1, true);
                     ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
-                    newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
+                    newCenter = (Point.distance(left.center, tp.probe1) < 0.0001) ? tp.probe2 : tp.probe1;
                     right = new Arc(newCenter, SesConfig.probeRadius);
 
                     right.vrts.add(bottom.end1);
@@ -1127,11 +1132,13 @@ public class MeshRefinement {
                         System.out.println("weird");
                     }
                     meshToroidalPatch(tp, bottom, top, left, right, false);
-                    tp.circleMeshed = true;
+                    //tp.circleMeshed = true;
                 }
             } else {
-                cz.fi.muni.xmraz3.math.Vector toProbe = Point.subtractPoints(tp.probe1, bottom.owner.sphere.center).makeUnit().multiply(bottom.owner.sphere.radius + SesConfig.probeRadius);
-                cz.fi.muni.xmraz3.math.Vector atom1ToAtom2 = Point.subtractPoints(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit();
+                //Vector toProbe = Point.subtractPoints(tp.probe1, bottom.owner.sphere.center).makeUnit().multiply(bottom.owner.sphere.radius + SesConfig.probeRadius);
+                toProbe.changeVector(tp.probe1, bottom.owner.sphere.center).makeUnit().multiply(bottom.owner.sphere.radius + SesConfig.probeRadius);
+                //Vector atom1ToAtom2 = Point.subtractPoints(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit();
+                atom1ToAtom2.changeVector(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit();
                 atom1ToAtom2.multiply(toProbe.dotProduct(atom1ToAtom2));
                 double probeToRotationAx = -42;
                 probeToRotationAx = PatchUtil.getProbeAxisDistance(tp.probe1, top.owner.sphere.center, bottom.owner.sphere.center);
@@ -1152,7 +1159,13 @@ public class MeshRefinement {
             e.printStackTrace();
         }
     }
-
+    private static Vector toProbe = new Vector(0, 0, 0);
+    private static Vector atom1ToAtom2 = new Vector(0, 0, 0);
+    private static Point centerOfRotation = new Point(0, 0, 0);
+    private static Point centerOfTorus = new Point(0, 0, 0);
+    private static Vector v1 = new Vector(0, 0, 0);
+    private static Point currProbe = new Point(0, 0, 0);
+    private static Point prevProbe = new Point(0, 0, 0);
     private static void meshToroidalPatch(ToroidalPatch tp, Arc bottom, Arc top, Arc left, Arc right, boolean special){
         try {
             if (tp.id == 8871){
@@ -1161,12 +1174,15 @@ public class MeshRefinement {
             List<Point> leftVArc = new ArrayList<>();
             leftVArc.addAll(left.vrts);
             List<Point> rightVArc = new ArrayList<>();
-            Point currProbe = null;
-            Point prevProbe = left.center;
+            //Point currProbe = null;
+            //Point prevProbe = left.center;
+            prevProbe.setAsMidpoint(left.center, left.center);
             for (int i = 1; i < bottom.vrts.size(); ++i) {
                 Point vert = bottom.vrts.get(bottom.vrts.size() - i - 1);
-                cz.fi.muni.xmraz3.math.Vector toProbe = Point.subtractPoints(vert, bottom.owner.sphere.center).makeUnit().multiply(SesConfig.probeRadius);
-                currProbe = Point.translatePoint(vert, toProbe);
+                //Vector toProbe = Point.subtractPoints(vert, bottom.owner.sphere.center).makeUnit().multiply(SesConfig.probeRadius);
+                toProbe.changeVector(vert, bottom.owner.sphere.center).makeUnit().multiply(SesConfig.probeRadius);
+                //currProbe = Point.translatePoint(vert, toProbe);
+                currProbe.assignTranslation(vert, toProbe);
                 rightVArc.clear();
                 if (i == bottom.vrts.size() - 1) {
                     rightVArc.addAll(right.vrts);
@@ -1230,6 +1246,7 @@ public class MeshRefinement {
                     }*/
                     tp.vrts.add(leftVArc.get(j)); // = 0
                     Vector n = Point.subtractPoints(prevProbe, leftVArc.get(j)).makeUnit();
+                    //n.changeVector(prevProbe, leftVArc.get(j)).makeUnit();
                     tp.vrts.add(new Point(n.getFloatData()));
 
                     tp.vertices.add(leftVArc.get(j)); // = 0
@@ -1277,7 +1294,7 @@ public class MeshRefinement {
                 }
                 leftVArc.clear();
                 leftVArc.addAll(rightVArc);
-                prevProbe = currProbe;
+                prevProbe.setAsMidpoint(currProbe, currProbe);
             }
         } catch (Exception e){
             e.printStackTrace();

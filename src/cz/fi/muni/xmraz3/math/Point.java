@@ -12,7 +12,7 @@ public class Point {
     public double x;
     public double y;
     public double z;
-    public int afmSelect = -1;
+    //public int afmSelect = -1;
     public int afmIdx = -1;
     //public boolean isShared = false;
     public int idx = -1;
@@ -73,10 +73,11 @@ public class Point {
         return nP;
     }
 
-    public void assignTranslation(Point p, Vector v){
+    public Point assignTranslation(Point p, Vector v){
         this.x = p.x + v.getX();
         this.y = p.y + v.getY();
         this.z = p.z + v.getZ();
+        return this;
     }
 
     public static Vector subtractPoints(Point p, Point q){

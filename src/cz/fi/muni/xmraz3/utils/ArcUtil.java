@@ -15,20 +15,27 @@ import java.util.TreeMap;
 public class ArcUtil {
 
 
-
+    private static Vector v = new Vector(0, 0, 0);
+    private static Point mid = new Point(0, 0, 0);
+    private static Point temp = new Point(0, 0, 0);
+    private static Vector n = new Vector(0, 0, 0);
+    private static Vector u = new Vector(0, 0, 0);
     public static void refineArc(Arc a, double maxLen, boolean fixedCount, int numOfSubdivisions, boolean fullCircle){
         try {
             int it = 0;
             if (a.mid == null){
-                Vector v = Point.subtractPoints(a.end1, a.end2).multiply(0.5f);
-                Point mid = Point.translatePoint(a.end2, v);
-                Vector toMid = Point.subtractPoints(mid, a.center).makeUnit().multiply(a.radius);
+                //Vector v = Point.subtractPoints(a.end1, a.end2).multiply(0.5f);
+                //Point mid = Point.translatePoint(a.end2, v);
+                v.changeVector(a.end1, a.end2).multiply(0.5f);
+                mid.assignTranslation(a.end2, v);
+                //Vector toMid = Point.subtractPoints(mid, a.center).makeUnit().multiply(a.radius);
+                v.changeVector(mid, a.center).makeUnit().multiply(a.radius);
                 boolean useMid = false;
-                if (Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
-                    toMid.multiply(-1.0);
+                if (n.assignNormalVectorOf(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){//Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
+                    v.multiply(-1.0);
                     //useMid = true;
                 }
-                a.mid = Point.translatePoint(a.center, toMid);
+                a.mid = Point.translatePoint(a.center, v);
                 /*if (useMid){
                     a.vrts.add(1, a.mid);
                 }*/
@@ -50,21 +57,26 @@ public class ArcUtil {
                         if (a.mid != null) {
                             tmp = a.mid;
                         } else {
-                            tmp = Point.translatePoint(a.end1, Point.subtractPoints(a.end2, a.end1).multiply(0.5f));
-                            Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
-                            if (Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
-                                toMid.multiply(-1.0);
+                            //tmp = Point.translatePoint(a.end1, Point.subtractPoints(a.end2, a.end1).multiply(0.5f));
+                            tmp = temp.assignTranslation(a.end1, v.changeVector(a.end2, a.end1).multiply(0.5f));
+                            //Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
+                            v.changeVector(tmp, a.center).makeUnit().multiply(a.radius);
+                            if (n.assignNormalVectorOf(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){//Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
+                                v.multiply(-1.0);
                             }
-                            tmp = Point.translatePoint(a.center, toMid);
+                            tmp = Point.translatePoint(a.center, v);
                         }
                     } else {
                         if (i < a.vrts.size() - 1) {
-                            tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
+                            //tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
+                            tmp = temp.assignTranslation(a.vrts.get(i), v.changeVector(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
                         } else {
-                            tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
+                            //tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
+                            tmp = temp.assignTranslation(a.vrts.get(i), v.changeVector(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
                         }
-                        Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
-                        tmp = Point.translatePoint(a.center, toMid);
+                        //Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
+                        v.changeVector(tmp, a.center).makeUnit().multiply(a.radius);
+                        tmp = Point.translatePoint(a.center, v);
                     }
 
                     newVerts.add(a.vrts.get(i));
@@ -91,15 +103,18 @@ public class ArcUtil {
             boolean convex = true;
             int it = 0;
             if (a.mid == null){
-                Vector v = Point.subtractPoints(a.end1, a.end2).multiply(0.5f);
-                Point mid = Point.translatePoint(a.end2, v);
-                Vector toMid = Point.subtractPoints(mid, a.center).makeUnit().multiply(a.radius);
+                //Vector v = Point.subtractPoints(a.end1, a.end2).multiply(0.5f);
+                v.changeVector(a.end1, a.end2).multiply(0.5f);
+                //Point mid = Point.translatePoint(a.end2, v);
+                mid.assignTranslation(a.end2, v);
+                //Vector toMid = Point.subtractPoints(mid, a.center).makeUnit().multiply(a.radius);
+                v.changeVector(mid, a.center).makeUnit().multiply(a.radius);
                 boolean useMid = false;
-                if (Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
-                    toMid.multiply(-1.0);
+                if (n.assignNormalVectorOf(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){//Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
+                    v.multiply(-1.0);
                     //useMid = true;
                 }
-                a.mid = Point.translatePoint(a.center, toMid);
+                a.mid = Point.translatePoint(a.center, v);
                 /*if (useMid){
                     a.vrts.add(1, a.mid);
                 }*/
@@ -126,21 +141,26 @@ public class ArcUtil {
                         if (a.mid != null) {
                             tmp = a.mid;
                         } else {
-                            tmp = Point.translatePoint(a.end1, Point.subtractPoints(a.end2, a.end1).multiply(0.5f));
-                            Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
-                            if (Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
-                                toMid.multiply(-1.0);
+                            //tmp = Point.translatePoint(a.end1, Point.subtractPoints(a.end2, a.end1).multiply(0.5f));
+                            tmp = temp.assignTranslation(a.end1, v.changeVector(a.end2, a.end1).multiply(0.5f));
+                            //Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
+                            v.changeVector(tmp, a.center).makeUnit().multiply(a.radius);
+                            if (n.assignNormalVectorOf(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0) {//Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
+                                v.multiply(-1.0);
                             }
-                            tmp = Point.translatePoint(a.center, toMid);
+                            tmp = Point.translatePoint(a.center, v);
                         }
                     } else {
                         if (i < a.vrts.size() - 1) {
-                            tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
+                            temp.assignTranslation(a.vrts.get(i), v.changeVector(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
+                            //tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
                         } else {
-                            tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
+                            temp.assignTranslation(a.vrts.get(i), v.changeVector(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
+                            //tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
                         }
-                        Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
-                        tmp = Point.translatePoint(a.center, toMid);
+                        v.changeVector(temp, a.center).makeUnit().multiply(a.radius);
+                        //Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
+                        tmp = Point.translatePoint(a.center, v);
                     }
 
                     newVerts.add(a.vrts.get(i));
@@ -223,7 +243,7 @@ public class ArcUtil {
             a.lines.add(a.endEdge1);
             for (int i = 1; i < a.vrts.size() - ((a.circularArc) ? 1 : 2); ++i) {
                 Edge e = new Edge(i, i + 1);
-                e.owner = a;
+                //e.owner = a;
                 a.lines.add(e);
                 e.p1 = a.vrts.get(i);
                 e.p2 = a.vrts.get(i + 1);
@@ -331,30 +351,39 @@ public class ArcUtil {
         if (Math.abs(a.toEnd1.dotProduct(a.toEnd2) + 1) < 0.001){
             return Math.PI;
         }
-        if (Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
+        if (n.assignNormalVectorOf(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){//Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
             phi = 2 * Math.PI - phi;
         }
         return phi;
     }
 
+    private static Vector neighborToAtom = new Vector(0, 0, 0);
+    private static Vector atomToNeighbor = new Vector(0, 0, 0);
+    private static Vector atomToEnd = new Vector(0, 0, 0);
+    private static Vector projection = new Vector(0, 0, 0);
+    private static Vector u1 = new Vector(0, 0, 0);
+    private static Vector u2 = new Vector(0, 0, 0);
+    private static float[] _v = new float[3];
+    private static Quaternion qRot = new Quaternion();
+    //private static Vector n = new Vector(0, 0, 0);
     public static Arc[] makeNewArc(SphericalPatch sp, SphericalPatch neighbor, Point e1, Point e2, Point mid, Point midProbe, boolean circular){
         if (!sp.neighbours.contains(neighbor)){
             sp.neighbours.add(neighbor);
         }
-        Vector neighborToAtom = Point.subtractPoints(sp.sphere.center, neighbor.sphere.center);
-        Vector atomToNeighbor = Vector.scaleVector(neighborToAtom, -1);
-        Vector atomToEnd = Point.subtractPoints(e1, sp.sphere.center);
-        Vector projection = atomToEnd.projectionOnto(atomToNeighbor);
+        //Vector neighborToAtom = Point.subtractPoints(sp.sphere.center, neighbor.sphere.center);
+        //Vector atomToNeighbor = Vector.scaleVector(neighborToAtom, -1);
+        //Vector atomToEnd = Point.subtractPoints(e1, sp.sphere.center);
+        //Vector projection = atomToEnd.projectionOnto(atomToNeighbor);
+        neighborToAtom.changeVector(sp.sphere.center, neighbor.sphere.center);
+        atomToNeighbor.changeVector(neighborToAtom).multiply(-1);
+        atomToEnd.changeVector(e1, sp.sphere.center);
+        //projection.changeVector(atomToNeighbor).multiply(atomToEnd.dotProduct(atomToNeighbor));
+        projection = atomToEnd.projectionOnto(atomToNeighbor);
         Point arcCenter = Point.translatePoint(sp.sphere.center, projection);
         double loopRadius = Math.sqrt(sp.sphere.radius * sp.sphere.radius - projection.dotProduct(projection));
         neighborToAtom.makeUnit();
         Point end1 = e1;
         Point end2 = e2;
-        Vector e1ToMid = Point.subtractPoints(mid, e1);
-        Vector e1ToE2 = Point.subtractPoints(e2, e1);
-        Vector u1 = Point.subtractPoints(e1, arcCenter).makeUnit();
-        Vector u2 = Point.subtractPoints(mid, arcCenter).makeUnit();
-        Vector n = Vector.getNormalVector(u1, u2).makeUnit();
         if (circular){
             Vector atToE1 = Point.subtractPoints(e1, sp.sphere.center);
             Vector atToMid = Point.subtractPoints(mid, sp.sphere.center);
@@ -368,24 +397,34 @@ public class ArcUtil {
             loops[1] = makeNewArc(sp, neighbor, mid, e1, trueMid2, midProbe2, false)[0];
             return loops;
         }
-        e1ToMid.makeUnit();
-        e1ToE2.makeUnit();
-        Vector normal = Vector.getNormalVector(e1ToMid, e1ToE2);
-        normal.makeUnit();
-        Point triMid = Point.getMidPoint(e1, mid, e2);
+        //Vector e1ToMid = Point.subtractPoints(mid, e1);
+        //Vector e1ToE2 = Point.subtractPoints(e2, e1);
+        //Vector u1 = Point.subtractPoints(e1, arcCenter).makeUnit();
+        //Vector u2 = Point.subtractPoints(mid, arcCenter).makeUnit();
+        //Vector n = Vector.getNormalVector(u1, u2).makeUnit();
+        u1.changeVector(e1, arcCenter).makeUnit();
+        u2.changeVector(mid, arcCenter).makeUnit();
+        n.assignNormalVectorOf(u1, u2).makeUnit();
+        //e1ToMid.makeUnit();
+        //e1ToE2.makeUnit();
+        //Vector normal = Vector.getNormalVector(e1ToMid, e1ToE2);
+        //normal.makeUnit();
+        //Point triMid = Point.getMidPoint(e1, mid, e2);
 
-        Vector e1ToCenter = Point.subtractPoints(sp.sphere.center, arcCenter).makeUnit();
+        //Vector e1ToCenter = Point.subtractPoints(sp.sphere.center, arcCenter).makeUnit();
         if (n.dotProduct(neighborToAtom) < 0){
             end1 = e2;
             end2 = e1;
         }
-        if (Point.subtractPoints(end1, mid).sqrtMagnitude() + Point.subtractPoints(end2, mid).sqrtMagnitude() < 0.001){
+        /*if (Point.subtractPoints(end1, mid).sqrtMagnitude() + Point.subtractPoints(end2, mid).sqrtMagnitude() < 0.001){
             System.err.println("possible short loop, atom1 id: " + sp.id + " atom2Id: " + neighbor.id);
-        }
+        }*/
         Arc[] arc = new Arc[1];
         arc[0] = new Arc(arcCenter, loopRadius);
         Arc a = arc[0];
-        a.normal = Vector.scaleVector(neighborToAtom, 1).makeUnit();
+        //a.normal = Vector.scaleVector(neighborToAtom, 1).makeUnit();
+        a.setNormal(neighborToAtom);
+        a.normal.makeUnit();
         a.end1 = end1;
         a.end2 = end2;
         a.setEndPoints(a.end1, a.end2, false);
@@ -412,10 +451,12 @@ public class ArcUtil {
         a.midProbe = midProbe;
         return arc;
     }
-
+    private static List<Arc> queue = new ArrayList<>();
     public static void linkArcs(SphericalPatch sp) {
         try {
-            List<Arc> queue = new ArrayList<>(sp.arcs);
+            //List<Arc> queue = new ArrayList<>(sp.arcs);
+            queue.clear();
+            queue.addAll(sp.arcs);
             boolean setValid = true;
             while (queue.size() > 0) {
                 ArrayList<Arc> newB = new ArrayList<>();
@@ -429,7 +470,7 @@ public class ArcUtil {
                 int i = 0;
                 int iterator = 0;
                 //while (Math.abs(loopEnd.dotProduct(pivot) - 1) >= 0.00001) {
-                while (Point.subtractPoints(loopEnd, pivot).sqrtMagnitude() > 0.001) {
+                while (Point.distance(loopEnd, pivot) > 0.001) {//Point.subtractPoints(loopEnd, pivot).sqrtMagnitude() > 0.001) {
                     if (iterator > sp.arcs.size() + 10) {
                         System.err.println("Cycle detected for atom id:" + sp.id);
                         System.out.println("Iterator: " + iterator);
@@ -447,12 +488,12 @@ public class ArcUtil {
                     Arc lop = queue.get(i);
                     //Vector vLop = lop.toEnd1;
                     Point pLop = lop.end1;
-                    if (Point.subtractPoints(pLop, pivot).sqrtMagnitude() < 0.001) {
+                    if (Point.distance(pLop, pivot) < 0.001) {//Point.subtractPoints(pLop, pivot).sqrtMagnitude() < 0.001) {
                         boolean betterCand = false;
                         Arc tmp = lop;
                         for (int j = i + 1; j < queue.size(); ++j) {
                             Arc tL = queue.get(j);
-                            if (Point.subtractPoints(l.end2, tL.end1).sqrtMagnitude() < Point.subtractPoints(l.end2, lop.end1).sqrtMagnitude()) {
+                            if (Point.distance(l.end2, tL.end1) < Point.distance(l.end2, lop.end1)) {//Point.subtractPoints(l.end2, tL.end1).sqrtMagnitude() < Point.subtractPoints(l.end2, lop.end1).sqrtMagnitude()) {
                                 lop = tL;
                                 betterCand = true;
                                 //System.err.println("Found a better candidate: " + this.id);
@@ -527,8 +568,11 @@ public class ArcUtil {
         }
         a.end1 = a.vrts.get(0);
         a.end2 = a.vrts.get(a.vrts.size() - 1);
-        a.toEnd1 = Point.subtractPoints(a.end1, a.center).makeUnit();
-        a.toEnd2 = Point.subtractPoints(a.end2, a.center).makeUnit();
+        //a.toEnd1 = Point.subtractPoints(a.end1, a.center).makeUnit();
+        //a.toEnd2 = Point.subtractPoints(a.end2, a.center).makeUnit();
+        Vector temp = a.toEnd1;
+        a.toEnd1 = a.toEnd2;
+        a.toEnd2 = temp;
         if (a.normal != null) {
             a.normal.multiply(-1.0);
         }
@@ -541,23 +585,27 @@ public class ArcUtil {
     private static boolean checkForOwnership(Boundary b1, Boundary b2){
         try {
             Point p1 = b1.arcs.get(0).end1;
-            Vector v1 = null;
-            Vector v2 = null;
+            //Vector v1 = null;
+            //Vector v2 = null;
             if (b1.arcs.size() < 2){
                 return false;
             }
             for (int i = 1; i < b1.arcs.size(); ++i) {
                 Arc l = b1.arcs.get(i);
-                v1 = Point.subtractPoints(l.end2, p1).makeUnit();
-                v2 = Point.subtractPoints(l.end1, p1).makeUnit();
-                if (Math.abs(v1.dotProduct(v2) - 1.0) > 0.01) {
+                //v1 = Point.subtractPoints(l.end2, p1).makeUnit();
+                //v2 = Point.subtractPoints(l.end1, p1).makeUnit();
+                u1.changeVector(l.end2, p1).makeUnit();
+                u2.changeVector(l.end1, p1).makeUnit();
+                if (Math.abs(u1.dotProduct(u2) - 1.0) > 0.01) {
                     break;
                 }
             }
-            Vector n = Vector.getNormalVector(v1, v2).makeUnit().multiply(-1.0);
+            //Vector n = Vector.getNormalVector(v1, v2).makeUnit().multiply(-1.0);
+            n.assignNormalVectorOf(u1, u2).makeUnit().multiply(-1.0);
             double maxY = 42000.0;
             for (Arc l : b1.arcs) {
-                Vector u = Point.subtractPoints(l.end2, b1.patch.sphere.center);
+                //Vector u = Point.subtractPoints(l.end2, b1.patch.sphere.center);
+                u.changeVector(l.end2, b1.patch.sphere.center);
                 double dot = u.dotProduct(n);
                 if (dot < maxY) {
                     maxY = dot;
@@ -565,7 +613,8 @@ public class ArcUtil {
             }
             boolean isInside = true;
             for (Arc l : b2.arcs) {
-                Vector u = Point.subtractPoints(l.end2, b2.patch.sphere.center);
+                //Vector u = Point.subtractPoints(l.end2, b2.patch.sphere.center);
+                u.changeVector(l.end2, b2.patch.sphere.center);
                 if (u.dotProduct(n) < maxY) {
                     isInside = false;
                     break;
@@ -579,32 +628,37 @@ public class ArcUtil {
     }
 
     public static List<Point> generateCircArc(Point start, Point end, Point center, double radius, int n, boolean overPI){
-        Vector tostart = Point.subtractPoints(start, center).makeUnit();
-        Vector toend = Point.subtractPoints(end, center).makeUnit();
-        Vector axis = Vector.getNormalVector(toend, tostart).makeUnit();
+        //Vector tostart = Point.subtractPoints(start, center).makeUnit();
+        //Vector toend = Point.subtractPoints(end, center).makeUnit();
+        //Vector axis = Vector.getNormalVector(toend, tostart).makeUnit();
         /*if (tostart.dotProduct(toend) < 0.0){
             axis.multiply(-1);
         }*/
-
-        double angle = Math.acos(toend.dotProduct(tostart));
+        v1.changeVector(start, center).makeUnit(); //tostart
+        v2.changeVector(end, center).makeUnit(); //toend
+        v.assignNormalVectorOf(v2, v1).makeUnit(); //axis of rotation
+        //double angle = Math.acos(toend.dotProduct(tostart));
+        double angle = Math.acos(v2.dotProduct(v1));
         if (overPI){
             angle = 2 * Math.PI - angle;
-            axis.multiply(-1);
+            v.multiply(-1);
         }
-        if (angle - Math.PI >= 0.0){
+        /*if (angle - Math.PI >= 0.0){
             System.out.println(" ");
-        }
+        }*/
         angle = angle / n;
         List<Point> vrts = new ArrayList<>();
         vrts.add(start);
         if (n > 1) {
             for (int i = 1; i < n; ++i) {
-                Quaternion qRot = new Quaternion(0, 0, 0, 0);
-                qRot.setFromAngleNormalAxis((float) (-i * angle), axis.getFloatData());
-                float[] v = new float[3];
-                v = qRot.rotateVector(v, 0, tostart.getFloatData(), 0);
-                Vector u = new Vector(v);
-                u.makeUnit().multiply(radius);
+                //Quaternion qRot = new Quaternion(0, 0, 0, 0);
+                qRot.setFromAngleNormalAxis((float) (-i * angle), v.getFloatData());
+                //float[] v = new float[3];
+                //v = qRot.rotateVector(v, 0, v1.getFloatData(), 0);
+                qRot.rotateVector(_v, 0, v1.getFloatData(), 0);
+                //Vector u = new Vector(v);
+                //u.makeUnit().multiply(radius);
+                u.changeVector(_v[0], _v[1], _v[2]).makeUnit().multiply(radius);
                 vrts.add(Point.translatePoint(center, u));
             }
         }
@@ -620,13 +674,15 @@ public class ArcUtil {
     }
 
     private static final double PLANE_EPS = 0.001;
+    private static Plane plane = new Plane(new Point(0, 0, 0), new Vector(0, 0, 0));
     public static Arc findContainingArc(Point p, Plane circle, SphericalPatch sp, Arc exclude){
         for (Boundary b : sp.boundaries){
             for (Arc a : b.arcs){
                 if (a == exclude){
                     continue;
                 }
-                Plane plane = new Plane(a.center, a.normal);
+                //Plane plane = new Plane(a.center, a.normal);
+                plane.redefine(a.center, a.normal);
                 if (Math.abs(plane.checkPointLocation(p)) > PLANE_EPS){
                     continue;
                 }
@@ -670,6 +726,7 @@ public class ArcUtil {
     private static Vector toStart = new Vector(0, 0, 0);
     private static Vector toP = new Vector(0, 0, 0);
     private static Vector v1 = new Vector(0, 0, 0);
+    private static Vector v2 = new Vector(0, 0, 0);
     public static Point findClosestPointOnCircle(List<Point> points, Point start, boolean includeStart, Point center, Vector normal, boolean next){
         double angle = 2 * Math.PI;
         Point closest = null;
@@ -705,12 +762,14 @@ public class ArcUtil {
     }
 
     public static int getOrder(Arc a, Point p, Point q){
-        Vector pV = Point.subtractPoints(p, a.center).makeUnit();
-        Vector qV = Point.subtractPoints(q, a.center).makeUnit();
-        double phi1 = Math.acos(pV.dotProduct(a.toEnd1));
-        double phi2 = Math.acos(qV.dotProduct(a.toEnd1));
-        phi1 = (Vector.getNormalVector(a.toEnd1, pV).makeUnit().dotProduct(a.normal) > 0.0) ? phi1 : 2 * Math.PI - phi1;
-        phi2 = (Vector.getNormalVector(a.toEnd1, qV).makeUnit().dotProduct(a.normal) > 0.0) ? phi2 : 2 * Math.PI - phi2;
+        //Vector pV = Point.subtractPoints(p, a.center).makeUnit();
+        //Vector qV = Point.subtractPoints(q, a.center).makeUnit();
+        v1.changeVector(p, a.center).makeUnit();//pV
+        v2.changeVector(q, a.center).makeUnit();//qV
+        double phi1 = Math.acos(v1.dotProduct(a.toEnd1));
+        double phi2 = Math.acos(v2.dotProduct(a.toEnd1));
+        phi1 = (n.assignNormalVectorOf(a.toEnd1, v1).makeUnit().dotProduct(a.normal) > 0.0) ? phi1 : 2 * Math.PI - phi1;//Vector.getNormalVector(a.toEnd1, v1).makeUnit().dotProduct(a.normal) > 0.0) ? phi1 : 2 * Math.PI - phi1;
+        phi2 = (n.assignNormalVectorOf(a.toEnd1, v2).makeUnit().dotProduct(a.normal) > 0.0) ? phi2 : 2 * Math.PI - phi2;//Vector.getNormalVector(a.toEnd1, v2).makeUnit().dotProduct(a.normal) > 0.0) ? phi2 : 2 * Math.PI - phi2;
         return (phi1 - phi2 < 0.0) ? -1 : 1;
     }
 
@@ -738,12 +797,13 @@ public class ArcUtil {
 
     public static Boundary generateCircularBoundary(Plane circle, double radius){
         Vector perp = circle.v.getPerpendicularVector().makeUnit().multiply(radius);
-        Vector perp2 = Vector.getNormalVector(circle.v, perp).makeUnit().multiply(radius);
+        //Vector perp2 = Vector.getNormalVector(circle.v, perp).makeUnit().multiply(radius);
+        n.assignNormalVectorOf(circle.v, perp).makeUnit().multiply(radius); //perp2
         Arc a1 = new Arc(circle.p, radius);
         Point p1 = Point.translatePoint(circle.p, perp);
-        Point mid1 = Point.translatePoint(circle.p, perp2);
-        perp2.multiply(-1);
-        Point mid2 = Point.translatePoint(circle.p, perp2);
+        Point mid1 = Point.translatePoint(circle.p, n);
+        n.multiply(-1);
+        Point mid2 = Point.translatePoint(circle.p, n);
         perp.multiply(-1);
         Point p2 = Point.translatePoint(circle.p, perp);
         a1.setEndPoints(p1, p2, false);
@@ -928,13 +988,16 @@ public class ArcUtil {
     }
 
     private static double getArcLength(Arc a, Point p1, Point p2){
-        Vector v1 = Point.subtractPoints(p1, a.center).makeUnit();
-        Vector v2 = Point.subtractPoints(p2, a.center).makeUnit();
-        Vector n = Vector.getNormalVector(v1, v2).makeUnit();
+        //Vector v1 = Point.subtractPoints(p1, a.center).makeUnit();
+        //Vector v2 = Point.subtractPoints(p2, a.center).makeUnit();
+        //Vector n = Vector.getNormalVector(v1, v2).makeUnit();
+        u.changeVector(p1, a.center).makeUnit();
+        v.changeVector(p2, a.center).makeUnit();
+        n.assignNormalVectorOf(u, v).makeUnit();
         if (n.dotProduct(a.normal) < 0.0){
-            return a.radius * (2 * Math.PI - Math.acos(v1.dotProduct(v2)));
+            return a.radius * (2 * Math.PI - Math.acos(u.dotProduct(v)));
         }
-        return a.radius * Math.acos(v1.dotProduct(v2));
+        return a.radius * Math.acos(u.dotProduct(v));
     }
 
     public static void resetArcs(SphericalPatch sp){

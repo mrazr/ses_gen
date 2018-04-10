@@ -31,16 +31,16 @@ public class SphericalPatch {
     public boolean trimmed = false;
 
     //opengl stuff
-    public int[] vao = new int[2];
-    public int[] vbo = new int[2];
-    public int[] ebo = new int[2];
-    public int usedVrtsBuffer = 0;
-    public int usedIndBuffer = 0;
-    public int usedFaceBuffer = 0;
+    //public int[] vao = new int[2];
+    //public int[] vbo = new int[2];
+    //public int[] ebo = new int[2];
+    //public int usedVrtsBuffer = 0;
+    //public int usedIndBuffer = 0;
+    //public int usedFaceBuffer = 0;
     public int lineCount = 0;
-    public int vrtsCount = 0;
-    public int faceCount = 0;
-    public int faceToHightlight = 0;
+    //public int vrtsCount = 0;
+    //public int faceCount = 0;
+    //public int faceToHightlight = 0;
     public int vboOffset = 0;
     public int eboOffset = 0;
     public int lineOffset = 0;

@@ -851,92 +851,6 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             drawModeUpdate = false;
         }
         updateCamera();
-        if (isNew){
-            this.sendNewData(vrts, lines);
-            isNew = false;
-        }
-        /*if (newAtoms){
-            this.sendConvexPatches2GPU();
-            newAtoms = false;
-        }
-        if (newCPs){
-            sendConcavePathes2GPU();
-        }*/
-
-        //gl.glPolygonMode(GL.GL_FRONT_AND_BACK, (drawFaces) ? GL4.GL_FILL : GL4.GL_LINE);
-        if (update2.get()){
-            SphericalPatch a = convexPatchList.get(selectedAtom.get());
-            //gl.glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-            gl.glBindVertexArray(a.vao[1]);
-            if (updaVrts.size() > 0){
-                gl.glBindBuffer(GL.GL_ARRAY_BUFFER, a.vbo[1]);
-                FloatBuffer vrts = GLBuffers.newDirectFloatBuffer(updaVrts.size() * 6);
-                for (Point p : updaVrts){
-                    vrts.put(p.getFloatData());
-                    Vector n = Point.subtractPoints(p, a.sphere.center).makeUnit();
-                    vrts.put(n.getFloatData());
-                }
-                vrts.rewind();
-                gl.glBufferSubData(GL.GL_ARRAY_BUFFER, a.usedVrtsBuffer, vrts.capacity() * Float.BYTES, vrts);
-                gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-                a.usedVrtsBuffer += updaVrts.size() * 6 * Float.BYTES;
-                a.vrtsCount += updaVrts.size();
-                System.out.println("USED Vrt: " + a.usedVrtsBuffer);
-            }
-            IntBuffer indx = GLBuffers.newDirectIntBuffer(3 * updaFaces.size());
-            /*for (Edge e : updaLines){
-                indx.put(e.v1);
-                indx.put(e.v2);
-            }*/
-            for (Face f : updaFaces){
-                indx.put(f.a);
-                indx.put(f.b);
-                indx.put(f.c);
-            }
-            indx.rewind();
-            gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, a.ebo[1]);
-            gl.glBufferSubData(GL.GL_ELEMENT_ARRAY_BUFFER, a.usedFaceBuffer, indx.capacity() * Integer.BYTES, indx);
-            gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);
-            /*a.usedIndBuffer += 2 * updaLines.size() * Integer.BYTES;
-            a.lineCount += 2 * updaLines.size();*/
-            a.faceCount += updaFaces.size();
-            a.usedFaceBuffer += 3 * updaFaces.size() * Integer.BYTES;
-            gl.glBindVertexArray(0);
-            update = false;
-            //update2.set(false);
-            update2.getAndSet(false);
-        }
-        if (cpUpdate.get()){
-            SphericalPatch c = concavePatchList.get(concavePatchesSelect.get(0));
-            gl.glBindVertexArray(c.vao[1]);
-            if (cpVrts.size() > 0){
-                gl.glBindBuffer(GL.GL_ARRAY_BUFFER, c.vbo[1]);
-                FloatBuffer newVrts = GLBuffers.newDirectFloatBuffer(cpVrts.size() * 3 * 2);
-                for (Point p : cpVrts){
-                    newVrts.put(p.getFloatData());
-                    Vector n = Point.subtractPoints(c.boundaries.get(0).patch.sphere.center, p).makeUnit();
-                    newVrts.put(n.getFloatData());
-                }
-                newVrts.rewind();
-                gl.glBufferSubData(GL.GL_ARRAY_BUFFER, c.usedVrtsBuffer, newVrts.capacity() * Float.BYTES, newVrts);
-                c.usedVrtsBuffer += cpVrts.size() * 3 * Float.BYTES * 2;
-                gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-            }
-            IntBuffer indBuffer = GLBuffers.newDirectIntBuffer(cpFaces.size() * 3);
-            for (Face f : cpFaces){
-                indBuffer.put(f.a);
-                indBuffer.put(f.b);
-                indBuffer.put(f.c);
-            }
-            indBuffer.rewind();
-            gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, c.ebo[1]);
-            gl.glBufferSubData(GL.GL_ELEMENT_ARRAY_BUFFER, c.usedIndBuffer, indBuffer.capacity() * Integer.BYTES, indBuffer);
-            gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);
-            gl.glBindVertexArray(0);
-            c.faceCount += cpFaces.size();
-            c.usedIndBuffer += 3 * cpFaces.size() * Integer.BYTES;
-            cpUpdate.set(false);
-        }
         if (!stopRendering.get()){
             if (mouseSelect && moved){
                 moved = false;
@@ -1531,7 +1445,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 vrtsNormals.add(p);
             }
             tp.vboOffset = vboOffset;
-            tp.faceCount = 3 * tp.faces.size();
+            //tp.faceCount = 3 * tp.faces.size();
             vboOffset += tp.vrts.size() / 2;
             faceCount += tp.faces.size();
         }

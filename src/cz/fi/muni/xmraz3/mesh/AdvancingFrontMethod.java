@@ -86,7 +86,7 @@ public class AdvancingFrontMethod {
         angle *= 0.5f;
         angle = Math.PI - angle;
 
-        Quaternion q = new Quaternion();
+
         /*Vector ector = new Vector(edgeVector);
         ector.makeUnit();*/
         aV1.changeVector(edgeVector).makeUnit();
@@ -122,6 +122,7 @@ public class AdvancingFrontMethod {
     Vector addv1 = new Vector(0, 0, 0);
     Vector addv2 = new Vector(0, 0, 0);
     Vector intersection = new Vector(0, 0, 0);
+    Quaternion q = new Quaternion();
 
     private boolean checkForIntersectingEdges(Edge e1, Edge e2, double atomRad, Point atomCenter){
         if (e1.p1 == e2.p1 || e1.p1 == e2.p2 || e1.p2 == e2.p1 || e1.p2 == e2.p2){
@@ -148,7 +149,7 @@ public class AdvancingFrontMethod {
             //Vector ne2 = Vector.getNormalVector(v2e1, v2e2).makeUnit();
             aV2.assignNormalVectorOf(v2e1, v2e2).makeUnit();
             Plane p2 = new Plane(atomCenter, aV2);
-            //p1.getIntersetionVector(p2);
+            //p1.getIntersectionVector(p2);
             if (!p1.assignIntersectionVectorTo(intersection, p2)){//no intersection vector was computed
                 return false;
             }
@@ -436,6 +437,8 @@ public class AdvancingFrontMethod {
     boolean loopDetected = false;
     Vector aV1 = new Vector(0, 0, 0);
     Vector aV2 = new Vector(0, 0, 0);
+    Vector v3 = new Vector(0, 0, 0);
+    Vector n = new Vector(0, 0, 0);
     Point testPoint = new Point(0, 0, 0);
 
     private boolean incorrectNumberOfIncEdges(Point p){
@@ -643,6 +646,12 @@ public class AdvancingFrontMethod {
         return !(Math.abs(Math.abs(v1.dotProduct(v2)) - 1.0) < 0.001);
     }
 
+    private Vector computeTriangleNormal(Point a, Point b, Point c){
+        //return in.assignNormalVectorOf(v1.changeVector(b, a).makeUnit(), v2.changeVector(c, a).makeUnit()).makeUnit();
+        //return Vector.getNormalVector(Point.subtractPoints(b, a).makeUnit(), Point.subtractPoints(c, a).makeUnit()).makeUnit();
+        return n.assignNormalVectorOf(aV1.changeVector(b, a).makeUnit(), aV2.changeVector(c, a).makeUnit()).makeUnit();
+    }
+
     public boolean newMesh(){
         loop = false;
         if (patchComplete){
@@ -721,7 +730,7 @@ public class AdvancingFrontMethod {
                             System.out.println("for 814 adding incorrect eRp2");
                         }
                         candidates.add(eR.p2);
-                        eR.p2.afmSelect = 1;
+                        //eR.p2.afmSelect = 1;
                     }
                 }
             }
@@ -738,7 +747,7 @@ public class AdvancingFrontMethod {
                             System.out.println("for 814 adding incorrect eLP1");
                         }
                         candidates.add(eL.p1);
-                        eL.p1.afmSelect = 1;
+                        //eL.p1.afmSelect = 1;
                     }
                 }
             }
@@ -756,7 +765,7 @@ public class AdvancingFrontMethod {
             }
             for (Point p : candidates){
                 if (computeAngle(aV1.changeVector(p, e.p1).makeUnit(), aV2.changeVector(e.p2, e.p1).makeUnit(), n1) > Math.toRadians(SesConfig.minAlpha)
-                        || computeAngle(aV1.changeVector(e.p1, e.p2).makeUnit(), aV2.changeVector(p, e.p2).makeUnit(), n2) > Math.toRadians(SesConfig.minAlpha) || (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, p))) < 0.01)) {
+                        || computeAngle(aV1.changeVector(e.p1, e.p2).makeUnit(), aV2.changeVector(p, e.p2).makeUnit(), n2) > Math.toRadians(SesConfig.minAlpha) || (Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, p))) < 0.0)) {//PatchUtil.computeTriangleNormal(e.p1, e.p2, p))) < 0.01)) {
                     continue;
                 }
                 trueCands.add(p);
@@ -783,7 +792,7 @@ public class AdvancingFrontMethod {
                     candidates.remove(e.p2);
                 }
                 for (Point c : candidates){
-                    if (Math.abs(Point.subtractPoints(c, e.p1).makeUnit().dotProduct(Point.subtractPoints(c, e.p2).makeUnit()) - 1.0) < 0.01){
+                    if (Math.abs(aV1.changeVector(c, e.p1).makeUnit().dotProduct(aV2.changeVector(c, e.p2).makeUnit()) - 1.0) < 0.01){
                         removePoints.add(c);
                     }
                 }
@@ -797,11 +806,13 @@ public class AdvancingFrontMethod {
                     ignore.clear();
                     ignore.add(e);
                     if (checkForIntersectingEdges(e1, e2, facets, ignore)){// || checkForIntersectingEdges(e1, e2, pastFacets, ignore)) {
-                        if (!(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, e.next.p2))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.next.p2)){
+                        //if (!(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, e.next.p2))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.next.p2)){
+                        if (!(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, e.next.p2))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.next.p2)){
                             //System.out.println(patch.id + " adding invalid vertex nextp2");
                             candidates.add(e.next.p2);
                         }
-                        if (!(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, e.prev.p1))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.prev.p1)){
+                        //if (!(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, e.prev.p1))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.prev.p1)){
+                        if (!(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, e.prev.p1))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.prev.p1)){
                             //System.out.println(patch.id + " adding invalid vertex prevp1");
                             candidates.add(e.prev.p1);
                         }
@@ -952,10 +963,10 @@ public class AdvancingFrontMethod {
                         ignore.add(e);
                         ignore.add(ef);
                         if (!checkForIntersectingEdges(pfp1, pfp2, facets, ignore) && !checkForIntersectingEdges(pfp1, pfp2, pastFacets, ignore)){
-                            if (nodeEdgeMap.get(ef.p1.afmIdx).size() > 0 && !(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, ef.p1))) < 0.01)) {
+                            if (nodeEdgeMap.get(ef.p1.afmIdx).size() > 0 && !(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, ef.p1))) < 0.01)) {
                                 if (ef.p1 != e.p2) {
                                     candidates.add(ef.p1);
-                                    ef.p1.afmSelect = 2;
+                                    //ef.p1.afmSelect = 2;
                                 }
                             }
                         }
@@ -976,10 +987,10 @@ public class AdvancingFrontMethod {
                         ignore.add(e);
                         ignore.add(ef);
                         if (!checkForIntersectingEdges(pfp1, pfp2, facets, ignore) && !checkForIntersectingEdges(pfp1, pfp2, pastFacets, ignore)){
-                            if (nodeEdgeMap.get(ef.p2.afmIdx).size() > 0 && !(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, ef.p2))) < 0.01)) {
+                            if (nodeEdgeMap.get(ef.p2.afmIdx).size() > 0 && !(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, ef.p2))) < 0.01)) {
                                 if (ef.p2 != e.p1) {
                                     candidates.add(ef.p2);
-                                    ef.p2.afmSelect = 2;
+                                    //ef.p2.afmSelect = 2;
                                 }
                             }
                         }
@@ -1010,13 +1021,13 @@ public class AdvancingFrontMethod {
                     ignore.clear();
                     ignore.add(e);
                     ignore.add(eF);
-                    if (!checkForIntersectingEdges(ef1E1, ef1E2, pastFacets, ignore) && !checkForIntersectingEdges(ef1E1, ef1E2, facets, ignore) && nodeEdgeMap.get(eF.p1.afmIdx).size() > 0 && eF.p1 != e.p2 && !(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, eF.p1))) < 0.01)){
+                    if (!checkForIntersectingEdges(ef1E1, ef1E2, pastFacets, ignore) && !checkForIntersectingEdges(ef1E1, ef1E2, facets, ignore) && nodeEdgeMap.get(eF.p1.afmIdx).size() > 0 && eF.p1 != e.p2 && !(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, eF.p1))) < 0.01)){
                         candidates.add(eF.p1);
-                        eF.p1.afmSelect = 3;
+                        //eF.p1.afmSelect = 3;
                     }
-                    if (!checkForIntersectingEdges(ef2E1, ef2E2, pastFacets, ignore) && !checkForIntersectingEdges(ef2E1, ef2E2, facets, ignore) && nodeEdgeMap.get(eF.p2.afmIdx).size() > 0 && eF.p2 != e.p1  && !(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, eF.p2))) < 0.01)){
+                    if (!checkForIntersectingEdges(ef2E1, ef2E2, pastFacets, ignore) && !checkForIntersectingEdges(ef2E1, ef2E2, facets, ignore) && nodeEdgeMap.get(eF.p2.afmIdx).size() > 0 && eF.p2 != e.p1  && !(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, eF.p2))) < 0.01)){
                         candidates.add(eF.p2);
-                        eF.p2.afmSelect = 3;
+                        //eF.p2.afmSelect = 3;
                     }
                 }
             }
@@ -1037,9 +1048,10 @@ public class AdvancingFrontMethod {
                 ignore.clear();
                 ignore.add(e);
                 if (!checkForIntersectingEdges(pfp1, pfp2, facets, ignore) && !checkForIntersectingEdges(pfp1, pfp2, pastFacets, ignore)){
-                    if (nodeEdgeMap.get(p2.afmIdx).size() > 0 && !(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, p2))) < 0.01)) {
+                    //if (nodeEdgeMap.get(p2.afmIdx).size() > 0 && !(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, p2))) < 0.01)) {
+                    if (nodeEdgeMap.get(p2.afmIdx).size() > 0 && !(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, p2))) < 0.01)) {
                         candidates.add(p2);
-                        p2.afmSelect = 4;
+                        //p2.afmSelect = 4;
                     }
                 }
             }
@@ -1105,7 +1117,7 @@ public class AdvancingFrontMethod {
             //System.err.println("ptest");
             //time = System.currentTimeMillis();
         }
-        e.frontFaceID = rightFacet.frontFaceID = leftFacet.frontFaceID = patch.faceCount;
+        //e.frontFaceID = rightFacet.frontFaceID = leftFacet.frontFaceID = patch.faceCount;
         e = rightFacet.next;
         leftFacet.loopID = activeLoop;
         rightFacet.loopID = activeLoop;
@@ -1147,13 +1159,13 @@ public class AdvancingFrontMethod {
         facets.add(newFacet);
         pastFacets.add(e);
         pastFacets.add(e.prev);
-        e.frontFaceID = e.prev.frontFaceID = newFacet.frontFaceID = patch.faceCount;
+        //e.frontFaceID = e.prev.frontFaceID = newFacet.frontFaceID = patch.faceCount;
         //newLines.add(newFacet);
         //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p1.afmIdx + vrtsOffset));
         //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p1.afmIdx + vrtsOffset));
-        if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, newFacet.p1))) < 0.01){
+        /*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, newFacet.p1))) < 0.01){
             System.out.println(patch.id + " invalid triangle possible");
-        }
+        }*/
         Face nF = new Face(e.p1._id, e.p2._id, newFacet.p1._id);
         patch.faces.add(nF);
         if (!vertexFaceMap.containsKey(e.p1._id)) {
@@ -1211,16 +1223,16 @@ public class AdvancingFrontMethod {
         facets.add(newFacet);
         pastFacets.add(e);
         pastFacets.add(e.next);
-        e.frontFaceID = e.next.frontFaceID = newFacet.frontFaceID = patch.faceCount;
+        //e.frontFaceID = e.next.frontFaceID = newFacet.frontFaceID = patch.faceCount;
         //newLines.add(newFacet);
         //System.out.println("Bridge with e.next");
         //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p2.afmIdx + vrtsOffset));
         //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p2.afmIdx + vrtsOffset));
         Face nF = new Face(e.p1._id, e.p2._id, newFacet.p2._id);
         patch.faces.add(nF);
-        if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, newFacet.p2))) < 0.01){
+        /*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, newFacet.p2))) < 0.01){
             System.out.println(patch.id + " invalid triangle possible");
-        }
+        }*/
         if (!vertexFaceMap.containsKey(e.p1._id)) {
             vertexFaceMap.put(e.p1._id, new ArrayList<>());
         }
@@ -1347,13 +1359,13 @@ public class AdvancingFrontMethod {
             //System.out.println("VEC: " + lF.dotProduct(rF));
             //newLines.add(rightFacet);
             //newLines.add(leftFacet);
-            e.frontFaceID = rightFacet.frontFaceID = leftFacet.frontFaceID = patch.faceCount;
+            //e.frontFaceID = rightFacet.frontFaceID = leftFacet.frontFaceID = patch.faceCount;
             //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
             //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
             Face nF = new Face(e.p1._id, e.p2._id, rightFacet.p1._id);
-            if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, rightFacet.p1))) < 0.01) {
+            /*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, rightFacet.p1))) < 0.01) {
                 System.out.println(patch.id + " invalid triangle possible");
-            }
+            }*/
             patch.faces.add(nF);
             if (!vertexFaceMap.containsKey(e.p1._id)) {
                 vertexFaceMap.put(e.p1._id, new ArrayList<>());
@@ -1383,13 +1395,16 @@ public class AdvancingFrontMethod {
                         vertexHighlight = pt.afmIdx;*/
         }
     }
-
+    //private Vector n = new Vector(0, 0, 0);
     private boolean hasCorrectOrientation(Point a, Point b, Point c){
-        Vector n = Vector.getNormalVector(Point.subtractPoints(b, a).makeUnit(), Point.subtractPoints(c, a).makeUnit()).makeUnit();
-        return n.dotProduct(Point.subtractPoints(a, patch.sphere.center).makeUnit()) > 0.0;
+        //Vector n = Vector.getNormalVector(Point.subtractPoints(b, a).makeUnit(), Point.subtractPoints(c, a).makeUnit()).makeUnit();
+        n.assignNormalVectorOf(aV1.changeVector(b, a).makeUnit(), aV2.changeVector(c, a).makeUnit()).makeUnit();
+        //return n.dotProduct(Point.subtractPoints(a, patch.sphere.center).makeUnit()) > 0.0;
+        return n.dotProduct(v3.changeVector(a, patch.sphere.center).makeUnit()) > 0.0;
     }
 
     private boolean hasCorrectOrientation(Point p){
-        return !(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, p))) < 0.01);
+        //return !(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, p))) < 0.01);
+        return !(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, p))) < 0.0);
     }
 }

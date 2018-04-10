@@ -105,6 +105,7 @@ public class SurfaceParser {
                 }
             }
             fillCommonVertices();
+            //System.gc();
         } catch (Exception e){
             System.out.println(e.getMessage());
         }
@@ -118,7 +119,7 @@ public class SurfaceParser {
             ArcUtil.resetArcs(sp);
             sp.meshed = false;
             sp.faces.clear();
-            sp.faceCount = 0;
+            //sp.faceCount = 0;
             //sp.vertices.clear();
         }
         System.out.println("convex reset done");
@@ -127,7 +128,7 @@ public class SurfaceParser {
             ArcUtil.resetArcs(sp);
             sp.meshed = false;
             sp.faces.clear();
-            sp.faceCount = 0;
+            //sp.faceCount = 0;
         }
         System.out.println("concave reset done");
         ArcUtil.refineArcsOnConcavePatches();
@@ -328,7 +329,7 @@ public class SurfaceParser {
             }
             for (Arc a : atom1Arcs){
                 for (Arc j : atom2Arcs){
-                    Vector midtomid = Point.subtractPoints(j.mid, a.mid).makeUnit();
+                    //Vector midtomid = Point.subtractPoints(j.mid, a.mid).makeUnit();
                     //if (Math.abs(Math.abs(midtomid.dotProduct(a1Toa2)) - 1) < 0.001){
                     if (Point.distance(a.midProbe, j.midProbe) < 0.001){
                         a.opposite = j;
@@ -377,7 +378,7 @@ public class SurfaceParser {
             }
             System.out.println("Constructed circular loop for: " + atom1.id + " and " + atom2.id);
             return;
-        } else if (Point.subtractPoints(probe1.center, probe2.center).sqrtMagnitude() < 0.0001){
+        } else if (Point.distance(probe1.center, probe2.center) < 0.0001){
             //System.out.println("small atom id: " + atom1Id + " " + atom2Id);
         }
         //ConvexPatchArc l1 = atom1.makeNewLoop(Atom.getContactPoint(atom1, probe1), Atom.getContactPoint(atom1, probe2), Atom.getContactPoint(atom1, probeMid), atom2, probeMid.center,false)[0];
@@ -415,11 +416,11 @@ public class SurfaceParser {
         if (smallerRadius.vrts.size() != greaterRadius.vrts.size()){
             System.err.println("inconsistency detected");
         }
-        tp.width = Point.distance(Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probeMid)) + Point.distance(Sphere.getContactPoint(atom1.sphere, probeMid), Sphere.getContactPoint(atom1.sphere, probe2));
-        if (tp.width < 0.005){
+        //tp.width = Point.distance(Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probeMid)) + Point.distance(Sphere.getContactPoint(atom1.sphere, probeMid), Sphere.getContactPoint(atom1.sphere, probe2));
+        /*if (tp.width < 0.005){
             //Surface.smallRectangles.add(tp);
             //System.err.println("added small rectangle to data structure");
-        }
+        }*/
         if (PatchUtil.getProbeAxisDistance(probe1.center, atom1.sphere.center, atom2.sphere.center) - SesConfig.probeRadius < 0.0){
             Surface.selfIntersectingRects.add(tp);
         }
@@ -437,7 +438,10 @@ public class SurfaceParser {
         //rp.id = Main.rectangles.size();
         Surface.rectangles.add(tp);
     }
-
+    private static Vector probeMid = new Vector(0, 0, 0);
+    private static Vector v1 = new Vector(0, 0, 0);
+    private static Vector v2 = new Vector(0, 0, 0);
+    private static Vector v3 = new Vector(0, 0, 0);
     private static void constructConcavePatchArcs(Sphere probe, int atom1, int atom2, int atom3){
         try {
             if (Surface.triangles.size() == 6498 || Surface.triangles.size() == 1351){
@@ -452,8 +456,10 @@ public class SurfaceParser {
             Point a3touch = Sphere.getContactPoint(a3.sphere, probe);
 
             Point mid = Point.getMidPoint(a1touch, a2touch);
-            Vector probeMid = Point.subtractPoints(mid, probe.center).makeUnit().multiply(probe.radius);
-            mid = Point.translatePoint(probe.center, probeMid);
+            //Vector probeMid = Point.subtractPoints(mid, probe.center).makeUnit().multiply(probe.radius);
+            probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
+            mid.assignTranslation(probe.center, probeMid);
+            //mid = Point.translatePoint(probe.center, probeMid);
             SphericalPatch cpatch = new SphericalPatch(probe, false);
             Arc cpl1 = new Arc(probe.center, probe.radius);
             cpl1.vrts.add(a1touch);
@@ -475,7 +481,10 @@ public class SurfaceParser {
                 //continue;
             } else {
                 for (ToroidalPatch tor : a1.tori.get(atom2)) {
-                    if (Point.subtractPoints(probe.center, tor.probe1).sqrtMagnitude() < 0.005 || Point.subtractPoints(probe.center, tor.probe2).sqrtMagnitude() < 0.005) {
+                    /*if (Point.subtractPoints(probe.center, tor.probe1).sqrtMagnitude() < 0.005 || Point.subtractPoints(probe.center, tor.probe2).sqrtMagnitude() < 0.005) {
+                        tp = tor;
+                    }*/
+                    if (Point.distance(probe.center, tor.probe1) < 0.005 || Point.distance(probe.center, tor.probe2) < 0.005){
                         tp = tor;
                     }
                 }
@@ -500,13 +509,16 @@ public class SurfaceParser {
                 /*Vector v1mid = Point.subtractPoints(mid, a1touch).makeUnit();
                 Vector v1v2 = Point.subtractPoints(a2touch, a1touch).makeUnit();
                 Vector v1probe = Point.subtractPoints(probe.center, a1touch).makeUnit();*/
-            Vector v1v2 = Point.subtractPoints(a2touch, a1touch).makeUnit();
-            Vector v1mid = Point.subtractPoints(a3touch, a1touch).makeUnit();
-            Vector v1probe = Point.subtractPoints(probe.center, a1.sphere.center).makeUnit();
+            //Vector v1v2 = Point.subtractPoints(a2touch, a1touch).makeUnit();
+            //Vector v1mid = Point.subtractPoints(a3touch, a1touch).makeUnit();
+            //Vector v1probe = Point.subtractPoints(probe.center, a1.sphere.center).makeUnit();
+            v1.changeVector(a2touch, a1touch).makeUnit();//v1v2
+            v2.changeVector(a3touch, a1touch).makeUnit();//v1mid
+            v3.changeVector(probe.center, a1.sphere.center).makeUnit();//v1probe
                 /*if (AdvancingFrontMethod.determinant(v1v2, v1mid, v1probe) < 0){
                     Util.reverserOrder(cpl1);
                 }*/
-            if (VectorUtil.determinantVec3(v1v2.getFloatData(), v1mid.getFloatData(), v1probe.getFloatData()) > 0.f) {
+            if (VectorUtil.determinantVec3(v1.getFloatData(), v2.getFloatData(), v3.getFloatData()) > 0.f) {
                 ArcUtil.reverseArc(cpl1, true);
             }
                 /*Edge e1 = new Edge(0, 1);
@@ -549,8 +561,10 @@ public class SurfaceParser {
             cpl1.endEdge2.prev = cpl1.endEdge1;
 
             mid = Point.getMidPoint(a1touch, a3touch);
-            probeMid = Point.subtractPoints(mid, probe.center).makeUnit().multiply(probe.radius);
-            mid = Point.translatePoint(probe.center, probeMid);
+            //probeMid = Point.subtractPoints(mid, probe.center).makeUnit().multiply(probe.radius);
+            probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
+            //mid = Point.translatePoint(probe.center, probeMid);
+            mid.assignTranslation(probe.center, probeMid);
             Arc cpl2 = new Arc(probe.center, probe.radius);
             cpl2.vrts.add(a3touch);
             cpl2.vrts.add(mid);
@@ -566,7 +580,10 @@ public class SurfaceParser {
                 //continue;
             } else {
                 for (ToroidalPatch tor : a1.tori.get(atom3)) {
-                    if (Point.subtractPoints(probe.center, tor.probe1).sqrtMagnitude() < Surface.scaleFactor * 0.005 || Point.subtractPoints(probe.center, tor.probe2).sqrtMagnitude() < Surface.scaleFactor * 0.005) {
+                    /*if (Point.subtractPoints(probe.center, tor.probe1).sqrtMagnitude() < Surface.scaleFactor * 0.005 || Point.subtractPoints(probe.center, tor.probe2).sqrtMagnitude() < Surface.scaleFactor * 0.005) {
+                        tp = tor;
+                    }*/
+                    if (Point.distance(probe.center, tor.probe1) < 0.005 || Point.distance(probe.center, tor.probe2) < 0.005){
                         tp = tor;
                     }
                 }
@@ -591,13 +608,16 @@ public class SurfaceParser {
             }
                 /*v1mid = Point.subtractPoints(mid, a1touch).makeUnit();
                 v1v2 = Point.subtractPoints(a3touch, a1touch).makeUnit();*/
-            v1v2 = Point.subtractPoints(a1touch, a3touch).makeUnit();
-            v1mid = Point.subtractPoints(a2touch, a3touch).makeUnit();
-            v1probe = Point.subtractPoints(probe.center, a3.sphere.center).makeUnit();
+            //v1v2 = Point.subtractPoints(a1touch, a3touch).makeUnit();
+            //v1mid = Point.subtractPoints(a2touch, a3touch).makeUnit();
+            //v1probe = Point.subtractPoints(probe.center, a3.sphere.center).makeUnit();
+            v1.changeVector(a1touch, a3touch).makeUnit();//v1v2
+            v2.changeVector(a2touch, a3touch).makeUnit();//v1mid
+            v3.changeVector(probe.center, a3.sphere.center).makeUnit();//v1probe
                 /*if (AdvancingFrontMethod.determinant(v1v2, v1mid, v1probe) < 0){
                     Util.reverserOrder(cpl2);
                 }*/
-            if (VectorUtil.determinantVec3(v1v2.getFloatData(), v1mid.getFloatData(), v1probe.getFloatData()) > 0.f) {
+            if (VectorUtil.determinantVec3(v1.getFloatData(), v2.getFloatData(), v3.getFloatData()) > 0.f) {
                 ArcUtil.reverseArc(cpl2, true);
             }
                 /*e1 = new Edge(0, 1);
@@ -644,8 +664,10 @@ public class SurfaceParser {
             cpl2.endEdge2.prev = cpl2.endEdge1;
 
             mid = Point.getMidPoint(a2touch, a3touch);
-            probeMid = Point.subtractPoints(mid, probe.center).makeUnit().multiply(probe.radius);
-            mid = Point.translatePoint(probe.center, probeMid);
+            //probeMid = Point.subtractPoints(mid, probe.center).makeUnit().multiply(probe.radius);
+            probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
+            //mid = Point.translatePoint(probe.center, probeMid);
+            mid.assignTranslation(probe.center, probeMid);
             Arc cpl3 = new Arc(probe.center, probe.radius);
             cpl3.vrts.add(a2touch);
             cpl3.vrts.add(mid);
@@ -661,7 +683,10 @@ public class SurfaceParser {
                 }
             } else {
                 for (ToroidalPatch tor : a2.tori.get(atom3)) {
-                    if (Point.subtractPoints(probe.center, tor.probe1).sqrtMagnitude() < Surface.scaleFactor * 0.005 || Point.subtractPoints(probe.center, tor.probe2).sqrtMagnitude() < Surface.scaleFactor * 0.005) {
+                    /*if (Point.subtractPoints(probe.center, tor.probe1).sqrtMagnitude() < Surface.scaleFactor * 0.005 || Point.subtractPoints(probe.center, tor.probe2).sqrtMagnitude() < Surface.scaleFactor * 0.005) {
+                        tp = tor;
+                    }*/
+                    if (Point.distance(probe.center, tor.probe1) < 0.005 || Point.distance(probe.center, tor.probe2) < 0.005){
                         tp = tor;
                     }
                 }
@@ -687,13 +712,16 @@ public class SurfaceParser {
                 /*v1v2 = Point.subtractPoints(a3touch, a2touch).makeUnit();
                 v1mid = Point.subtractPoints(mid, a2touch).makeUnit();
                 v1probe = Point.subtractPoints(probe.center, a2touch).makeUnit();*/
-            v1v2 = Point.subtractPoints(a3touch, a2touch).makeUnit();
-            v1mid = Point.subtractPoints(a1touch, a2touch).makeUnit();
-            v1probe = Point.subtractPoints(probe.center, a2.sphere.center).makeUnit();
+            //v1v2 = Point.subtractPoints(a3touch, a2touch).makeUnit();
+            //v1mid = Point.subtractPoints(a1touch, a2touch).makeUnit();
+            //v1probe = Point.subtractPoints(probe.center, a2.sphere.center).makeUnit();
+            v1.changeVector(a3touch, a2touch).makeUnit();//v1v2
+            v2.changeVector(a1touch, a2touch).makeUnit();//v1mid
+            v3.changeVector(probe.center, a2.sphere.center).makeUnit();//v1probe
                 /*if (AdvancingFrontMethod.determinant(v1v2, v1mid, v1probe) < 0){
                     Util.reverserOrder(cpl3);
                 }*/
-            if (VectorUtil.determinantVec3(v1v2.getFloatData(), v1mid.getFloatData(), v1probe.getFloatData()) > 0.f) {
+            if (VectorUtil.determinantVec3(v1.getFloatData(), v2.getFloatData(), v3.getFloatData()) > 0.f) {
                 ArcUtil.reverseArc(cpl3, true);
             }
                 /*e1 = new Edge(0, 1);
@@ -754,7 +782,7 @@ public class SurfaceParser {
                     System.out.println("");
                 }
                 Arc l = q.get(i);
-                if (Point.subtractPoints(pivot, l.end1).sqrtMagnitude() < 0.0001) {
+                if (Point.distance(pivot, l.end1) < 0.001) {//Point.subtractPoints(pivot, l.end1).sqrtMagnitude() < 0.0001) {
                     pivotLoop.next = l;
                     l.prev = pivotLoop;
                     pivotLoop.endEdge2.next = l.endEdge1;
@@ -770,7 +798,7 @@ public class SurfaceParser {
                         break;
                     }
                 }
-            } while (Point.subtractPoints(start, pivot).sqrtMagnitude() >= 0.0001);
+            } while (Point.distance(start, pivot) >= 0.0001);//Point.subtractPoints(start, pivot).sqrtMagnitude() >= 0.0001);
 
             if (ghost) {
                 /*if (cpl1.torus.id == 0) {
@@ -818,8 +846,8 @@ public class SurfaceParser {
                 /*cpatch.atomIDs[0] = atom1;
                 cpatch.atomIDs[1] = atom2;
                 cpatch.atomIDs[2] = atom3;*/
-            Vector u = Point.subtractPoints(cpl1.next.end2, cpl1.end2).makeUnit();
-            Vector v = Point.subtractPoints(cpl1.end1, cpl1.end2).makeUnit();
+            //Vector u = Point.subtractPoints(cpl1.next.end2, cpl1.end2).makeUnit();
+            //Vector v = Point.subtractPoints(cpl1.end1, cpl1.end2).makeUnit();
             //cpatch.plane = new Plane(cpl1.end1, Vector.getNormalVector(u, v).makeUnit());
             //cpatch.planeNormal = Vector.getNormalVector(u, v).makeUnit();
             Surface.triangles.add(cpatch);

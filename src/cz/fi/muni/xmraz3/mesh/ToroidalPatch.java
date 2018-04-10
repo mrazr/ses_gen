@@ -23,11 +23,11 @@ public class ToroidalPatch {
 
     public int vbo[] = new int[1];
     public int vboOffset;
-    public int faceCount;
+    //public int faceCount;
     public boolean circular = false;
-    public boolean circleMeshed = false;
+    //public boolean circleMeshed = false;
     public boolean valid = true;
-    public double width = 0.0;
+    //public double width = 0.0;
     public int id = -1;
     public static int nextID = 0;
 

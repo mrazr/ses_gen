@@ -440,6 +440,7 @@ public class AdvancingFrontMethod {
     Vector v3 = new Vector(0, 0, 0);
     Vector n = new Vector(0, 0, 0);
     Point testPoint = new Point(0, 0, 0);
+    public int numOfTriangles = 0;
 
     private boolean incorrectNumberOfIncEdges(Point p){
         return (nodeEdgeMap.get(p.afmIdx).size() != 2 && nodeEdgeMap.get(p.afmIdx).size() != 0 && nodeEdgeMap.get(p.afmIdx).size() != 4);
@@ -559,7 +560,8 @@ public class AdvancingFrontMethod {
             vrtsOffset = 0;
         }
         Boundary b = cp.boundaries.get(0);
-        verbose = false && (cp.id == 4946);
+        timeout = 300000;
+        verbose = (cp.id == 918);
         loopDetected = false;
         this.patch = cp;
         //meshFaceList = cp.faces;
@@ -661,6 +663,9 @@ public class AdvancingFrontMethod {
         int empty = 0;
         boolean faceGenerated = false;
         while (facets.size() > 0){
+            if (concavePatch && patch.id == 918){
+                int f = 4;
+            }
             faceGenerated = false;
             dontConsider.clear();
             if (System.currentTimeMillis() - time > timeout){
@@ -717,7 +722,7 @@ public class AdvancingFrontMethod {
             //double alpha2 = computeAngle(Point.subtractPoints(e.prev.p1, e.prev.p2).makeUnit(), Point.subtractPoints(e.p2, e.p1).makeUnit(), n1);
             double alpha2 = computeAngle(aV1.changeVector(e.prev.p1, e.prev.p2).makeUnit(), aV2.changeVector(e.p2, e.p1).makeUnit(), n1);
 
-            if (alpha1 < this.minAlpha){
+            if (alpha1 < this.minAlpha) {//realMinAlpha){//this.minAlpha){
                 if (nodeEdgeMap.get(eR.p2.afmIdx).size() > 0) {
                     e1.p1 = e.p1;
                     e1.p2 = eR.p2;
@@ -827,6 +832,7 @@ public class AdvancingFrontMethod {
                             e2.p2 = pTest;
                         }*/
                         generateFaceWithNewPoint();
+                        candidates.clear();
                         faceGenerated = true;
                     }
                 }
@@ -867,8 +873,8 @@ public class AdvancingFrontMethod {
             } else {
                 if (!faceGenerated){
                     e = e.next;
+                    empty++;
                 }
-                empty++;
             }
         }
         if (facets.size() == 0){
@@ -1098,7 +1104,8 @@ public class AdvancingFrontMethod {
         vertexFaceMap.get(e.p2._id).add(nF);
         vertexFaceMap.get(pTest._id).add(nF);
         PatchUtil.addFaceToEdgeFacesMap(patch, nF);
-        Surface.numoftriangles++;
+        //Surface.numoftriangles++;
+        numOfTriangles++;
         nodeEdgeMap.get(e.p1.afmIdx).remove(e);
         nodeEdgeMap.get(e.p1.afmIdx).add(leftFacet);
         nodeEdgeMap.get(e.p2.afmIdx).remove(e);
@@ -1181,7 +1188,8 @@ public class AdvancingFrontMethod {
         vertexFaceMap.get(e.p2._id).add(nF);
         vertexFaceMap.get(newFacet.p1._id).add(nF);
         PatchUtil.addFaceToEdgeFacesMap(patch, nF);
-        Surface.numoftriangles++;
+        //Surface.numoftriangles++;
+        numOfTriangles++;
         //System.out.println("Bridge with e.prev");
         e = newFacet.next;
         newFacet.loopID = activeLoop;
@@ -1246,7 +1254,8 @@ public class AdvancingFrontMethod {
         vertexFaceMap.get(e.p2._id).add(nF);
         vertexFaceMap.get(newFacet.p2._id).add(nF);
         PatchUtil.addFaceToEdgeFacesMap(patch, nF);
-        Surface.numoftriangles++;
+        //Surface.numoftriangles++;
+        numOfTriangles++;
         e = newFacet.next;
         newFacet.loopID = activeLoop;
     }
@@ -1380,19 +1389,14 @@ public class AdvancingFrontMethod {
             vertexFaceMap.get(e.p2._id).add(nF);
             vertexFaceMap.get(rightFacet.p1._id).add(nF);
             PatchUtil.addFaceToEdgeFacesMap(patch, nF);
-            Surface.numoftriangles++;
+            //Surface.numoftriangles++;
+
             //System.out.println("Bridge with something else");
             //System.out.println("afm: " + pt.afmIdx);
             e = leftFacet.next;
             activeLoop = e.loopID;
+            numOfTriangles++;
         } else {
-                        /*System.out.println("HEAR HEAR\n PEsize: " + nodeEdgeMap.get(pt.afmIdx).size());
-                        System.out.println("afm id: " + pt.afmIdx);
-                        System.out.println("node size: " + nodes.size());
-                        System.out.println("loop id: " + activeLoop);
-                        System.out.println(pt.toString());
-                        System.out.println("CP: " + ((patch != null) ? patch.id : -1));
-                        vertexHighlight = pt.afmIdx;*/
         }
     }
     //private Vector n = new Vector(0, 0, 0);

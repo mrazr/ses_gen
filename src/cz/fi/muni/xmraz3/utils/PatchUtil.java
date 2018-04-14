@@ -1,5 +1,6 @@
 package cz.fi.muni.xmraz3.utils;
 
+import com.jogamp.opengl.math.Quaternion;
 import cz.fi.muni.xmraz3.*;
 import cz.fi.muni.xmraz3.math.Plane;
 import cz.fi.muni.xmraz3.math.Point;
@@ -858,7 +859,15 @@ public class PatchUtil {
         Arc start = a1;
         Arc a = a2;
 
-        boolean toBridge = (a1 != a2 || circle.checkPointLocation(a1.end1) > 0.0);
+        //boolean toBridge = (a1 != a2 || circle.checkPointLocation(a1.end1) > 0.0);
+        boolean toBridge = isOptimal(in1, a1, circle);
+        if (toBridge && !isOptimal(in1, a1, circle)){
+            int o = 8;
+        }
+        if (intersectionPoints.size() > 2 && a1.bOwner == a2.bOwner && Vector.getNormalVector(Point.subtractPoints(in1, circle.p).makeUnit(), Point.subtractPoints(in2, circle.p).makeUnit()).makeUnit().dotProduct(circle.v) < 0.0){
+            int c = 3;
+            toBridge = false;
+        }
         boolean forceContinue = false;
         boolean arcExit = false;
         int it = 0;
@@ -895,7 +904,7 @@ public class PatchUtil {
                 in1 = in2;
                 a1 = a2;
                 in2 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in1, false, circle.p, circle.v, true);
-                a2 = ArcUtil.findContainingArc(in2, circle, sp, null);
+                a2 = in2.arc;//ArcUtil.findContainingArc(in2, circle, sp, null);
                 while (a2.bOwner != a1.bOwner && !a2.bOwner.nestedBoundaries.contains(a1.bOwner)){
                     in2 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in2, false, circle.p, circle.v, true);
                     a2 = ArcUtil.findContainingArc(in2, circle, sp, null);
@@ -975,7 +984,7 @@ public class PatchUtil {
                     toBridge = true;
                     in1 = in2;
                     in2 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in1, false, circle.p, circle.v, true);
-                    a2 = ArcUtil.findContainingArc(in2, circle, sp, null);
+                    a2 = in2.arc;//ArcUtil.findContainingArc(in2, circle, sp, null);
                     while (a2.bOwner != a1.bOwner && !a2.bOwner.nestedBoundaries.contains(a1.bOwner)) {
                         in2 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in2, false, circle.p, circle.v, true);
                         a2 = ArcUtil.findContainingArc(in2, circle, sp, null);
@@ -1160,7 +1169,7 @@ public class PatchUtil {
                 in1 = in2;
                 a1 = a2;
                 in2 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in1, false, circle.p, circle.v, true);
-                a2 = ArcUtil.findContainingArc(in2, circle, sp, null);
+                a2 = in2.arc;//ArcUtil.findContainingArc(in2, circle, sp, null);
                 while (a2.bOwner != a1.bOwner && !a2.bOwner.nestedBoundaries.contains(a1.bOwner)){
                     in2 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in2, false, circle.p, circle.v, true);
                     a2 = ArcUtil.findContainingArc(in2, circle, sp, null);
@@ -1258,11 +1267,12 @@ public class PatchUtil {
             usedPoints.clear();
             toRemove.clear();
             newBS.clear();
+            int count = intersectionPoints.size();
             if (intersectionPoints.size() > 1) {
                 //List<Boundary> newBS = new ArrayList<>();
                 //List<Boundary> toRemove = new ArrayList<>();
                 int i = 0;
-                while (i < intersectionPoints.size()) {
+                while (i < count) {
                     Point in1 = findOptimalPoint(intersectionPoints, usedPoints, sp, circle);
                     if (in1 == null){
                         break;
@@ -1270,8 +1280,11 @@ public class PatchUtil {
                     Point in2 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in1, false, circle.p, circle.v, true);
                     Point pStart = in1;
 
-                    Arc a1 = ArcUtil.findContainingArc(in1, circle, sp, null);
-                    Arc a2 = ArcUtil.findContainingArc(in2, circle, sp, null);
+                    Arc a1 = in1.arc;//ArcUtil.findContainingArc(in1, circle, sp, null);
+                    Arc a2 = in2.arc;//ArcUtil.findContainingArc(in2, circle, sp, null);
+                    if (a1 == null || a2 == null){
+                        int b = 433;
+                    }
                     final Point p1 = in1;
                     final Point p2 = in2;
 
@@ -1283,16 +1296,30 @@ public class PatchUtil {
                         int c = 32;
                     }
 
+                    if (Point.distance(a1.end1, p1) < 0.002){
+                        if (circle.checkPointLocation(a1.prev.end1) > 0.0){
+                            a1 = a1.prev;
+                            in1.arc = a1;
+                        }
+                    }
+
+                    if (Point.distance(a2.end2, p2) < 0.002){
+                        if (circle.checkPointLocation(a2.next.end2) > 0.0){
+                            a2 = a2.next;
+                            in2.arc = a2;
+                        }
+                    }
+
                     //int spl = patchSplit(intersectionPoints, in1, in2, sp, circle);
                     //List<Point> ps = (intersectionPoints.size() > 2) ?  patchSplit(intersectionPoints, in1, in2, sp, circle) : intersectionPoints;
                     List<Point> ps = (intersectionPoints.size() > 2) ? getUsablePoints(intersectionPoints, in1, in2, sp, circle) : intersectionPoints;
 
-                    boolean inside = a1.vrts.stream().allMatch(p -> (Point.distance(p, p1) < 0.001) || circle.checkPointLocation(p) > 0.0) &&
-                            a1.next.vrts.stream().allMatch(p -> Point.distance(p, p1) < 0.001 || circle.checkPointLocation(p) > 0.0) &&
-                            a1.prev.vrts.stream().allMatch(p -> Point.distance(p, p1) < 0.001 || circle.checkPointLocation(p) > 0.0) &&
-                            a2.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0) &&
-                            a2.next.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0) &&
-                            a2.prev.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0);
+                    boolean inside = a1.vrts.stream().allMatch(p -> (Point.distance(p, p1) < 0.001) || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
+                            a1.next.vrts.stream().allMatch(p -> Point.distance(p, p1) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
+                            a1.prev.vrts.stream().allMatch(p -> Point.distance(p, p1) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
+                            a2.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
+                            a2.next.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
+                            a2.prev.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001);
                     if (!force && inside){
                         return;
                     }
@@ -1330,6 +1357,7 @@ public class PatchUtil {
                     //toRemove.add(boundaryAlgorithm2(circle, radius, in1, a1, in2, a2, ps, usedPoints, newBS, sp));
                     boundaryAlgorithm2(circle, radius, in1, a1, in2, a2, ps, usedPoints, toRemove, newBS, sp, otherPatch);
                     i += ps.size();
+                    intersectionPoints.removeAll(ps);
                     //System.out.println("did: " + sp.id);
                     //sp.boundaries.remove(a.bOwner);f
                 }
@@ -1562,6 +1590,17 @@ public class PatchUtil {
     private static Map<Integer, Map<Integer, List<Point>>> moip = new TreeMap<>();
     private static Map<Integer, Map<Integer, PatchBridge>> bridgeArcs = new TreeMap<>();
     private static Map<Integer, List<ArcDivide>> divides = new TreeMap<>();
+    private static SphericalPatch curr;
+    private static Plane currCirc;
+    private static double currRad;
+    private static List<Point> currInt;
+    private static int currIter;
+
+    private static void exp(){
+        SurfaceParser.exportCP(curr, "/home/radoslav/objs/cp_" + curr.id + "_" + currIter + ".obj");
+        SurfaceParser.exportCircle(currCirc, currRad, currInt.get(0), "/home/radoslav/objs/cir_" + curr.id + "_" + currIter + ".obj");
+        SurfaceParser.exportPoints(currInt, currCirc.v, "/home/radoslav/objs/poi_" + curr.id + "_" + currIter + ".obj");
+    }
 
     private static void trimConcavePatch(SphericalPatch sp){
         try {
@@ -1585,6 +1624,8 @@ public class PatchUtil {
                     planes.get(sp.id).add(p);
                 }
             }
+            currIter = 0;
+            curr = sp;
             for (Neighbor<double[], SphericalPatch> n : neighbors) {
                 if (n.value == sp) {
                     continue;
@@ -1640,6 +1681,9 @@ public class PatchUtil {
                 if (sp.id == 6102){
                     int fads = 32;
                 }
+                currInt = intersectionPoints;
+                currCirc = p;
+                currRad = radius;
                 if (intersectionPoints.size() > 1) {
                     if (planes.get(sp.id).stream().noneMatch(plane -> plane.isIdenticalWith(p))) {
                         planes.get(sp.id).add(p);
@@ -1647,6 +1691,7 @@ public class PatchUtil {
                         sp.intersectingPatches.add(sp2.id);
                         generateNewBoundaries2(sp, intersectionPoints, p, radius, sp2.id,false);
                         i++;
+                        currIter++;
                         if (!sp.trimmed){
                             sp.trimmed = true;
                             Surface.trimmedTriangles++;
@@ -1798,14 +1843,18 @@ public class PatchUtil {
                         //Point in2 = Point.translatePoint(midTetiva, Vector.scaleVector(vInt, -odv2));
                         in1.assignTranslation(midOfChord, vInt.makeUnit().multiply(odv2));
                         in2.assignTranslation(midOfChord, vInt.multiply(-1.0));
-                        if (a.isInside(in1)){
+                        if (a.isInside(in1)){// && ArcUtil.findContainingArc(in1, p1, sp, null) != null){
                             if (intersectionPoints.stream().noneMatch(v -> Point.distance(in1, v) < 0.01)){
-                                intersectionPoints.add(new Point(in1));
+                                Point _p = new Point(in1);
+                                _p.arc = a;
+                                intersectionPoints.add(_p);
                             }
                         }
-                        if (a.isInside(in2)) {
+                        if (a.isInside(in2)){// && ArcUtil.findContainingArc(in2, p1, sp, null) != null) {
                             if (intersectionPoints.stream().noneMatch(v -> Point.distance(in2, v) < 0.01)){
-                                intersectionPoints.add(new Point(in2));
+                                Point _p = new Point(in2);
+                                _p.arc = a;
+                                intersectionPoints.add(_p);
                             }
                         }
                     }
@@ -1814,7 +1863,29 @@ public class PatchUtil {
         }
     }
     private static Vector n = new Vector(0, 0, 0);
+
+
     private static Point findOptimalPoint(List<Point> points, List<Point> usedPoints, SphericalPatch sp, Plane plane){
+        try {
+            for (Point p : points) {
+                if (usedPoints.contains(p)){
+                    continue;
+                }
+                Arc a = p.arc;//ArcUtil.findContainingArc(p, plane, sp, null);
+                if (a == null){
+                    int r = 42;
+                }
+                if (isOptimal(p, a, plane)){
+                    return p;
+                }
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private static Point _findOptimalPoint(List<Point> points, List<Point> usedPoints, SphericalPatch sp, Plane plane){
         try {
             for (Point p : points) {
                 if (usedPoints.contains(p)){
@@ -1840,6 +1911,13 @@ public class PatchUtil {
                         return  secondPoint;
                     }
                 } else {
+                    if (plane.checkPointLocation(a.end1) > 0.0 && plane.checkPointLocation(a.end2) > 0.0){
+                        if (Point.distance(p, a.end1) - Point.distance(p, a.end2) < 0.0){
+                            return p;
+                        } else {
+                            continue;
+                        }
+                    }
                     if (Point.distance(p, a.end1) < 0.001 && plane.checkPointLocation(a.end2) > 0.0){
                         continue;
                     }
@@ -1890,6 +1968,9 @@ public class PatchUtil {
                 Point first = ArcUtil.findClosestPointOnCircle(intersectionPoints, arc.end1, true, arc.center, arc.normal, true);
                 intersectionPoints.remove(first);
                 Arc a = ArcUtil.findContainingArc(first, circle, sp, arc);
+                if (a == null){
+                    int c = 4;
+                }
                 Boundary b = new Boundary();
                 Arc newA = (Point.distance(first, arc.end1) < 0.0018) ? null : new Arc(arc.center, arc.radius);
                 if (newA != null) {
@@ -2213,8 +2294,8 @@ public class PatchUtil {
         usedPoints2.clear();
         usablePoints.clear();
         usablePoints.addAll(intersectionPoints);
-        Arc originArc = ArcUtil.findContainingArc(origin, circle, sp, null);
-        Arc startArc = ArcUtil.findContainingArc(start, circle, sp, null);
+        Arc originArc = origin.arc;//ArcUtil.findContainingArc(origin, circle, sp, null);
+        Arc startArc = start.arc;//ArcUtil.findContainingArc(start, circle, sp, null);
         Arc endArc = null;
         Arc a = null;
         Point end = null;
@@ -2227,9 +2308,9 @@ public class PatchUtil {
                 /*if (start == origin){
                     return usedPoints;
                 }*/
-                startArc = ArcUtil.findContainingArc(start, circle, sp, null);
+                startArc = start.arc;//ArcUtil.findContainingArc(start, circle, sp, null);
                 end = ArcUtil.findClosestPointOnCircle(intersectionPoints, start, false, circle.p, circle.v, true);
-                endArc = ArcUtil.findContainingArc(end, circle, sp, null);
+                endArc = end.arc;//ArcUtil.findContainingArc(end, circle, sp, null);
                 a = (startArc == endArc) ? ((ArcUtil.getOrder(startArc, start, end) < 0) ? startArc : startArc.next) : startArc.next;
                 if (startArc.bOwner != endArc.bOwner && startArc.bOwner.nestedBoundaries.contains(endArc.bOwner)){
                     a = endArc;
@@ -2424,6 +2505,17 @@ public class PatchUtil {
         map1.get(sID).get(bID).remove(f);
     }
 
+    public static List<Face> retrieveFacesFromEdgeFacesMap(SphericalPatch sp, int a, int b){
+        int small = Math.min(a, b);
+        int big = Math.max(a, b);
+        return sp.edgeFacesMap.get(small).get(big);
+    }
+
+    public static Face retrieveFirstFaceFromEdgeFacesMap(SphericalPatch sp, int a, int b){
+        List<Face> _f = retrieveFacesFromEdgeFacesMap(sp, a, b);
+        return (_f.size() > 0) ? _f.get(0) : null;
+    }
+
     public static Vector computeTriangleNormal(Point a, Point b, Point c){
         //return in.assignNormalVectorOf(v1.changeVector(b, a).makeUnit(), v2.changeVector(c, a).makeUnit()).makeUnit();
         return Vector.getNormalVector(Point.subtractPoints(b, a).makeUnit(), Point.subtractPoints(c, a).makeUnit()).makeUnit();
@@ -2494,5 +2586,44 @@ public class PatchUtil {
             return arc.get();
         }
         return null;
+    }
+
+    private static boolean _check(SphericalPatch sp){
+        for (Boundary b : sp.boundaries){
+            for (Arc a : b.arcs){
+                if (a.cuspTriangle != null){
+                    if (a.opposite.owner.id == sp.id){
+                        int g = 3;
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public static Point genP(Arc a, Point p){
+        Vector v = Point.subtractPoints(p, a.center).makeUnit();
+        Quaternion q = new Quaternion();
+        q.setFromAngleNormalAxis((float)Math.toRadians(2), a.normal.getFloatData());
+        float[] _f = new float[3];
+        q.rotateVector(_f, 0, v.getFloatData(), 0);
+        Vector u = new Vector(_f);
+        u.makeUnit().multiply(a.radius);
+        return Point.translatePoint(a.center, u);
+    }
+
+    private static boolean isOptimal(Point p, Arc a, Plane circle){
+        Point _p = genP(a, p);
+        Vector ak = Point.subtractPoints(_p, circle.p).multiply(10.f);
+        Point __p = Point.translatePoint(circle.p, ak);
+        return circle.checkPointLocation(__p) < 0.0;
+    }
+
+    public static double nextSign(Point p, Arc a, Plane circle){
+        Point _p = genP(a, p);
+        Vector ak = Point.subtractPoints(_p, circle.p).multiply(10.f);
+        Point __p = Point.translatePoint(circle.p, ak);
+        return circle.checkPointLocation(__p);
     }
 }

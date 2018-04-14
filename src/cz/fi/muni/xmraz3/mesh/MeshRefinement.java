@@ -33,7 +33,8 @@ public class MeshRefinement {
     public static List<Map<Integer, Map<Integer, Integer>>> concaveEdgeSplitMap;
     public static List<Map<Integer, List<Face>>> convexVertexFaceMap;
     public static List<Map<Integer, List<Face>>> concaveVertexFaceMap;
-
+    public static AtomicInteger trianglesGenerated = new AtomicInteger(0);
+    private static int[] _triangles;
     public static AtomicBoolean free = new AtomicBoolean(true);
     public static AtomicBoolean finished = new AtomicBoolean(false);
     private static Vector[] v;
@@ -79,16 +80,27 @@ public class MeshRefinement {
             } while (!facesToRefine.isEmpty());
         }
     }
-    private static void _meshRefine(List<SphericalPatch> patches, int threadIdx){
+    private static void __meshRefine(List<SphericalPatch> patches, int threadIdx){
         threads_working.getAndIncrement();
         long startTime = System.currentTimeMillis();
         int step = patches.size() / THREAD_COUNT;
         Queue<Face> facesToRefine = new LinkedList<>();
         List<Face> newFaces = new ArrayList<>(1000);
         Vector u = v[threadIdx];
+        int numOfTriangles = 0;
         for (int i = threadIdx * step; i < ((threadIdx == 3) ? patches.size() : (threadIdx + 1) * step); ++i) {
             SphericalPatch sp = patches.get(i);
-            if (!sp.convexPatch) {
+            if (sp.convexPatch){
+                for (Boundary b : sp.boundaries){
+                    for (Arc a : b.arcs){
+                        for (Point p : a.vrts){
+                            p.arc = a;
+                        }
+                    }
+                }
+            }
+            if (!sp.convexPatch && false) {
+                _triangles[threadIdx] += sp.faces.size();
                 continue;
             }
             if (!sp.valid) {
@@ -110,15 +122,19 @@ public class MeshRefinement {
                 if (!face.divisible){
                     int fads = 43;
                 }
-                if (sp.id == 13 && arcPointsInFace(face, sp.vertices) > 1){
+                if (sp.id == 868 && arcPointsInFace(face, sp.vertices) > 1){
                     int _sf = 43;
                 }
                 boolean arcFace = isArcFace(face, sp.vertices);
-                if (!face.divisible || (arcFace && !canSubdivideArcFace(face, sp)) || (face.forceRefine && isSmallTriangle(face, sp, 1.6 * SesConfig.edgeLimit))){
-                    if (isSplit(a, b, sp) || (Point.distance(a, b) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                if (!face.divisible || (arcFace && !canSubdivideArcFace(face, sp)) || (face.forceRefine && isSmallTriangle(face, sp, Surface.refineFac * SesConfig.edgeLimit))){
+                    if ((arcFace && isSplit(a, b, sp)) || (!arcFace && (isSplit(a, b, sp) || (Point.distance(a, b) - Surface.refineFac * SesConfig.edgeLimit) > 0.0))){
                         int sID = (a._id > b._id) ? b._id : a._id;
                         int bID = (a._id > b._id) ? a._id : b._id;
                         PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        Face _f = PatchUtil.retrieveFirstFaceFromEdgeFacesMap(sp, a._id, b._id);
+                        if (_f != null){
+                            //facesToRefine.add(_f);
+                        }
                         if (!splitMap.containsKey(sID)){
                             splitMap.put(sID, new TreeMap<>());
                         }
@@ -145,10 +161,15 @@ public class MeshRefinement {
                         nF.divisible = false;
                         facesToRefine.add(nF);
                         face.valid = false;
-                    } else if (isSplit(b, c, sp) || (Point.distance(b, c) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                        numOfTriangles += 1;
+                    } else if ((arcFace && isSplit(b, c, sp)) || (!arcFace && (isSplit(b, c, sp) || (Point.distance(b, c) - Surface.refineFac * SesConfig.edgeLimit) > 0.0))){
                         int sID = (b._id > c._id) ? c._id : b._id;
                         int bID = (b._id > c._id) ? b._id : c._id;
                         PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        Face _f = PatchUtil.retrieveFirstFaceFromEdgeFacesMap(sp, b._id, c._id);
+                        if (_f != null){
+                            //facesToRefine.add(_f);
+                        }
                         if (!splitMap.containsKey(sID)){
                             splitMap.put(sID, new TreeMap<>());
                         }
@@ -173,10 +194,15 @@ public class MeshRefinement {
                         PatchUtil.addFaceToEdgeFacesMap(sp, nF);
                         facesToRefine.add(nF);
                         face.valid = false;
-                    } else if (isSplit(c, a, sp) || (Point.distance(c, a) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                        numOfTriangles += 1;
+                    } else if ((arcFace && isSplit(c, a, sp)) || (!arcFace && (isSplit(c, a, sp) || (Point.distance(c, a) - Surface.refineFac * SesConfig.edgeLimit) > 0.0))){
                         int sID = (a._id > c._id) ? c._id : a._id;
                         int bID = (a._id > c._id) ? a._id : c._id;
                         PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        Face _f = PatchUtil.retrieveFirstFaceFromEdgeFacesMap(sp, c._id, a._id);
+                        if (_f != null){
+                            //wfsfacesToRefine.add(_f);
+                        }
                         if (!splitMap.containsKey(sID)){
                             splitMap.put(sID, new TreeMap<>());
                         }
@@ -201,14 +227,15 @@ public class MeshRefinement {
                         PatchUtil.addFaceToEdgeFacesMap(sp, nF);
                         facesToRefine.add(nF);
                         face.valid = false;
+                        numOfTriangles += 1;
                     } else {
                         newFaces.add(face);
                     }
                     //continue;
                 } else if (face.forceRefine ||
-                        Point.distance(a, b) - 1.6 * SesConfig.edgeLimit > 0.0 ||
-                        Point.distance(b, c) - 1.6 * SesConfig.edgeLimit > 0.0 ||
-                        Point.distance(c, a) - 1.6 * SesConfig.edgeLimit > 0.0){
+                        Point.distance(a, b) - Surface.refineFac * SesConfig.edgeLimit > 0.0 ||
+                        Point.distance(b, c) - Surface.refineFac * SesConfig.edgeLimit > 0.0 ||
+                        Point.distance(c, a) - Surface.refineFac * SesConfig.edgeLimit > 0.0){
                     int sID = (a._id > b._id) ? b._id : a._id;
                     int bID = (a._id > b._id) ? a._id : b._id;
 
@@ -307,6 +334,7 @@ public class MeshRefinement {
                     PatchUtil.addFaceToEdgeFacesMap(sp, nF);
                     facesToRefine.add(nF);
                     face.valid = false;
+                    numOfTriangles += 3;
                 } else {
                     newFaces.add(face);
                 }
@@ -322,10 +350,15 @@ public class MeshRefinement {
                     sp.faces.add(f);
                 }
             }
+            _triangles[threadIdx] += sp.faces.size();
         }
 
         System.out.println("REFINE COMPLETE, thd: " + threadIdx + " in " + (System.currentTimeMillis() - startTime) + " ms");
         //threads_working.decrementAndGet();
+        //trianglesGenerated.addAndGet(numOfTriangles);
+        if (!patches.get(0).convexPatch) {
+            trianglesGenerated.addAndGet(_triangles[threadIdx]);
+        }
         threads_done.incrementAndGet();
         if (threads_done.get() == THREAD_COUNT){
             if (SesConfig.useGUI) {
@@ -340,6 +373,7 @@ public class MeshRefinement {
             if (!patches.get(0).convexPatch){
                 finished.set(true);
             }
+            System.out.println(trianglesGenerated.get() + " triangles generated");
         }
     }
 
@@ -619,6 +653,8 @@ public class MeshRefinement {
         v[1] = new Vector(0, 0, 0);
         v[2] = new Vector(0, 0, 0);
         v[3] = new Vector(0, 0, 0);
+        _triangles = new int[4];
+        _triangles[0] = _triangles[1] = _triangles[2] = _triangles[3] = 0;
     }
 
     public static void generateBaseMesh(int start, int end, List<SphericalPatch> patches, int threadId) {
@@ -676,6 +712,7 @@ public class MeshRefinement {
         System.out.println("Meshed in " + (endTime - startTime) + " ms");
         threads_working.decrementAndGet();
         threads_done.incrementAndGet();
+        //trianglesGenerated.addAndGet(afm.numOfTriangles);
         if (threadId == 0){
             while (threads_done.get() != THREAD_COUNT);
             System.out.println("STARTING REFINING");
@@ -691,6 +728,9 @@ public class MeshRefinement {
         /*for (int i = sp.arcPointCount; i < sp.vertices.size(); ++i){
             vertices.add(sp.vertices.get(i));
         }*/
+        if (!sp.convexPatch && sp.id == 918){
+            return;
+        }
         int end = sp.vertices.size() - sp.arcPointCount;
         for (int i = 0; i < end; ++i){
             sp.vertices.remove(sp.arcPointCount);
@@ -904,7 +944,9 @@ public class MeshRefinement {
     }
 
     public static void reset(){
+        trianglesGenerated.set(0);
         finished.set(false);
+        _triangles[0] = _triangles[1] = _triangles[2] = _triangles[3] = 0;
         Runnable r1 = new Runnable() {
             @Override
             public void run() {
@@ -949,6 +991,7 @@ public class MeshRefinement {
             //tp.faceCount = 0;
             tp.vrts.clear();
             meshToroidalPatch(tp);
+            _triangles[0] += tp.faces.size();
         }
         if (SesConfig.useGUI){
             MainWindow.mainWindow.pushTori();
@@ -1300,6 +1343,279 @@ public class MeshRefinement {
             e.printStackTrace();
             tp.valid = false;
             System.err.println("tp id: " + tp.id);
+        }
+    }
+
+    private static void _meshRefine(List<SphericalPatch> patches, int threadIdx){
+        threads_working.getAndIncrement();
+        long startTime = System.currentTimeMillis();
+        int step = patches.size() / THREAD_COUNT;
+        Queue<Face> facesToRefine = new LinkedList<>();
+        List<Face> newFaces = new ArrayList<>(1000);
+        Vector u = v[threadIdx];
+        for (int i = threadIdx * step; i < ((threadIdx == 3) ? patches.size() : (threadIdx + 1) * step); ++i) {
+            SphericalPatch sp = patches.get(i);
+            if (!sp.convexPatch && !sp.trimmed){
+                for (Boundary b : sp.boundaries){
+                    for (Arc a : b.arcs){
+                        for (Point p : a.refined.vrts){
+                            p.arc = a;
+                        }
+                    }
+                }
+            }
+            if (!sp.convexPatch && sp.id == 918) {
+                int triv = 5;
+            }
+            if (!sp.valid) {
+                continue;
+            }
+            facesToRefine.clear();
+            facesToRefine.addAll(sp.faces);
+            sp.faces.clear();
+            newFaces.clear();
+            Map<Integer, Map<Integer, Integer>> splitMap = (sp.convexPatch) ? convexEdgeSplitMap.get(sp.id) : concaveEdgeSplitMap.get(sp.id);
+            while (!facesToRefine.isEmpty()){
+                Face face = facesToRefine.poll();
+                Point a = sp.vertices.get(face.a);
+                Point b = sp.vertices.get(face.b);
+                Point c = sp.vertices.get(face.c);
+                if (!face.valid){
+                    continue;
+                }
+                if (!face.divisible){
+                    int fads = 43;
+                }
+                if (sp.id == 918 && !sp.convexPatch && arcPointsInFace(face, sp.vertices) > 1){
+                    int _sf = 43;
+                }
+                boolean arcFace = isArcFace(face, sp.vertices);
+                if (!face.divisible || (arcFace && !canSubdivideArcFace(face, sp)) || (face.forceRefine && isSmallTriangle(face, sp, 1.6 * SesConfig.edgeLimit))){
+                    if (isSplit(a, b, sp) || (Point.distance(a, b) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                        int sID = (a._id > b._id) ? b._id : a._id;
+                        int bID = (a._id > b._id) ? a._id : b._id;
+                        PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        if (!splitMap.containsKey(sID)){
+                            splitMap.put(sID, new TreeMap<>());
+                        }
+                        Map<Integer, Integer> map = splitMap.get(sID);
+                        Point d;
+                        if (!map.containsKey(bID)){
+                            d = Point.translatePoint(a, u.changeVector(b, a).multiply(0.5f));
+                            //d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
+                            //v.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius);
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            //d = Point.translatePoint(sp.sphere.center, v);
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d._id = sp.nextVertexID++;
+                            sp.vertices.add(d);
+                            map.put(bID, d._id);
+                        }
+                        d = sp.vertices.get(splitMap.get(sID).get(bID));
+                        Face nF = new Face(a._id, d._id, c._id);
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        nF.divisible = false;
+                        facesToRefine.add(nF);
+                        nF = new Face(b._id, c._id, d._id);
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        nF.divisible = false;
+                        facesToRefine.add(nF);
+                        face.valid = false;
+                    } else if (isSplit(b, c, sp) || (Point.distance(b, c) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                        int sID = (b._id > c._id) ? c._id : b._id;
+                        int bID = (b._id > c._id) ? b._id : c._id;
+                        PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        if (!splitMap.containsKey(sID)){
+                            splitMap.put(sID, new TreeMap<>());
+                        }
+                        Map<Integer, Integer> map = splitMap.get(sID);
+                        Point d;
+                        if (!map.containsKey(bID)){
+                            d = Point.translatePoint(b, u.changeVector(c, b).multiply(0.5f));
+                            //d = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d._id = sp.nextVertexID++;
+                            sp.vertices.add(d);
+                            map.put(bID, d._id);
+                        }
+                        d = sp.vertices.get(splitMap.get(sID).get(bID));
+                        Face nF = new Face(b._id, d._id, a._id);
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        nF.divisible = false;
+                        facesToRefine.add(nF);
+                        nF = new Face(c._id, a._id, d._id);
+                        nF.divisible = false;
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        facesToRefine.add(nF);
+                        face.valid = false;
+                    } else if (isSplit(c, a, sp) || (Point.distance(c, a) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                        int sID = (a._id > c._id) ? c._id : a._id;
+                        int bID = (a._id > c._id) ? a._id : c._id;
+                        PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        if (!splitMap.containsKey(sID)){
+                            splitMap.put(sID, new TreeMap<>());
+                        }
+                        Map<Integer, Integer> map = splitMap.get(sID);
+                        Point d;
+                        if (!map.containsKey(bID)){
+                            //d = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
+                            d = Point.translatePoint(a, u.changeVector(c, a).multiply(0.5f));
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d._id = sp.nextVertexID++;
+                            sp.vertices.add(d);
+                            map.put(bID, d._id);
+                        }
+                        d = sp.vertices.get(splitMap.get(sID).get(bID));
+                        Face nF = new Face(c._id, d._id, b._id);
+                        nF.divisible = false;
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        facesToRefine.add(nF);
+                        nF = new Face(a._id, b._id, d._id);
+                        nF.divisible = false;
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        facesToRefine.add(nF);
+                        face.valid = false;
+                    } else {
+                        newFaces.add(face);
+                    }
+                    //continue;
+                } else if (face.forceRefine ||
+                        Point.distance(a, b) - 1.6 * SesConfig.edgeLimit > 0.0 ||
+                        Point.distance(b, c) - 1.6 * SesConfig.edgeLimit > 0.0 ||
+                        Point.distance(c, a) - 1.6 * SesConfig.edgeLimit > 0.0){
+                    int sID = (a._id > b._id) ? b._id : a._id;
+                    int bID = (a._id > b._id) ? a._id : b._id;
+
+                    if (!splitMap.containsKey(sID)){
+                        splitMap.put(sID, new TreeMap<>());
+                    }
+                    Map<Integer, Integer> map = splitMap.get(sID);
+                    Point d;
+                    if (!map.containsKey(bID)){
+                        //d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
+                        //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        d = Point.translatePoint(a, u.changeVector(b, a).multiply(0.5f));
+                        d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        sp.vertices.add(d);
+                        d._id = sp.nextVertexID++;
+                        map.put(bID, d._id);
+                        try {
+                            Optional<Face> op = sp.edgeFacesMap.get(sID).get(bID).stream().filter(_f -> _f != face).findFirst();
+                            if (op.isPresent()) {
+                                facesToRefine.add(op.get());
+                                op.get().forceRefine = true;
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                    d = sp.vertices.get(map.get(bID));
+
+                    sID = (b._id > c._id) ? c._id : b._id;
+                    bID = (b._id > c._id) ? b._id : c._id;
+
+                    if (!splitMap.containsKey(sID)){
+                        splitMap.put(sID, new TreeMap<>());
+                    }
+                    map = splitMap.get(sID);
+                    Point e;
+                    if (!map.containsKey(bID)){
+                        //e = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
+                        //e = Point.translatePoint(sp.sphere.center, Point.subtractPoints(e, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        e = Point.translatePoint(b, u.changeVector(c, b).multiply(0.5f));
+                        e.assignTranslation(sp.sphere.center, u.changeVector(e, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        sp.vertices.add(e);
+                        e._id = sp.nextVertexID++;
+                        map.put(bID, e._id);
+                        try {
+                            Optional<Face> op = sp.edgeFacesMap.get(sID).get(bID).stream().filter(_f -> _f != face).findFirst();
+                            if (op.isPresent()) {
+                                facesToRefine.add(op.get());
+                                op.get().forceRefine = true;
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                    e = sp.vertices.get(map.get(bID));
+
+                    sID = (a._id > c._id) ? c._id : a._id;
+                    bID = (a._id > c._id) ? a._id : c._id;
+
+                    if (!splitMap.containsKey(sID)){
+                        splitMap.put(sID, new TreeMap<>());
+                    }
+                    map = splitMap.get(sID);
+                    Point f;
+                    if (!map.containsKey(bID)){
+                        //f = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
+                        //f = Point.translatePoint(sp.sphere.center, Point.subtractPoints(f, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        f = Point.translatePoint(a, u.changeVector(c, a).multiply(0.5f));
+                        f.assignTranslation(sp.sphere.center, u.changeVector(f, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        sp.vertices.add(f);
+                        f._id = sp.nextVertexID++;
+                        map.put(bID, f._id);
+                        try {
+                            Optional<Face> op = sp.edgeFacesMap.get(sID).get(bID).stream().filter(_f -> _f != face).findFirst();
+                            if (op.isPresent()) {
+                                facesToRefine.add(op.get());
+                                op.get().forceRefine = true;
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                    f = sp.vertices.get(map.get(bID));
+
+                    PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                    Face nF = new Face(a._id, d._id, f._id);
+                    PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                    facesToRefine.add(nF);
+                    nF = new Face(b._id, e._id, d._id);
+                    PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                    facesToRefine.add(nF);
+                    nF = new Face(c._id, f._id, e._id);
+                    PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                    facesToRefine.add(nF);
+                    nF = new Face(d._id, e._id, f._id);
+                    PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                    facesToRefine.add(nF);
+                    face.valid = false;
+                } else {
+                    newFaces.add(face);
+                }
+            }
+            for (Face f : newFaces){
+                Point a = sp.vertices.get(f.a);
+                Point b = sp.vertices.get(f.b);
+                Point c = sp.vertices.get(f.c);
+                /*if (!f.divisible && (Point.distance(a, b) - 1.6 * SesConfig.edgeLimit > 0.0 || Point.distance(b, c) - 1.6 * SesConfig.edgeLimit > 0.0 || Point.distance(c, a) - 1.6 * SesConfig.edgeLimit > 0.0)) {
+                    System.out.println("nondivisible long face");
+                }*/
+                if (f.valid){
+                    sp.faces.add(f);
+                }
+            }
+        }
+
+        System.out.println("REFINE COMPLETE, thd: " + threadIdx + " in " + (System.currentTimeMillis() - startTime) + " ms");
+        //threads_working.decrementAndGet();
+        threads_done.incrementAndGet();
+        if (threads_done.get() == THREAD_COUNT){
+            if (SesConfig.useGUI) {
+                System.out.println("PUSHING DATA TO GPU");
+                if (patches.get(0).convexPatch) {
+                    MainWindow.mainWindow.pushConvex();
+                } else {
+                    MainWindow.mainWindow.pushConcave();
+                }
+            }
+            free.set(true);
+            if (!patches.get(0).convexPatch){
+                finished.set(true);
+            }
         }
     }
 }

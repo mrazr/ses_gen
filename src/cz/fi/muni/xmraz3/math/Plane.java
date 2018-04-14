@@ -117,7 +117,7 @@ public class Plane {
     }
 
     public Plane redefine(Point p, Vector v, Vector u){
-        redefine(p, v.assignNormalVectorOf(v, u));
+        redefine(p, this.v.assignNormalVectorOf(v, u));
         return this;
     }
 

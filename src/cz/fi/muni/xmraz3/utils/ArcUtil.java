@@ -47,7 +47,7 @@ public class ArcUtil {
                 refineArc(a, 0, true, 1, false);
             }
             //while ((!fixedCount && Point.subtractPoints(a.vrts.get(0), a.vrts.get(1)).sqrtMagnitude() > 1.2 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
-            while ((!fixedCount && getArcLength(a, a.vrts.get(0), a.vrts.get(1)) > 1.2 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
+            while ((!fixedCount && Point.distance(a.vrts.get(0), a.vrts.get(1)) > Surface.refineFac * maxLen) || (fixedCount && it < numOfSubdivisions)) {
                 List<Point> newVerts = new ArrayList<>();
                 for (int i = 0; i < a.vrts.size() - ((fullCircle) ? 0 : 1); ++i) {
                     Point v1 = a.vrts.get(i);
@@ -126,7 +126,7 @@ public class ArcUtil {
                 refineArc(a, 0, true, 1, false, edgeSplit);
             }
             //while ((!fixedCount && Point.subtractPoints(a.vrts.get(0), a.vrts.get(1)).sqrtMagnitude() > 1.6 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
-            while ((!fixedCount && getArcLength(a, a.vrts.get(0), a.vrts.get(1)) > 1.2 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
+            while ((!fixedCount && Point.distance(a.vrts.get(0), a.vrts.get(1)) > Surface.refineFac * maxLen) || (fixedCount && it < numOfSubdivisions)) {
                 List<Point> newVerts = new ArrayList<>();
                 for (int i = 0; i < a.vrts.size() - ((fullCircle) ? 0 : 1); ++i) {
                     Point v1 = a.vrts.get(i);
@@ -178,6 +178,7 @@ public class ArcUtil {
             }
             for (Point v : a.vrts){
                 v.arcPoint = true;
+                v.arc = a;
             }
             if (a.baseSubdivision < 0){
                 a.baseSubdivision = getSubdivisionLevel(a);
@@ -191,8 +192,10 @@ public class ArcUtil {
         List<Map<Integer, Map<Integer, Integer>>> edgeSplit = (convex) ? MeshRefinement.convexEdgeSplitMap : MeshRefinement.concaveEdgeSplitMap;
         /*Arc shorter = (a1.radius - a2.radius > 0.0) ? a2 : a1;
         Arc longer = (shorter == a2) ? a1 : a2;*/
-        Arc longer = (getSubdivisionLevel(a1) >= getSubdivisionLevel(a2)) ? a1 : a2;
-        Arc shorter = (longer == a1) ? a2 : a1;
+        //Arc longer = (getSubdivisionLevel(a1) >= getSubdivisionLevel(a2)) ? a1 : a2;
+        //Arc shorter = (longer == a1) ? a2 : a1;
+        Arc longer = (a1.radius - a2.radius > 0.0) ? a1 : a2;
+        Arc shorter = (a1 == longer) ? a2 : a1;
         if (!meshRefine) {
             int currentLevel = getSubdivisionLevel(shorter);
             refineArc(shorter, maxlen, false, 0, false);
@@ -296,6 +299,7 @@ public class ArcUtil {
                 a.valid = true;
                 for (int i = 0; i < a.vrts.size() - 1; ++i) {
                     b.vrts.add(a.vrts.get(i));
+                    a.vrts.get(i).arc = a;
                 }
             }
         }
@@ -458,9 +462,10 @@ public class ArcUtil {
             queue.clear();
             queue.addAll(sp.arcs);
             boolean setValid = true;
+            int loopEndIdx = 0;
             while (queue.size() > 0) {
                 ArrayList<Arc> newB = new ArrayList<>();
-                Arc l = queue.get(0);
+                Arc l = queue.get(loopEndIdx);
                 newB.add(l);
                 queue.remove(l);
                 //Vector loopEnd = l.toEnd1;
@@ -472,12 +477,20 @@ public class ArcUtil {
                 //while (Math.abs(loopEnd.dotProduct(pivot) - 1) >= 0.00001) {
                 while (Point.distance(loopEnd, pivot) > 0.001) {//Point.subtractPoints(loopEnd, pivot).sqrtMagnitude() > 0.001) {
                     if (iterator > sp.arcs.size() + 10) {
-                        System.err.println("Cycle detected for atom id:" + sp.id);
-                        System.out.println("Iterator: " + iterator);
-                        System.out.println("Queue size: " + queue.size());
-                        //Main.convexPatches.remove(sp);
-                        sp.valid = false;
-                        return;
+                        loopEndIdx++;
+                        if (loopEndIdx >= queue.size()) {
+                            System.err.println("Cycle detected for atom id:" + sp.id);
+                            System.out.println("Iterator: " + iterator);
+                            System.out.println("Queue size: " + queue.size());
+                            //Main.convexPatches.remove(sp);
+                            sp.valid = (sp.boundaries.size() > 0);
+                            return;
+                        } else {
+                            //loopEndIdx++;
+                            setValid = false;
+                            break;
+                        }
+                        //return;
                     }
                     iterator++;
                     if (queue.size() == 0) {
@@ -518,10 +531,13 @@ public class ArcUtil {
                     if (i >= queue.size()) {
                         i = 0;
                         //completeBoundary = false;
-                        //System.err.println("atom id: " + this.id + " incomplete boundary");
+                        //System.err.println("atom id: " + this.id + " incomplete boundary");m10480
                         //return;
                     }
                 }
+                /*if (newB.size() < 2){
+                    setValid = false;
+                }*/
                 if (setValid) {
                     newB.get(0).end1 = l.end2;
                     newB.get(0).lines.get(0).p1 = l.end2;
@@ -538,8 +554,9 @@ public class ArcUtil {
                         v._id = sp.nextVertexID++;
                         sp.vertices.add(v);
                     }
+                    loopEndIdx = 0;
                 } else {
-                    sp.valid = false;
+                    sp.valid = (sp.boundaries.size() > 0);
                 }
             }
             /*int nextIdx = 0;
@@ -675,7 +692,63 @@ public class ArcUtil {
 
     private static final double PLANE_EPS = 0.001;
     private static Plane plane = new Plane(new Point(0, 0, 0), new Vector(0, 0, 0));
+
     public static Arc findContainingArc(Point p, Plane circle, SphericalPatch sp, Arc exclude){
+        for (Boundary b : sp.boundaries){
+            for (Arc a : b.arcs){
+                if (a == exclude){
+                    continue;
+                }
+                //Plane plane = new Plane(a.center, a.normal);
+                plane.redefine(a.center, a.normal);
+                if (Math.abs(plane.checkPointLocation(p)) > PLANE_EPS){
+                    continue;
+                }
+                Vector vector = Point.subtractPoints(p, a.center).makeUnit();
+                if (Math.abs(vector.dotProduct(a.toEnd1) - 1.0) < 0.001){
+                    /*Point _p = PatchUtil.genP(a, p);
+                    Vector _v = Point.subtractPoints(_p, circle.p).multiply(10.f);
+                    Point _p2 = Point.translatePoint(circle.p, _v);
+                    if (circle.checkPointLocation(_p2) < 0.0){
+                        return a.prev;
+                    }*/
+                    double aNextSign = PatchUtil.nextSign(p, a, circle);
+                    double aprevNextSign = PatchUtil.nextSign(p, a.prev, circle);
+                    if (aNextSign * aprevNextSign < 0.0){
+                        return null;
+                    }
+                    if (aNextSign > 0.0){
+                        return a;
+                    }
+                    return a.prev;
+                } else if (Math.abs(vector.dotProduct(a.toEnd2) - 1.0) < 0.001){
+                    /*Point _p = PatchUtil.genP(a, p);
+                    Vector _v = Point.subtractPoints(_p, circle.p).multiply(10.f);
+                    Point _p2 = Point.translatePoint(circle.p, _v);
+                    if (circle.checkPointLocation(_p2) < 0.0){
+                        return a;
+                    }
+                    return a.next;*/
+                    double aNextSign = PatchUtil.nextSign(p, a, circle);
+                    double anextNextSign = PatchUtil.nextSign(p, a.next, circle);
+                    if (aNextSign * anextNextSign < 0.0){
+                        return null;
+                    }
+                    if (aNextSign < 0.0){
+                        return a;
+                    }
+                    return a.next;
+                } else {
+                    if (a.isInside(p)){
+                        return a;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public static Arc _findContainingArc(Point p, Plane circle, SphericalPatch sp, Arc exclude){
         for (Boundary b : sp.boundaries){
             for (Arc a : b.arcs){
                 if (a == exclude){
@@ -902,13 +975,14 @@ public class ArcUtil {
 
     public static void refineArcsOnConcavePatches(){
         for (SphericalPatch sp : Surface.triangles) {
-            if (sp.id == 5238 || sp.id == 5255) {
-                System.out.println("object of interest");
-            }
+
             sp.vertices.clear();
             sp.nextVertexID = 0;
             for (Boundary b : sp.boundaries) {
                 ArcUtil.buildEdges(b, true);
+                if (sp.id == 918) {
+                    System.out.println("object of interest");
+                }
                 for (Point v : b.vrts) {
                     v._id = sp.nextVertexID++;
                     sp.vertices.add(v);
@@ -1054,6 +1128,9 @@ public class ArcUtil {
                 ArcUtil.linkArcs(sp);
             }
             for (Boundary b : sp.boundaries) {
+                if (b.arcs.size() < 2){
+                    int c = 4;
+                }
                 for (Arc a : b.arcs){
                     for (Point v : a.vrts){
                         v.arcPoint = true;
@@ -1062,7 +1139,7 @@ public class ArcUtil {
                         continue;
                     }
                     Arc op = a.opposite;
-                    if (sp.id == 767 || sp.id == 772){
+                    if (sp.id == 3734 && op.owner.id == 3783){
                         int fgd = 3;
                     }
                     if (op.owner.boundaries.size() == 0){
@@ -1120,4 +1197,5 @@ public class ArcUtil {
             }
         }
     }
+
 }

@@ -87,13 +87,13 @@ public class SurfaceParser {
             PatchUtil.processSelfIntersectingTori();
             PatchUtil.processSelfIntersectingConcavePatches();
             PatchUtil.processIntersectingConcavePatches();
-            if (SesConfig.useGUI) {
-                MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
-            }
             System.out.println("Trimmed triangles: " + Surface.trimmedTriangles + " / " + Surface.triangles.size());
             ArcUtil.refineArcsOnConvexPatches();
             ArcUtil.nestConvexPatchBoundaries();
             ArcUtil.refineArcsOnConcavePatches();
+            if (SesConfig.useGUI) {
+                MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
+            }
             MeshRefinement.startMeshing();
             if (SesConfig.objFile != null || SesConfig.stlFile != null){
                 while (!MeshRefinement.finished.get()){}
@@ -402,12 +402,12 @@ public class SurfaceParser {
         Arc smallerRadius = (arc1.owner.sphere.radius <= arc2.owner.sphere.radius) ? arc1 : arc2;
         Arc greaterRadius = (smallerRadius == arc1) ? arc2 : arc1;
         //ArcUtil.refineArc(smallerRadius, Main.maxEdgeLen, 2, false);
-        ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, false,0, false);
-        ArcUtil.buildEdges(smallerRadius);
-        //int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
-        int numOfDivs = ArcUtil.getSubdivisionLevel(smallerRadius);
-        ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, true, numOfDivs, false);
+        ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, false,0, false);
         ArcUtil.buildEdges(greaterRadius);
+        //int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
+        int numOfDivs = ArcUtil.getSubdivisionLevel(greaterRadius);
+        ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, true, numOfDivs, false);
+        ArcUtil.buildEdges(smallerRadius);
         /*smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
         smallerRadius.refined.owner = smallerRadius.owner;
         greaterRadius.refined = ArcUtil.dbgCloneArc(greaterRadius);
@@ -490,7 +490,8 @@ public class SurfaceParser {
                 }
             }
             if (tp == null) {
-                System.out.println("corresponding rolling patch not found");
+                //System.out.println("corresponding rolling patch not found");
+                System.out.println("corresponding rolling patch not found for " + atom1 + " " + atom2);
                 updateMissingArcs(atom1, atom2, cpatch);
             } else {
                 tp.concavePatchArcs.add(cpl1);
@@ -589,7 +590,8 @@ public class SurfaceParser {
                 }
             }
             if (tp == null) {
-                System.out.println("corresponding rolling patch not found");
+                //System.out.println("corresponding rolling patch not found");
+                System.out.println("corresponding rolling patch not found for " + atom1 + " " + atom3);
                 //continue;
                 updateMissingArcs(atom1, atom3, cpatch);
             } else {
@@ -676,7 +678,7 @@ public class SurfaceParser {
 
             tp = null;
             if (a2.tori.get(atom3) == null) {
-               System.out.println("corresponding rolling patch not found for " + atom2 + " " + atom3);
+               //System.out.println("corresponding rolling patch not found for " + atom2 + " " + atom3);
                 //continue;
                 if (atom1 == 224 || atom2 == 224 || atom3 == 224){
                     System.out.println("for atom 224");
@@ -693,6 +695,7 @@ public class SurfaceParser {
             }
             if (tp == null) {
                 //System.out.println("corresponding rolling patch not found");
+                System.out.println("corresponding rolling patch not found for " + atom2 + " " + atom3);
                 //continue;
                 updateMissingArcs(atom2, atom3, cpatch);
             } else {

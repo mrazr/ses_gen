@@ -812,6 +812,10 @@ public class ArcUtil {
             //Vector toP = Point.subtractPoints(p, center).makeUnit();
             toP.changeVector(p, center).makeUnit();
             double alpha = (v1.assignNormalVectorOf(toStart, toP).multiply(next ? 1 : -1).dotProduct(normal) > 0.0) ? Math.acos(toStart.dotProduct(toP)) : (2 * Math.PI - Math.acos(toStart.dotProduct(toP)));
+            if (Math.abs(toStart.dotProduct(toP) - 1.0) < 0.001 && includeStart){
+                angle = 0.0;
+                closest = p;
+            }
             if (angle - alpha > 0.0){
                 angle = alpha;
                 closest = p;

@@ -501,7 +501,7 @@ public class PatchUtil {
         Vector u1 = v1.changeVector(arc.end1, arc.center).makeUnit();
         Vector u2 = v2.changeVector(arc.end2, arc.center).makeUnit();
         Vector n1 = v3.changeVector(sp.sphere.center, arc.center).makeUnit();
-        if (sp.id == 1505){
+        if (sp.id == 1467){
             int fd=  43;
         }
         //Plane p1 = new Plane(arc.center, n1);
@@ -1940,7 +1940,7 @@ public class PatchUtil {
                 return;
             }
             SphericalPatch sp = arc.owner;
-            if (sp.id == 251){
+            if (sp.id == 828 || sp.id == 2902){
                 System.out.println("ligh");
             }
             //List<Point> intersectionPoints = new ArrayList<>();
@@ -1977,7 +1977,7 @@ public class PatchUtil {
                     int c = 4;
                 }
                 Boundary b = new Boundary();
-                Arc newA = (Point.distance(first, arc.end1) < 0.0018) ? null : new Arc(arc.center, arc.radius);
+                Arc newA = (Point.distance(first, arc.end1) < 0.003) ? null : new Arc(arc.center, arc.radius);
                 if (newA != null) {
                     newA.vrts.add(arc.end1);
                     newA.vrts.add(first);
@@ -2141,7 +2141,7 @@ public class PatchUtil {
                 /*newA.prev = a.prev;
                 newA.prev.next = newA;*/
 
-                newA2 = (Point.distance(second, arc.end2) < 0.0018) ? null : new Arc(arc.center, arc.radius);
+                newA2 = (Point.distance(second, arc.end2) < 0.003) ? null : new Arc(arc.center, arc.radius);
                 if (newA2 != null) {
                     newA2.vrts.add(second);
                     newA2.vrts.add(arc.end2);
@@ -2184,7 +2184,7 @@ public class PatchUtil {
                 } else {
                     second = arc.end2;
                     newA.end2 = second;
-                    newA.vrts.remove(1);
+                    newA.vrts.remove(newA.vrts.size() - 1);
                     newA.vrts.add(second);
                 }
                 /*newA.next = newA2;

@@ -933,6 +933,17 @@ public class MeshRefinement {
         if (!split.containsKey(sID)){
             return false;
         }
+
+        /*if (a.arcPoint && b.arcPoint){
+            if (split.get(sID).containsKey(bID)){
+                return false;
+            }
+            Arc _a = a.arc;
+            if ((_a.end1 == a || _a.end2 == a) && (_a.end1 == b || _a.end2 == b)){
+                Point d = sp.vertices.get(split.get(sID).get(bID));
+                return _a.isInside()
+            }
+        }*/
         return split.get(sID).containsKey(bID);
     }
 
@@ -1488,6 +1499,14 @@ public class MeshRefinement {
                     int sID = (a._id > b._id) ? b._id : a._id;
                     int bID = (a._id > b._id) ? a._id : b._id;
 
+                    /*if (face.forceRefine){
+                        sID = b._id;
+                        bID = a._id;
+                    } else {
+                        sID = a._id;//(a._id > b._id) ? b._id : a._id;
+                        bID = b._id;//(a._id > b._id) ? a._id : b._id;
+                    }*/
+
                     if (!splitMap.containsKey(sID)){
                         splitMap.put(sID, new TreeMap<>());
                     }
@@ -1540,6 +1559,9 @@ public class MeshRefinement {
                         }
                     }
                     e = sp.vertices.get(map.get(bID));
+
+                    //sID = (a._id > b._id) ? b._id : a._id;
+                    //bID = (a._id > b._id) ? a._id : b._id;
 
                     sID = (a._id > c._id) ? c._id : a._id;
                     bID = (a._id > c._id) ? a._id : c._id;

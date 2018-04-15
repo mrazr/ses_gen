@@ -560,7 +560,7 @@ public class AdvancingFrontMethod {
             vrtsOffset = 0;
         }
         Boundary b = cp.boundaries.get(0);
-        timeout = 300000;
+        //timeout = 3000;
         verbose = (cp.id == 918);
         loopDetected = false;
         this.patch = cp;

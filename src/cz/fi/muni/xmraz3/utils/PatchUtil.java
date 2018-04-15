@@ -53,9 +53,7 @@ public class PatchUtil {
             //Arc_ bottom = (leftL.end2 == tp.convexPatchArcs.get(0).end2) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
             Arc bottom = (Point.distance(leftL.end2, tp.convexPatchArcs.get(0).end2) < 0.001) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
             Arc top = (tp.convexPatchArcs.get(0) == bottom) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
-            if (leftL.owner.id == 1349){
-                int fff = 4;
-            }
+
             if (leftL.owner.intersectingPatches.contains(rightL.owner.id)){
                 Arc cpl1 = leftL.owner.boundaries.get(0).arcs.stream().filter(a -> a.intersecting).findFirst().get();
                 Arc cpl2 = rightL.owner.boundaries.get(0).arcs.stream().filter(a -> a.intersecting).findFirst().get();
@@ -503,7 +501,9 @@ public class PatchUtil {
         Vector u1 = v1.changeVector(arc.end1, arc.center).makeUnit();
         Vector u2 = v2.changeVector(arc.end2, arc.center).makeUnit();
         Vector n1 = v3.changeVector(sp.sphere.center, arc.center).makeUnit();
-
+        if (sp.id == 1505){
+            int fd=  43;
+        }
         //Plane p1 = new Plane(arc.center, n1);
         p1.redefine(arc.center, n1);
         for (Boundary b : sp.boundaries){
@@ -864,10 +864,10 @@ public class PatchUtil {
         if (toBridge && !isOptimal(in1, a1, circle)){
             int o = 8;
         }
-        if (intersectionPoints.size() > 2 && a1.bOwner == a2.bOwner && Vector.getNormalVector(Point.subtractPoints(in1, circle.p).makeUnit(), Point.subtractPoints(in2, circle.p).makeUnit()).makeUnit().dotProduct(circle.v) < 0.0){
+        /*if (intersectionPoints.size() > 2 && a1.bOwner == a2.bOwner && Vector.getNormalVector(Point.subtractPoints(in1, circle.p).makeUnit(), Point.subtractPoints(in2, circle.p).makeUnit()).makeUnit().dotProduct(circle.v) < 0.0){
             int c = 3;
             toBridge = false;
-        }
+        }*/
         boolean forceContinue = false;
         boolean arcExit = false;
         int it = 0;
@@ -1940,7 +1940,7 @@ public class PatchUtil {
                 return;
             }
             SphericalPatch sp = arc.owner;
-            if (sp.id == 1158){
+            if (sp.id == 251){
                 System.out.println("ligh");
             }
             //List<Point> intersectionPoints = new ArrayList<>();
@@ -1967,7 +1967,12 @@ public class PatchUtil {
                 List<Boundary> newBS = new ArrayList<>();
                 Point first = ArcUtil.findClosestPointOnCircle(intersectionPoints, arc.end1, true, arc.center, arc.normal, true);
                 intersectionPoints.remove(first);
-                Arc a = ArcUtil.findContainingArc(first, circle, sp, arc);
+                Arc a = first.arc;//ArcUtil.findContainingArc(first, circle, sp, arc);
+                if (Point.distance(a.end1, first) < 0.001 && nextSign(first, a, circle) < 0.0){
+                    a = a.prev;
+                } else if (Point.distance(a.end2, first) < 0.001 && nextSign(first, a, circle) > 0.0){
+                    a = a.next;
+                }
                 if (a == null){
                     int c = 4;
                 }
@@ -2086,7 +2091,12 @@ public class PatchUtil {
 
 
                 Point second = intersectionPoints.get(0); //remaining intersection point
-                a = ArcUtil.findContainingArc(second, circle, sp, arc);
+                a = second.arc;//ArcUtil.findContainingArc(second, circle, sp, arc);
+                if (Point.distance(second, a.end1) < 0.001 && nextSign(second, a, circle) < 0.0){
+                    a = a.prev;
+                } else if (Point.distance(second, a.end2) < 0.001 && nextSign(second, a, circle) > 0.0){
+                    a = a.next;
+                }
                 b = new Boundary();
                 newA = new Arc(a.center, a.radius);
                 newA.vrts.add(a.end1);

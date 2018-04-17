@@ -12,12 +12,11 @@ public class Point {
     public double x;
     public double y;
     public double z;
-    public int afmSelect = -1;
-    public Edge leavingEdge;
+    //public int afmSelect = -1;
     public int afmIdx = -1;
-    public boolean isShared = false;
+    //public boolean isShared = false;
     public int idx = -1;
-    public boolean common = true;
+    //public boolean common = true;
     public int ownIdx = -1;
     public int _id = -1;
     //public static double scaleFactor = 5;
@@ -72,6 +71,13 @@ public class Point {
         double nZ = p.z + v.getZ();
         Point nP = new Point(nX, nY, nZ);
         return nP;
+    }
+
+    public Point assignTranslation(Point p, Vector v){
+        this.x = p.x + v.getX();
+        this.y = p.y + v.getY();
+        this.z = p.z + v.getZ();
+        return this;
     }
 
     public static Vector subtractPoints(Point p, Point q){

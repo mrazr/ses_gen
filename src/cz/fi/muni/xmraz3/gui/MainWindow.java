@@ -32,6 +32,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.stage.Stage;
 import smile.neighbor.Neighbor;
 
+import java.nio.Buffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -109,6 +110,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     Matrix3D pMat;
     Point3D cameraTarget;
     Point3D lightPos;
+    PMVMatrix look = new PMVMatrix();
 
     private List<SphericalPatch> convexPatchList;
     private boolean newAtoms = false;
@@ -122,9 +124,9 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     private AdvancingFrontMethod afm;
     AtomicBoolean update2 = new AtomicBoolean(false);
     private boolean update = false;
-    private List<Edge> updaLines = new ArrayList<>();
-    private List<Point> updaVrts = new ArrayList<>();
-    private List<Face> updaFaces = new ArrayList<>();
+    //private List<Edge> updaLines = new ArrayList<>();
+    //private List<Point> updaVrts = new ArrayList<>();
+    //private List<Face> updaFaces = new ArrayList<>();
     private boolean drawFaces = true;
     private boolean drawLinesOnTop = true;
     private boolean step = true;
@@ -132,12 +134,12 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     private boolean[] concavePatchesMeshed;
 
     private List<SphericalPatch> concavePatchList;
-    private boolean newCPs = false;
+    //private boolean newCPs = false;
     private boolean renderCPs = false;
-    private AdvancingFrontMethod cpAfm;
-    private List<Point> cpVrts = new ArrayList<>();
-    private List<Face> cpFaces = new ArrayList<>();
-    private AtomicBoolean cpUpdate = new AtomicBoolean(false);
+    //private AdvancingFrontMethod cpAfm;
+    //private List<Point> cpVrts = new ArrayList<>();
+    //private List<Face> cpFaces = new ArrayList<>();
+    //private AtomicBoolean cpUpdate = new AtomicBoolean(false);
 
 
     private float[] toriPatchCol = {33 / 255.f, 161 / 255.f, 235 / 255.f};
@@ -272,6 +274,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     private AtomicBoolean resourcesFreed = new AtomicBoolean(true);
     private int convexFaceCountShow;
 
+    private IntBuffer mouseSelectPixelBuffer = GLBuffers.newDirectIntBuffer(1);
+
 
     public void sendPatchesLists(List<SphericalPatch> convex, List<SphericalPatch> concave){
         stopRendering.set(true);
@@ -401,21 +405,21 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
 
     public void sendConvexPatchList(List<SphericalPatch> at){
         convexPatchList = at;
-        newAtoms = true;
-        afm = new AdvancingFrontMethod();
-        atomsMeshed = new boolean[at.size()];
-        for (int i = 0; i < atomsMeshed.length; ++i)
-            atomsMeshed[i] = false;
+        //newAtoms = true;
+        //afm = new AdvancingFrontMethod();
+        //atomsMeshed = new boolean[at.size()];
+        //for (int i = 0; i < atomsMeshed.length; ++i)
+        //    atomsMeshed[i] = false;
     }
 
     public void sendConcavePatchList(List<SphericalPatch> cp){
         concavePatchList = cp;
-        newCPs = true;
-        cpAfm = new AdvancingFrontMethod();
-        concavePatchesMeshed = new boolean[cp.size()];
-        for (int i = 0; i < cp.size(); ++i){
-            concavePatchesMeshed[i] = false;
-        }
+        //newCPs = true;
+        //cpAfm = new AdvancingFrontMethod();
+        //concavePatchesMeshed = new boolean[cp.size()];
+        //for (int i = 0; i < cp.size(); ++i){
+        //    concavePatchesMeshed[i] = false;
+        //}
     }
 
     public void selectConvexPatchesByIDs(List<Integer> ids){
@@ -636,14 +640,14 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         float aspect = 800 / (float)600;
         pMat = GLUtil.perspective(60.f, aspect, 0.1f, 100.f);
         lastTick = System.currentTimeMillis();
-        List<Point> vrts = new ArrayList<>();
-        for (int i = 0; i < data.length; i += 3){
-            vrts.add(new Point(data[i], data[i + 1], data[i + 2]));
-        }
-        List<Edge> lines = new ArrayList<>();
-        for (int i = 0; i < indices.length; i += 2){
-            lines.add(new Edge(indices[i], indices[i + 1]));
-        }
+        //List<Point> vrts = new ArrayList<>();
+        //for (int i = 0; i < data.length; i += 3){
+        //    vrts.add(new Point(data[i], data[i + 1], data[i + 2]));
+        //}
+        //List<Edge> lines = new ArrayList<>();
+        //for (int i = 0; i < indices.length; i += 2){
+        //    lines.add(new Edge(indices[i], indices[i + 1]));
+        //}
         mouseLocation = new Point(0, 0, 0);
         gl.glGenVertexArrays(1, mouseSelectVao, 0);
         gl.glGenBuffers(1, mouseSelectVbo, 0);
@@ -851,104 +855,19 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             drawModeUpdate = false;
         }
         updateCamera();
-        if (isNew){
-            this.sendNewData(vrts, lines);
-            isNew = false;
-        }
-        /*if (newAtoms){
-            this.sendConvexPatches2GPU();
-            newAtoms = false;
-        }
-        if (newCPs){
-            sendConcavePathes2GPU();
-        }*/
-
-        //gl.glPolygonMode(GL.GL_FRONT_AND_BACK, (drawFaces) ? GL4.GL_FILL : GL4.GL_LINE);
-        if (update2.get()){
-            SphericalPatch a = convexPatchList.get(selectedAtom.get());
-            //gl.glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-            gl.glBindVertexArray(a.vao[1]);
-            if (updaVrts.size() > 0){
-                gl.glBindBuffer(GL.GL_ARRAY_BUFFER, a.vbo[1]);
-                FloatBuffer vrts = GLBuffers.newDirectFloatBuffer(updaVrts.size() * 6);
-                for (Point p : updaVrts){
-                    vrts.put(p.getFloatData());
-                    Vector n = Point.subtractPoints(p, a.sphere.center).makeUnit();
-                    vrts.put(n.getFloatData());
-                }
-                vrts.rewind();
-                gl.glBufferSubData(GL.GL_ARRAY_BUFFER, a.usedVrtsBuffer, vrts.capacity() * Float.BYTES, vrts);
-                gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-                a.usedVrtsBuffer += updaVrts.size() * 6 * Float.BYTES;
-                a.vrtsCount += updaVrts.size();
-                System.out.println("USED Vrt: " + a.usedVrtsBuffer);
-            }
-            IntBuffer indx = GLBuffers.newDirectIntBuffer(3 * updaFaces.size());
-            /*for (Edge e : updaLines){
-                indx.put(e.v1);
-                indx.put(e.v2);
-            }*/
-            for (Face f : updaFaces){
-                indx.put(f.a);
-                indx.put(f.b);
-                indx.put(f.c);
-            }
-            indx.rewind();
-            gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, a.ebo[1]);
-            gl.glBufferSubData(GL.GL_ELEMENT_ARRAY_BUFFER, a.usedFaceBuffer, indx.capacity() * Integer.BYTES, indx);
-            gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);
-            /*a.usedIndBuffer += 2 * updaLines.size() * Integer.BYTES;
-            a.lineCount += 2 * updaLines.size();*/
-            a.faceCount += updaFaces.size();
-            a.usedFaceBuffer += 3 * updaFaces.size() * Integer.BYTES;
-            gl.glBindVertexArray(0);
-            update = false;
-            //update2.set(false);
-            update2.getAndSet(false);
-        }
-        if (cpUpdate.get()){
-            SphericalPatch c = concavePatchList.get(concavePatchesSelect.get(0));
-            gl.glBindVertexArray(c.vao[1]);
-            if (cpVrts.size() > 0){
-                gl.glBindBuffer(GL.GL_ARRAY_BUFFER, c.vbo[1]);
-                FloatBuffer newVrts = GLBuffers.newDirectFloatBuffer(cpVrts.size() * 3 * 2);
-                for (Point p : cpVrts){
-                    newVrts.put(p.getFloatData());
-                    Vector n = Point.subtractPoints(c.boundaries.get(0).patch.sphere.center, p).makeUnit();
-                    newVrts.put(n.getFloatData());
-                }
-                newVrts.rewind();
-                gl.glBufferSubData(GL.GL_ARRAY_BUFFER, c.usedVrtsBuffer, newVrts.capacity() * Float.BYTES, newVrts);
-                c.usedVrtsBuffer += cpVrts.size() * 3 * Float.BYTES * 2;
-                gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-            }
-            IntBuffer indBuffer = GLBuffers.newDirectIntBuffer(cpFaces.size() * 3);
-            for (Face f : cpFaces){
-                indBuffer.put(f.a);
-                indBuffer.put(f.b);
-                indBuffer.put(f.c);
-            }
-            indBuffer.rewind();
-            gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, c.ebo[1]);
-            gl.glBufferSubData(GL.GL_ELEMENT_ARRAY_BUFFER, c.usedIndBuffer, indBuffer.capacity() * Integer.BYTES, indBuffer);
-            gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, 0);
-            gl.glBindVertexArray(0);
-            c.faceCount += cpFaces.size();
-            c.usedIndBuffer += 3 * cpFaces.size() * Integer.BYTES;
-            cpUpdate.set(false);
-        }
         if (!stopRendering.get()){
             if (mouseSelect && moved){
                 moved = false;
                 gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, fbo[0]);
-                IntBuffer val = GLBuffers.newDirectIntBuffer(1);
-                gl.glReadPixels((int)mouseLocation.x, window.getHeight() - 1 - (int)mouseLocation.y, 1, 1, GL4.GL_RED_INTEGER, GL4.GL_INT, val);
-                hoverAtom = val.get();
+                //IntBuffer val = GLBuffers.newDirectIntBuffer(1);
+                mouseSelectPixelBuffer.clear();
+                gl.glReadPixels((int)mouseLocation.x, window.getHeight() - 1 - (int)mouseLocation.y, 1, 1, GL4.GL_RED_INTEGER, GL4.GL_INT, mouseSelectPixelBuffer);
+                hoverAtom = mouseSelectPixelBuffer.get();
                 //System.out.println("id: " + hoverAtom);
                 gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
             }
-            PMVMatrix modelMat = new PMVMatrix();
-            modelMat.glLoadIdentity();
+            //PMVMatrix modelMat = new PMVMatrix();
+            //modelMat.glLoadIdentity();
             //modelMat.glTranslatef(modelX, modelY, modelZ);
             gl.glUseProgram(mainProgram);
             /*PMVMatrix projection = new PMVMatrix();
@@ -960,16 +879,16 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             up[1], up[2]);
             //projection.glMultMatrixf(view.glGetMatrixf());
             view.glMultMatrixf(projection.glGetMatrixf());*/
-            Matrix3D vMat = new Matrix3D();
+            /*Matrix3D vMat = new Matrix3D();
             vMat.translate(-cameraPos[0], -cameraPos[1], -cameraPos[2]);
             Matrix3D mMat = new Matrix3D();
             mMat.translate(modelX, modelY,modelZ);
             Matrix3D mvMat = new Matrix3D();
             mvMat.concatenate(vMat);
-            mvMat.concatenate(mMat);
+            mvMat.concatenate(mMat);*/
 
-            PMVMatrix look = new PMVMatrix();
-            look.glLoadIdentity();
+            //PMVMatrix look = new PMVMatrix();
+            //look.glLoadIdentity();
             /*Vector3D target = new Vector3D(cameraTarget.getX() - cameraPos[0],
                     cameraTarget.getY() - cameraPos[1],
                     cameraTarget.getZ() - cameraPos[2]);
@@ -981,26 +900,25 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     (float)up.getX(), (float)up.getY(), (float)up.getZ());
             PMVMatrix view = new PMVMatrix();
             view.glTranslatef(-cameraPos[0], -cameraPos[1], -cameraPos[2]);*/
-            look.gluLookAt(cameraPos[0], cameraPos[1], cameraPos[2],
-                    cameraPos[0] + direction[0], cameraPos[1] + direction[1], + cameraPos[2] + direction[2],
-                    up[0], up[1], up[2]);
+
 
             //int mv_loc = gl.glGetUniformLocation(mainProgram, "mv_matrix");
             //int view_loc = gl.glGetUniformLocation(mainProgram, "viewMat");
             //int proj_loc = gl.glGetUniformLocation(mainProgram, "proj_matrix");
             //int uniModelMatLoc = gl.glGetUniformLocation(mainProgram, "modelMat");
             //int uniMeshColorLoc = gl.glGetUniformLocation(mainProgram, "col");
+
             int lightColor_loc = gl.glGetUniformLocation(mainProgram, "lightColor");
             int lightPos_loc = gl.glGetUniformLocation(mainProgram, "lightPos");
             int alpha_loc = gl.glGetUniformLocation(mainProgram, "alpha");
-            Matrix4 mat = new Matrix4();
+            //Matrix4 mat = new Matrix4();
             //gl.glBindVertexArray(vao[0]);
             gl.glUniformMatrix4fv(uniProjMatLoc, 1, false, pMat.getFloatValues(), 0);
             gl.glUniformMatrix4fv(uniViewMatLoc, 1, false, look.glGetMatrixf());
             gl.glUniformMatrix4fv(uniModelMatLoc, 1, false, modelMAT.glGetMatrixf());
             gl.glUniformMatrix4fv(uniMvInverseLoc, 1, false, modelMAT.glGetMvitMatrixf());
             gl.glUniform3f(lightColor_loc, 1.f, 1.f, 1.f);
-            Point p = new Point(lightPos.getX(), lightPos.getY(), lightPos.getZ());
+            //Point p = new Point(lightPos.getX(), lightPos.getY(), lightPos.getZ());
             //float[] light = new float[3];
             //light =
             gl.glUniform3f(lightPos_loc, (float)lightPos.getX(), (float)lightPos.getY(), (float)lightPos.getZ());
@@ -1052,6 +970,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         cameraPos[1] += right[1] * cright * speed * deltaTime;
         cameraPos[2] += right[2] * cright * speed * deltaTime;
 
+
+
         lightPos.setX(cameraPos[0]);
         lightPos.setY(cameraPos[1]);
         lightPos.setZ(cameraPos[2]);
@@ -1076,6 +996,12 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             slerping = false;
             slerpParam = 0.f;
         }
+
+        look.glLoadIdentity();
+        look.gluLookAt(cameraPos[0], cameraPos[1], cameraPos[2],
+                cameraPos[0] + direction[0], cameraPos[1] + direction[1], + cameraPos[2] + direction[2],
+                up[0], up[1], up[2]);
+
         if (!stopRendering.get() && mouseSelect){
             if (convexPatchesFaceCount == 0 || concavePatchesFaceCount == 0 || toriPatchesFaceCount == 0){
                 return;
@@ -1126,13 +1052,13 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             int projLoc = gl.glGetUniformLocation(selProgram, "proj_matrix");
             int modelLoc = gl.glGetUniformLocation(selProgram, "modelMat");
             //int atomIdLoc = gl.glGetUniformLocation(selProgram, "atomID");
-            PMVMatrix look = new PMVMatrix();
-            look.glLoadIdentity();
-            look.gluLookAt(cameraPos[0], cameraPos[1], cameraPos[2],
-                    cameraPos[0] + direction[0], cameraPos[1] + direction[1], + cameraPos[2] + direction[2],
-                    up[0], up[1], up[2]);
-            PMVMatrix modelMat = new PMVMatrix();
-            modelMat.glLoadIdentity();
+            //PMVMatrix look = new PMVMatrix();
+            //look.glLoadIdentity();
+            //look.gluLookAt(cameraPos[0], cameraPos[1], cameraPos[2],
+            //        cameraPos[0] + direction[0], cameraPos[1] + direction[1], + cameraPos[2] + direction[2],
+            //        up[0], up[1], up[2]);
+            //PMVMatrix modelMat = new PMVMatrix();
+            //modelMat.glLoadIdentity();
 
             gl.glUniformMatrix4fv(projLoc, 1, false, pMat.getFloatValues(), 0);
             gl.glUniformMatrix4fv(viewLoc, 1, false, look.glGetMatrixf());
@@ -1195,81 +1121,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         }
     }
 
-    private void meshConvexPatches(int start, int end, boolean waitForOthers) {
-        stopRendering.set(true);
-        List<Point> verts = new ArrayList<>();
-        List<Face> faces = new ArrayList<>();
-        AdvancingFrontMethod afm = new AdvancingFrontMethod();
-        long startTime = System.currentTimeMillis();
-        for (int i = start; i < end; ++i) {
-            SphericalPatch a = convexPatchList.get(i);
-            if (!a.valid){
-                MeshRefinement.refinement.enqueue(a);
-                continue;
-            }
-            if (!atomsMeshed[i]) {
-                //selectedAtom.set(i);
-                //List<Point> noveBody = new ArrayList<>();
-                long time = 0;
-                //System.out.println("Meshing atom " + i);
-                if (a.boundaries.size() > 0) {
-                    afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
-                    //updaFaces = afm.soho(a.convexPatchBoundaries.get(0), Math.toRadians(75), 0.2, 0.3 * (Math.sqrt(3) / 2.f), false, noveBody);
-                        /*do {
-                            overallTime += System.currentTimeMillis() - time;
-                            updaVrts.clear();
-                            updaFaces.clear();
-
-                            afm.mesh(noveBody, updaFaces, false);
-                            //System.out.println("Done meshing atom " + i);
-                            updaVrts = noveBody;
-                            //update =
-                            //update2.set(true);
-                            atomsMeshed[i] = true;
-                            time = System.currentTimeMillis();
-                            /*while (update2.get()) {
-                                //System.out.println("Waiting for gl");
-                            }
-                        } while (!afm.atomComplete);*/
-                    verts.clear();
-                    faces.clear();
-                    //time = System.currentTimeMillis();
-                    do {
-                        afm._mesh2();
-                    } while (!afm.atomComplete);
-                    if (afm.loop){
-                        System.out.println("convex " + i + " looped");
-                    }
-                    //meshTime += (System.currentTimeMillis() - time);
-                    atomsMeshed[i] = true;
-                    //update2.getAndSet(true);
-                    //trianglesCount += updaFaces.size();
-                    //while (update2.get()) {
-                        //System.out.println(".");
-                    //}
-                }
-                MeshRefinement.refinement.enqueue(a);
-            }
-        }
-        long endTime = System.currentTimeMillis();
-        System.out.println("Meshed in " + (endTime - startTime) + " ms");
-        convexMeshThreadsCounter.getAndIncrement();
-        if (waitForOthers && false){
-            while (convexMeshThreadsCounter.get() < 4){}
-            GLRunnable task = new GLRunnable() {
-                @Override
-                public boolean run(GLAutoDrawable glAutoDrawable) {
-                    pushConvexPatchesToGPU();
-                    convexMeshInitialized = true;
-                    return true;
-                }
-            };
-            window.invoke(false, task);
-        } else {
-            //convexPushData2GPU.set(true);
-
-        }
-    }
+    private IntBuffer selectStart = GLBuffers.newDirectIntBuffer(20);
+    private IntBuffer selectEnd = GLBuffers.newDirectIntBuffer(20);
 
     private void drawConvex(){
         gl.glUniform3fv(uniNormalColorLoc, 1, convexPatchCol, 0);
@@ -1290,24 +1143,32 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             } else {
                 gl.glUniform1iv(uniSelectedMeshStartLoc, 20, zeroes);
                 gl.glUniform1iv(uniSelectedMeshEndLoc, 20, zeroes);
-                IntBuffer start = GLBuffers.newDirectIntBuffer(convexPatchesSelect.size());
-                IntBuffer end = GLBuffers.newDirectIntBuffer(convexPatchesSelect.size());
+                //IntBuffer start = GLBuffers.newDirectIntBuffer(convexPatchesSelect.size());
+                //IntBuffer end = GLBuffers.newDirectIntBuffer(convexPatchesSelect.size());
+                selectStart.clear();
+                selectEnd.clear();
                 for (Integer i : convexPatchesSelect) {
                     SphericalPatch a = convexPatchList.get(i);
-                    start.put(a.vboOffset);
-                    end.put(a.vboOffset + a.vertices.size());
+                    //start.put(a.vboOffset);
+                    //end.put(a.vboOffset + a.vertices.size());
+                    selectStart.put(a.vboOffset);
+                    selectEnd.put(a.vboOffset + a.vertices.size());
                 }
                 if (convexPatchesSelect.size() == 0) {
-                    start = GLBuffers.newDirectIntBuffer(20);
+                    //start = GLBuffers.newDirectIntBuffer(20);
                     for (int i = 0; i < 20; ++i) {
-                        start.put(-1);
+                        //start.put(-1);
+                        selectStart.put(-1);
                     }
                 }
-                start.rewind();
-                end.rewind();
-                gl.glUniform1i(uniSelectedMeshCountLoc, convexPatchesSelect.size());
-                gl.glUniform1iv(uniSelectedMeshStartLoc, start.capacity(), start);
-                gl.glUniform1iv(uniSelectedMeshEndLoc, end.capacity(), end);
+                //start.rewind();
+                //end.rewind();
+                selectStart.rewind();
+                selectEnd.rewind();
+                int buffCap = convexPatchesSelect.size();
+                gl.glUniform1i(uniSelectedMeshCountLoc, buffCap); //convexPatchesSelect.size());
+                gl.glUniform1iv(uniSelectedMeshStartLoc, buffCap, selectStart);
+                gl.glUniform1iv(uniSelectedMeshEndLoc, buffCap, selectEnd);
                 gl.glUniform1f(uniAmbientStrengthLoc, 0.5f);
                 gl.glUniform3fv(uniMeshColorLoc, 1, convexPatchCol, 0);
                 gl.glBindVertexArray(meshVao[CONVEX]);
@@ -1358,26 +1219,32 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             } else {
                 gl.glUniform1iv(uniSelectedMeshStartLoc, 20, zeroes);
                 gl.glUniform1iv(uniSelectedMeshEndLoc, 20, zeroes);
-                IntBuffer start = GLBuffers.newDirectIntBuffer(concavePatchesSelect.size());
-                IntBuffer end = GLBuffers.newDirectIntBuffer(concavePatchesSelect.size());
+                //IntBuffer start = GLBuffers.newDirectIntBuffer(concavePatchesSelect.size());
+                //IntBuffer end = GLBuffers.newDirectIntBuffer(concavePatchesSelect.size());
+                selectStart.clear();
+                selectEnd.clear();
                 for (Integer i : concavePatchesSelect) {
                     SphericalPatch a = concavePatchList.get(i);
-                    start.put(a.vboOffset);
-                    end.put(a.vboOffset + a.vertices.size());
+                    //start.put(a.vboOffset);
+                    //end.put(a.vboOffset + a.vertices.size());
+                    selectStart.put(a.vboOffset);
+                    selectEnd.put(a.vboOffset + a.vertices.size());
                 }
                 if (concavePatchesSelect.size() == 0) {
-                    start = GLBuffers.newDirectIntBuffer(20);
+                    //start = GLBuffers.newDirectIntBuffer(20);
                     for (int i = 0; i < 20; ++i) {
-                        start.put(-1);
+                        //start.put(-1);
+                        selectStart.put(-1);
                     }
                 }
-                start.rewind();
-                end.rewind();
+                selectStart.rewind();
+                selectEnd.rewind();
+                int  buffCap = concavePatchesSelect.size();
                 gl.glFrontFace(GL4.GL_CW);
                 gl.glUniform1f(uniAmbientStrengthLoc, 0.5f);
-                gl.glUniform1i(uniSelectedMeshCountLoc, concavePatchesSelect.size());
-                gl.glUniform1iv(uniSelectedMeshStartLoc, start.capacity(), start);
-                gl.glUniform1iv(uniSelectedMeshEndLoc, end.capacity(), end);
+                gl.glUniform1i(uniSelectedMeshCountLoc, buffCap); //concavePatchesSelect.size());
+                gl.glUniform1iv(uniSelectedMeshStartLoc, buffCap, selectStart);
+                gl.glUniform1iv(uniSelectedMeshEndLoc, buffCap, selectEnd);
                 gl.glFrontFace(GL4.GL_CW);
                 gl.glUniform3fv(uniMeshColorLoc, 1, concavePatchCol, 0);
                 gl.glUniform3fv(uniNormalColorLoc, 1, concavePatchCol, 0);
@@ -1424,90 +1291,39 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             }
             gl.glUniform1iv(uniSelectedMeshStartLoc, 20, zeroes);
             gl.glUniform1iv(uniSelectedMeshEndLoc, 20, zeroes);
-            IntBuffer start = GLBuffers.newDirectIntBuffer(toriPatchesSelect.size());
-            IntBuffer end = GLBuffers.newDirectIntBuffer(toriPatchesSelect.size());
+            //IntBuffer start = GLBuffers.newDirectIntBuffer(toriPatchesSelect.size());
+            //IntBuffer end = GLBuffers.newDirectIntBuffer(toriPatchesSelect.size());
+            selectStart.clear();
+            selectEnd.clear();
             for (Integer i : toriPatchesSelect) {
                 ToroidalPatch a = Surface.rectangles.get(i);
-                start.put(a.vboOffset);
-                end.put(a.vboOffset + (a.vrts.size() / 2));
+                selectStart.put(a.vboOffset);
+                selectEnd.put(a.vboOffset + (a.vrts.size() / 2));
+                //start.put(a.vboOffset);
+                //end.put(a.vboOffset + (a.vrts.size() / 2));
             }
             if (toriPatchesSelect.size() == 0) {
-                start = GLBuffers.newDirectIntBuffer(20);
+                ///start = GLBuffers.newDirectIntBuffer(20);
                 for (int i = 0; i < 20; ++i) {
-                    start.put(-1);
+                    //start.put(-1);
+                    selectStart.put(-1);
                 }
             }
-            start.rewind();
-            end.rewind();
+            //start.rewind();
+            //end.rewind();
+            selectStart.rewind();
+            selectEnd.rewind();
+            int buffCap = toriPatchesSelect.size();//(toriPatchesSelect.size() > 0) ? toriPatchesSelect.size() : 20;
             gl.glUniform1f(uniAmbientStrengthLoc, 0.5f);
-            gl.glUniform1i(uniSelectedMeshCountLoc, toriPatchesSelect.size());
-            gl.glUniform1iv(uniSelectedMeshStartLoc, start.capacity(), start);
-            gl.glUniform1iv(uniSelectedMeshEndLoc, end.capacity(), end);
+            gl.glUniform1i(uniSelectedMeshCountLoc, buffCap);//toriPatchesSelect.size());
+            gl.glUniform1iv(uniSelectedMeshStartLoc, buffCap, selectStart);
+            gl.glUniform1iv(uniSelectedMeshEndLoc, buffCap, selectEnd);
             gl.glUniform3fv(uniMeshColorLoc, 1, toriPatchCol, 0);
             gl.glUniform3fv(uniNormalColorLoc, 1, toriPatchCol, 0);
             //gl.glUniform3fv(uniSelectedColorLoc, 1, selecte)
             gl.glBindVertexArray(meshVao[TORUS]);
             gl.glDrawArrays(GL4.GL_TRIANGLES, 0, 3 * toriPatchesFaceCount);
             gl.glBindVertexArray(0);
-        }
-    }
-
-    private void meshConcavePatches(int start, int end, boolean waitForOthers){
-        stopRendering.set(true);
-        List<Point> verts = new ArrayList<>();
-        List<Face> faces = new ArrayList<>();
-        AdvancingFrontMethod afm = new AdvancingFrontMethod();
-        long startTime = System.currentTimeMillis();
-        for (int i = start; i < end; ++i) {
-            if (!concavePatchesMeshed[i]) {
-                SphericalPatch cp = concavePatchList.get(i);
-                if (!cp.valid){
-                    //MeshRefinement.refinement.enqueue(cp);
-                    continue;
-                }
-                //selectedConcaveP.set(i);
-                //List<Point> noveBody = new ArrayList<>();
-                //cpFaces = cpAfm.soho(cp.b, Math.toRadians(70), 0.2, 0.3 * (Math.sqrt(3)/2.f), false, noveBody);
-                afm.atomComplete = false;
-                while (!afm.atomComplete) {
-                    faces.clear();
-                    verts.clear();
-                    afm._initializeConcaveAFM(cp, Math.toRadians(SesConfig.minAlpha), SesConfig.distTolerance, Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
-                    long time = System.currentTimeMillis();
-                    afm._mesh2();
-                    //meshTime += System.currentTimeMillis() - time;
-                    //cpVrts = noveBody;
-                    //trianglesCount += cpFaces.size();
-                    concavePatchesMeshed[i] = true;
-                    if (afm.loop){
-                        System.out.println("concave " + i + " looped");
-                    }
-                    //if (cpAfm.loop) {
-                     //   looped.add(i);
-                    //}
-                    //cpUpdate.set(true);
-                    //while (cpUpdate.get()) ;
-                }
-                //MeshRefinement.refinement.enqueue(cp);
-            }
-        }
-        long endTime = System.currentTimeMillis();
-        System.out.println("Concave meshed in " + (endTime - startTime) + " ms");
-        concaveMeshThreadsCounter.getAndIncrement();
-        if (waitForOthers){
-            while (concaveMeshThreadsCounter.get() < 4){}
-            GLRunnable task = new GLRunnable() {
-                @Override
-                public boolean run(GLAutoDrawable glAutoDrawable) {
-                    pushConcavePatchesToGPU();
-                    concaveMeshInitialized = true;
-                    return true;
-                }
-            };
-            window.invoke(false, task);
-            stopRendering.set(false);
-        } else {
-            //concavePushData2GPU.set(true);
         }
     }
 
@@ -1666,7 +1482,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 vrtsNormals.add(p);
             }
             tp.vboOffset = vboOffset;
-            tp.faceCount = 3 * tp.faces.size();
+            //tp.faceCount = 3 * tp.faces.size();
             vboOffset += tp.vrts.size() / 2;
             faceCount += tp.faces.size();
         }
@@ -1744,7 +1560,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         }
 
         if (keyEvent.getKeyChar() == '.'){
-            if (!MeshRefinement.refinement.isRunning()){
+            /*if (!MeshRefinement.refinement.isRunning()){
                 //MeshRefinement.refinement.start();
             }
             concavePushData2GPU.set(false);
@@ -1777,7 +1593,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             (new Thread(task1)).start();
             (new Thread(task2)).start();
             (new Thread(task3)).start();
-            (new Thread(task4)).start();
+            (new Thread(task4)).start();*/
         }
 
         if (keyEvent.getKeyCode() == KeyEvent.VK_F1){

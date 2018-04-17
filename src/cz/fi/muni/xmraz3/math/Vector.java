@@ -116,6 +116,20 @@ public class Vector {
         return new Vector(w1, w2, w3);
     }
 
+    public Vector assignNormalVectorOf(Vector u, Vector v){
+        x = u.y*v.z - u.z*v.y;
+        y = u.z*v.x - u.x*v.z;
+        z = u.x*v.y - u.y*v.x;
+        return this;
+    }
+
+    public Vector assignAddition(Vector u, Vector v){
+        this.x = u.x + v.x;
+        this.y = u.y + v.y;
+        this.z = u.z + v.z;
+        return this;
+    }
+
     public Vector projectionOnto(Vector v){
         v.makeUnit();
         Vector proj = new Vector(v);
@@ -184,6 +198,20 @@ public class Vector {
         x = p.x - q.x;
         y = p.y - q.y;
         z = p.z - q.z;
+        return this;
+    }
+
+    public Vector changeVector(Vector v){
+        this.x = v.x;
+        this.y = v.y;
+        this.z = v.z;
+        return this;
+    }
+
+    public Vector changeVector(double x, double y, double z){
+        this.x = x;
+        this.y = y;
+        this.z = z;
         return this;
     }
 

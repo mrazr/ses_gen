@@ -33,10 +33,11 @@ public class MeshRefinement {
     public static List<Map<Integer, Map<Integer, Integer>>> concaveEdgeSplitMap;
     public static List<Map<Integer, List<Face>>> convexVertexFaceMap;
     public static List<Map<Integer, List<Face>>> concaveVertexFaceMap;
-
+    public static AtomicInteger trianglesGenerated = new AtomicInteger(0);
+    private static int[] _triangles;
     public static AtomicBoolean free = new AtomicBoolean(true);
     public static AtomicBoolean finished = new AtomicBoolean(false);
-
+    private static Vector[] v;
     public static boolean isFree(){
         return free.get();
     }
@@ -79,16 +80,27 @@ public class MeshRefinement {
             } while (!facesToRefine.isEmpty());
         }
     }
-
-    private static void _meshRefine(List<SphericalPatch> patches, int threadIdx){
+    private static void __meshRefine(List<SphericalPatch> patches, int threadIdx){
         threads_working.getAndIncrement();
         long startTime = System.currentTimeMillis();
         int step = patches.size() / THREAD_COUNT;
         Queue<Face> facesToRefine = new LinkedList<>();
         List<Face> newFaces = new ArrayList<>(1000);
+        Vector u = v[threadIdx];
+        int numOfTriangles = 0;
         for (int i = threadIdx * step; i < ((threadIdx == 3) ? patches.size() : (threadIdx + 1) * step); ++i) {
             SphericalPatch sp = patches.get(i);
-            if (!sp.convexPatch) {
+            if (sp.convexPatch){
+                for (Boundary b : sp.boundaries){
+                    for (Arc a : b.arcs){
+                        for (Point p : a.vrts){
+                            p.arc = a;
+                        }
+                    }
+                }
+            }
+            if (!sp.convexPatch && false) {
+                _triangles[threadIdx] += sp.faces.size();
                 continue;
             }
             if (!sp.valid) {
@@ -110,23 +122,31 @@ public class MeshRefinement {
                 if (!face.divisible){
                     int fads = 43;
                 }
-                if (sp.id == 13 && arcPointsInFace(face, sp.vertices) > 1){
+                if (sp.id == 868 && arcPointsInFace(face, sp.vertices) > 1){
                     int _sf = 43;
                 }
                 boolean arcFace = isArcFace(face, sp.vertices);
-                if (!face.divisible || (arcFace && !canSubdivideArcFace(face, sp)) || (face.forceRefine && isSmallTriangle(face, sp, 1.6 * SesConfig.edgeLimit))){
-                    if (isSplit(a, b, sp) || (Point.distance(a, b) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                if (!face.divisible || (arcFace && !canSubdivideArcFace(face, sp)) || (face.forceRefine && isSmallTriangle(face, sp, Surface.refineFac * SesConfig.edgeLimit))){
+                    if ((arcFace && isSplit(a, b, sp)) || (!arcFace && (isSplit(a, b, sp) || (Point.distance(a, b) - Surface.refineFac * SesConfig.edgeLimit) > 0.0))){
                         int sID = (a._id > b._id) ? b._id : a._id;
                         int bID = (a._id > b._id) ? a._id : b._id;
                         PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        Face _f = PatchUtil.retrieveFirstFaceFromEdgeFacesMap(sp, a._id, b._id);
+                        if (_f != null){
+                            //facesToRefine.add(_f);
+                        }
                         if (!splitMap.containsKey(sID)){
                             splitMap.put(sID, new TreeMap<>());
                         }
                         Map<Integer, Integer> map = splitMap.get(sID);
                         Point d;
                         if (!map.containsKey(bID)){
-                            d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
-                            d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d = Point.translatePoint(a, u.changeVector(b, a).multiply(0.5f));
+                            //d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
+                            //v.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius);
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            //d = Point.translatePoint(sp.sphere.center, v);
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                             d._id = sp.nextVertexID++;
                             sp.vertices.add(d);
                             map.put(bID, d._id);
@@ -141,18 +161,25 @@ public class MeshRefinement {
                         nF.divisible = false;
                         facesToRefine.add(nF);
                         face.valid = false;
-                    } else if (isSplit(b, c, sp) || (Point.distance(b, c) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                        numOfTriangles += 1;
+                    } else if ((arcFace && isSplit(b, c, sp)) || (!arcFace && (isSplit(b, c, sp) || (Point.distance(b, c) - Surface.refineFac * SesConfig.edgeLimit) > 0.0))){
                         int sID = (b._id > c._id) ? c._id : b._id;
                         int bID = (b._id > c._id) ? b._id : c._id;
                         PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        Face _f = PatchUtil.retrieveFirstFaceFromEdgeFacesMap(sp, b._id, c._id);
+                        if (_f != null){
+                            //facesToRefine.add(_f);
+                        }
                         if (!splitMap.containsKey(sID)){
                             splitMap.put(sID, new TreeMap<>());
                         }
                         Map<Integer, Integer> map = splitMap.get(sID);
                         Point d;
                         if (!map.containsKey(bID)){
-                            d = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
-                            d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d = Point.translatePoint(b, u.changeVector(c, b).multiply(0.5f));
+                            //d = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                             d._id = sp.nextVertexID++;
                             sp.vertices.add(d);
                             map.put(bID, d._id);
@@ -167,18 +194,25 @@ public class MeshRefinement {
                         PatchUtil.addFaceToEdgeFacesMap(sp, nF);
                         facesToRefine.add(nF);
                         face.valid = false;
-                    } else if (isSplit(c, a, sp) || (Point.distance(c, a) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                        numOfTriangles += 1;
+                    } else if ((arcFace && isSplit(c, a, sp)) || (!arcFace && (isSplit(c, a, sp) || (Point.distance(c, a) - Surface.refineFac * SesConfig.edgeLimit) > 0.0))){
                         int sID = (a._id > c._id) ? c._id : a._id;
                         int bID = (a._id > c._id) ? a._id : c._id;
                         PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        Face _f = PatchUtil.retrieveFirstFaceFromEdgeFacesMap(sp, c._id, a._id);
+                        if (_f != null){
+                            //wfsfacesToRefine.add(_f);
+                        }
                         if (!splitMap.containsKey(sID)){
                             splitMap.put(sID, new TreeMap<>());
                         }
                         Map<Integer, Integer> map = splitMap.get(sID);
                         Point d;
                         if (!map.containsKey(bID)){
-                            d = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
-                            d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            //d = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
+                            d = Point.translatePoint(a, u.changeVector(c, a).multiply(0.5f));
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                             d._id = sp.nextVertexID++;
                             sp.vertices.add(d);
                             map.put(bID, d._id);
@@ -193,14 +227,15 @@ public class MeshRefinement {
                         PatchUtil.addFaceToEdgeFacesMap(sp, nF);
                         facesToRefine.add(nF);
                         face.valid = false;
+                        numOfTriangles += 1;
                     } else {
                         newFaces.add(face);
                     }
                     //continue;
                 } else if (face.forceRefine ||
-                        Point.distance(a, b) - 1.6 * SesConfig.edgeLimit > 0.0 ||
-                        Point.distance(b, c) - 1.6 * SesConfig.edgeLimit > 0.0 ||
-                        Point.distance(c, a) - 1.6 * SesConfig.edgeLimit > 0.0){
+                        Point.distance(a, b) - Surface.refineFac * SesConfig.edgeLimit > 0.0 ||
+                        Point.distance(b, c) - Surface.refineFac * SesConfig.edgeLimit > 0.0 ||
+                        Point.distance(c, a) - Surface.refineFac * SesConfig.edgeLimit > 0.0){
                     int sID = (a._id > b._id) ? b._id : a._id;
                     int bID = (a._id > b._id) ? a._id : b._id;
 
@@ -210,8 +245,10 @@ public class MeshRefinement {
                     Map<Integer, Integer> map = splitMap.get(sID);
                     Point d;
                     if (!map.containsKey(bID)){
-                        d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
-                        d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        //d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
+                        //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        d = Point.translatePoint(a, u.changeVector(b, a).multiply(0.5f));
+                        d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                         sp.vertices.add(d);
                         d._id = sp.nextVertexID++;
                         map.put(bID, d._id);
@@ -236,8 +273,10 @@ public class MeshRefinement {
                     map = splitMap.get(sID);
                     Point e;
                     if (!map.containsKey(bID)){
-                        e = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
-                        e = Point.translatePoint(sp.sphere.center, Point.subtractPoints(e, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        //e = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
+                        //e = Point.translatePoint(sp.sphere.center, Point.subtractPoints(e, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        e = Point.translatePoint(b, u.changeVector(c, b).multiply(0.5f));
+                        e.assignTranslation(sp.sphere.center, u.changeVector(e, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                         sp.vertices.add(e);
                         e._id = sp.nextVertexID++;
                         map.put(bID, e._id);
@@ -262,8 +301,10 @@ public class MeshRefinement {
                     map = splitMap.get(sID);
                     Point f;
                     if (!map.containsKey(bID)){
-                        f = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
-                        f = Point.translatePoint(sp.sphere.center, Point.subtractPoints(f, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        //f = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
+                        //f = Point.translatePoint(sp.sphere.center, Point.subtractPoints(f, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        f = Point.translatePoint(a, u.changeVector(c, a).multiply(0.5f));
+                        f.assignTranslation(sp.sphere.center, u.changeVector(f, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                         sp.vertices.add(f);
                         f._id = sp.nextVertexID++;
                         map.put(bID, f._id);
@@ -293,6 +334,7 @@ public class MeshRefinement {
                     PatchUtil.addFaceToEdgeFacesMap(sp, nF);
                     facesToRefine.add(nF);
                     face.valid = false;
+                    numOfTriangles += 3;
                 } else {
                     newFaces.add(face);
                 }
@@ -308,9 +350,15 @@ public class MeshRefinement {
                     sp.faces.add(f);
                 }
             }
+            _triangles[threadIdx] += sp.faces.size();
         }
+
         System.out.println("REFINE COMPLETE, thd: " + threadIdx + " in " + (System.currentTimeMillis() - startTime) + " ms");
         //threads_working.decrementAndGet();
+        //trianglesGenerated.addAndGet(numOfTriangles);
+        if (!patches.get(0).convexPatch) {
+            trianglesGenerated.addAndGet(_triangles[threadIdx]);
+        }
         threads_done.incrementAndGet();
         if (threads_done.get() == THREAD_COUNT){
             if (SesConfig.useGUI) {
@@ -325,6 +373,7 @@ public class MeshRefinement {
             if (!patches.get(0).convexPatch){
                 finished.set(true);
             }
+            System.out.println(trianglesGenerated.get() + " triangles generated");
         }
     }
 
@@ -598,7 +647,15 @@ public class MeshRefinement {
         return false;
     }
 
-    private MeshRefinement(){}
+    private MeshRefinement(){
+        v = new Vector[4];
+        v[0] = new Vector(0, 0, 0);
+        v[1] = new Vector(0, 0, 0);
+        v[2] = new Vector(0, 0, 0);
+        v[3] = new Vector(0, 0, 0);
+        _triangles = new int[4];
+        _triangles[0] = _triangles[1] = _triangles[2] = _triangles[3] = 0;
+    }
 
     public static void generateBaseMesh(int start, int end, List<SphericalPatch> patches, int threadId) {
         free.set(false);
@@ -625,9 +682,9 @@ public class MeshRefinement {
             if (!a.meshed) {
                 if (a.boundaries.size() > 0) {
                     if (a.convexPatch) {
-                        afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
+                        afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit, Surface.maxEdgeLen);
                     } else {
-                        afm._initializeConcaveAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit);
+                        afm._initializeConcaveAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit, Surface.maxEdgeLen);
                     }
                     do {
                         //afm._mesh2();
@@ -641,7 +698,7 @@ public class MeshRefinement {
                     if (afm.loop){
                         System.out.println((a.convexPatch) ? "convex " + i + "looped" : "concave" + i + " looped");
                     } else {
-                        optimizeMesh(a, 0.5 * Surface.maxEdgeLen);
+                        optimizeMesh(a, 0.5 * Surface.maxEdgeLen, threadId);
                     }
                     if (!a.convexPatch && a.id == 225){
                         System.out.println("A:");
@@ -655,6 +712,7 @@ public class MeshRefinement {
         System.out.println("Meshed in " + (endTime - startTime) + " ms");
         threads_working.decrementAndGet();
         threads_done.incrementAndGet();
+        //trianglesGenerated.addAndGet(afm.numOfTriangles);
         if (threadId == 0){
             while (threads_done.get() != THREAD_COUNT);
             System.out.println("STARTING REFINING");
@@ -663,18 +721,22 @@ public class MeshRefinement {
         }
     }
 
-    private static void optimizeMesh(SphericalPatch sp, double len){
+    private static void optimizeMesh(SphericalPatch sp, double len, int threadId){
         Queue<Face> toOptimize = new LinkedList<>(sp.faces);
         List<Face> facesToUpdate = new ArrayList<>();
         List<Point> vertices = new ArrayList<>(sp.vertices);
         /*for (int i = sp.arcPointCount; i < sp.vertices.size(); ++i){
             vertices.add(sp.vertices.get(i));
         }*/
+        if (!sp.convexPatch && sp.id == 918){
+            return;
+        }
         int end = sp.vertices.size() - sp.arcPointCount;
         for (int i = 0; i < end; ++i){
             sp.vertices.remove(sp.arcPointCount);
         }
         //System.out.println("starting: " + sp.id);
+        Vector u = v[threadId];
         while (!toOptimize.isEmpty()){
             Face f = toOptimize.poll();
             Point a = vertices.get(f.a);
@@ -711,8 +773,9 @@ public class MeshRefinement {
                 d.arcPoint = true;
 
             } else {
-                d = Point.translatePoint(v1, Point.subtractPoints(v2, v1).multiply(0.5f));
-                d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                d = Point.translatePoint(v1, u.changeVector(v2, v1).multiply(0.5f));
+                //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
                 d._id = vertices.size();
                 vertices.add(d);
             }
@@ -870,6 +933,17 @@ public class MeshRefinement {
         if (!split.containsKey(sID)){
             return false;
         }
+
+        /*if (a.arcPoint && b.arcPoint){
+            if (split.get(sID).containsKey(bID)){
+                return false;
+            }
+            Arc _a = a.arc;
+            if ((_a.end1 == a || _a.end2 == a) && (_a.end1 == b || _a.end2 == b)){
+                Point d = sp.vertices.get(split.get(sID).get(bID));
+                return _a.isInside()
+            }
+        }*/
         return split.get(sID).containsKey(bID);
     }
 
@@ -881,7 +955,9 @@ public class MeshRefinement {
     }
 
     public static void reset(){
+        trianglesGenerated.set(0);
         finished.set(false);
+        _triangles[0] = _triangles[1] = _triangles[2] = _triangles[3] = 0;
         Runnable r1 = new Runnable() {
             @Override
             public void run() {
@@ -923,9 +999,10 @@ public class MeshRefinement {
             tp.vertices.clear();
             tp.normals.clear();
             tp.faces.clear();
-            tp.faceCount = 0;
+            //tp.faceCount = 0;
             tp.vrts.clear();
             meshToroidalPatch(tp);
+            _triangles[0] += tp.faces.size();
         }
         if (SesConfig.useGUI){
             MainWindow.mainWindow.pushTori();
@@ -1021,38 +1098,43 @@ public class MeshRefinement {
             Arc right = null;
             Arc top = tp.convexPatchArcs.get(1).refined;
 
-            cz.fi.muni.xmraz3.math.Vector a1toa2 = Point.subtractPoints(tp.convexPatchArcs.get(0).owner.sphere.center, tp.convexPatchArcs.get(1).owner.sphere.center).makeUnit();
-            cz.fi.muni.xmraz3.math.Vector a1toprobe = Point.subtractPoints(tp.probe1, tp.convexPatchArcs.get(0).owner.sphere.center);
-            a1toa2.multiply(a1toa2.dotProduct(a1toprobe));
-            Point centerOfRot = Point.translatePoint(tp.convexPatchArcs.get(0).owner.sphere.center, a1toa2);
-            cz.fi.muni.xmraz3.math.Vector vr = Point.subtractPoints(tp.probe1, centerOfRot);
+            //Vector a1toa2 = Point.subtractPoints(tp.convexPatchArcs.get(0).owner.sphere.center, tp.convexPatchArcs.get(1).owner.sphere.center).makeUnit();
+            atom1ToAtom2.changeVector(tp.convexPatchArcs.get(0).owner.sphere.center, tp.convexPatchArcs.get(1).owner.sphere.center).makeUnit();
+            //Vector a1toprobe = Point.subtractPoints(tp.probe1, tp.convexPatchArcs.get(0).owner.sphere.center);
+            toProbe.changeVector(tp.probe1, tp.convexPatchArcs.get(0).owner.sphere.center);
+            //a1toa2.multiply(a1toa2.dotProduct(a1toprobe));
+            atom1ToAtom2.multiply(atom1ToAtom2.dotProduct(toProbe));
+            //Point centerOfRot = Point.translatePoint(tp.convexPatchArcs.get(0).owner.sphere.center, a1toa2);
+            //Vector vr = Point.subtractPoints(tp.probe1, centerOfRot);
+            centerOfRotation.assignTranslation(tp.convexPatchArcs.get(0).owner.sphere.center, atom1ToAtom2);
             if (tp.concavePatchArcs.size() == 0){
-                if (vr.sqrtMagnitude() < SesConfig.probeRadius) {
+                if (Point.distance(tp.probe1, centerOfRotation) < SesConfig.probeRadius) {
                     //System.err.println("beginning to mesh circ patch");
-                    Point centerOfRect = Point.translatePoint(tp.probe1, Point.subtractPoints(tp.probe2, tp.probe1).multiply(0.5f));
-                    double centerToCuspLength = Math.sqrt(Math.pow(SesConfig.probeRadius, 2) - Math.pow(Point.subtractPoints(tp.probe1, tp.probe2).sqrtMagnitude() / 2.f, 2));
-                    Point bottomCusp = Point.translatePoint(centerOfRect, Point.subtractPoints(bottom.owner.sphere.center, top.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
-                    Point topCusp = Point.translatePoint(centerOfRect, Point.subtractPoints(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
+                    //Point centerOfRect = Point.translatePoint(tp.probe1, Point.subtractPoints(tp.probe2, tp.probe1).multiply(0.5f));
+                    centerOfTorus.assignTranslation(tp.probe1, v1.changeVector(tp.probe2, tp.probe1).multiply(0.5f));
+                    double centerToCuspLength = Math.sqrt(Math.pow(SesConfig.probeRadius, 2) - Math.pow(Point.distance(tp.probe1, tp.probe2) / 2.f, 2));
+                    Point bottomCusp = Point.translatePoint(centerOfTorus, v1.changeVector(bottom.owner.sphere.center, top.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
+                    Point topCusp = Point.translatePoint(centerOfTorus, v1.changeVector(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
                     Arc topForBottomRect = new Arc(bottom.center, bottom.radius);
                     for (Point p : bottom.vrts) {
                         topForBottomRect.vrts.add(bottomCusp);
                     }
-                    Point newCenter = (Point.subtractPoints(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)).sqrtMagnitude() < 0.0001) ? tp.probe1 : tp.probe2;
+                    Point newCenter = (Point.distance(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)) < 0.0001) ? tp.probe1 : tp.probe2;
                     left = new Arc(newCenter, SesConfig.probeRadius);
                     left.vrts.add(bottom.end2);
                     Point mid;
-                    cz.fi.muni.xmraz3.math.Vector v;
+                    Vector v;
                     left.vrts.add(bottomCusp);
                     left.setEndPoints(bottom.end2, bottomCusp, true);
                     ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
                     ArcUtil.refineArc(left, SesConfig.edgeLimit, false,0, false);
 
-                    newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
+                    newCenter = (Point.distance(left.center, tp.probe1) < 0.0001) ? tp.probe2 : tp.probe1;
 
                     right = new Arc(newCenter, SesConfig.probeRadius);
                     right.vrts.add(bottom.end1);
-                    mid = Point.translatePoint(right.vrts.get(0), Point.subtractPoints(bottomCusp, right.vrts.get(0)).multiply(0.5f));
-                    v = Point.subtractPoints(mid, right.center).makeUnit().multiply(right.radius);
+                    //mid = Point.translatePoint(right.vrts.get(0), Point.subtractPoints(bottomCusp, right.vrts.get(0)).multiply(0.5f));
+                    //v = Point.subtractPoints(mid, right.center).makeUnit().multiply(right.radius);
 
                     right.vrts.add(bottomCusp);
                     right.setEndPoints(bottom.end1, bottomCusp, true);
@@ -1064,11 +1146,11 @@ public class MeshRefinement {
                     for (Point p : top.vrts){
                         bottomForTopRect.vrts.add(topCusp);
                     }
-                    newCenter = (Point.subtractPoints(top.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), top.owner.sphere)).sqrtMagnitude() < 0.0001) ? tp.probe1 : tp.probe2;
+                    newCenter = (Point.distance(top.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), top.owner.sphere)) < 0.0001) ? tp.probe1 : tp.probe2;
                     left = new Arc(newCenter, SesConfig.probeRadius);
                     left.vrts.add(top.end2);
-                    mid = Point.translatePoint(left.vrts.get(0), Point.subtractPoints(topCusp, left.vrts.get(0)).multiply(0.5f));
-                    v = Point.subtractPoints(mid, left.center).makeUnit().multiply(left.radius);
+                    //mid = Point.translatePoint(left.vrts.get(0), Point.subtractPoints(topCusp, left.vrts.get(0)).multiply(0.5f));
+                    //v = Point.subtractPoints(mid, left.center).makeUnit().multiply(left.radius);
                     left.vrts.add(topCusp);
                     left.setEndPoints(top.end2, topCusp, true);
                     ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
@@ -1076,8 +1158,8 @@ public class MeshRefinement {
                     newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
                     right = new Arc(newCenter, SesConfig.probeRadius);
                     right.vrts.add(top.end1);
-                    mid = Point.translatePoint(right.vrts.get(0), Point.subtractPoints(topCusp, right.vrts.get(0)).multiply(0.5f));
-                    v = Point.subtractPoints(mid, right.center).makeUnit().multiply(right.radius);
+                    //mid = Point.translatePoint(right.vrts.get(0), Point.subtractPoints(topCusp, right.vrts.get(0)).multiply(0.5f));
+                    //v = Point.subtractPoints(mid, right.center).makeUnit().multiply(right.radius);
 
                     right.vrts.add(topCusp);
                     right.setEndPoints(top.end1, topCusp, true);
@@ -1087,13 +1169,13 @@ public class MeshRefinement {
                     //System.out.println("finished meshing circ patch");
                 } else {
 
-                    Point newCenter = (Point.subtractPoints(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)).sqrtMagnitude() < 0.0001) ? tp.probe1 : tp.probe2;
+                    Point newCenter = (Point.distance(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)) < 0.0001) ? tp.probe1 : tp.probe2;
                     left = new Arc(newCenter, SesConfig.probeRadius);
                     left.vrts.add(bottom.end2);
                     left.vrts.add(top.end1);
                     left.setEndPoints(bottom.end2, top.end1, true);
                     ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
-                    newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
+                    newCenter = (Point.distance(left.center, tp.probe1) < 0.0001) ? tp.probe2 : tp.probe1;
                     right = new Arc(newCenter, SesConfig.probeRadius);
 
                     right.vrts.add(bottom.end1);
@@ -1104,11 +1186,13 @@ public class MeshRefinement {
                         System.out.println("weird");
                     }
                     meshToroidalPatch(tp, bottom, top, left, right, false);
-                    tp.circleMeshed = true;
+                    //tp.circleMeshed = true;
                 }
             } else {
-                cz.fi.muni.xmraz3.math.Vector toProbe = Point.subtractPoints(tp.probe1, bottom.owner.sphere.center).makeUnit().multiply(bottom.owner.sphere.radius + SesConfig.probeRadius);
-                cz.fi.muni.xmraz3.math.Vector atom1ToAtom2 = Point.subtractPoints(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit();
+                //Vector toProbe = Point.subtractPoints(tp.probe1, bottom.owner.sphere.center).makeUnit().multiply(bottom.owner.sphere.radius + SesConfig.probeRadius);
+                toProbe.changeVector(tp.probe1, bottom.owner.sphere.center).makeUnit().multiply(bottom.owner.sphere.radius + SesConfig.probeRadius);
+                //Vector atom1ToAtom2 = Point.subtractPoints(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit();
+                atom1ToAtom2.changeVector(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit();
                 atom1ToAtom2.multiply(toProbe.dotProduct(atom1ToAtom2));
                 double probeToRotationAx = -42;
                 probeToRotationAx = PatchUtil.getProbeAxisDistance(tp.probe1, top.owner.sphere.center, bottom.owner.sphere.center);
@@ -1129,7 +1213,13 @@ public class MeshRefinement {
             e.printStackTrace();
         }
     }
-
+    private static Vector toProbe = new Vector(0, 0, 0);
+    private static Vector atom1ToAtom2 = new Vector(0, 0, 0);
+    private static Point centerOfRotation = new Point(0, 0, 0);
+    private static Point centerOfTorus = new Point(0, 0, 0);
+    private static Vector v1 = new Vector(0, 0, 0);
+    private static Point currProbe = new Point(0, 0, 0);
+    private static Point prevProbe = new Point(0, 0, 0);
     private static void meshToroidalPatch(ToroidalPatch tp, Arc bottom, Arc top, Arc left, Arc right, boolean special){
         try {
             if (tp.id == 8871){
@@ -1138,12 +1228,15 @@ public class MeshRefinement {
             List<Point> leftVArc = new ArrayList<>();
             leftVArc.addAll(left.vrts);
             List<Point> rightVArc = new ArrayList<>();
-            Point currProbe = null;
-            Point prevProbe = left.center;
+            //Point currProbe = null;
+            //Point prevProbe = left.center;
+            prevProbe.setAsMidpoint(left.center, left.center);
             for (int i = 1; i < bottom.vrts.size(); ++i) {
                 Point vert = bottom.vrts.get(bottom.vrts.size() - i - 1);
-                cz.fi.muni.xmraz3.math.Vector toProbe = Point.subtractPoints(vert, bottom.owner.sphere.center).makeUnit().multiply(SesConfig.probeRadius);
-                currProbe = Point.translatePoint(vert, toProbe);
+                //Vector toProbe = Point.subtractPoints(vert, bottom.owner.sphere.center).makeUnit().multiply(SesConfig.probeRadius);
+                toProbe.changeVector(vert, bottom.owner.sphere.center).makeUnit().multiply(SesConfig.probeRadius);
+                //currProbe = Point.translatePoint(vert, toProbe);
+                currProbe.assignTranslation(vert, toProbe);
                 rightVArc.clear();
                 if (i == bottom.vrts.size() - 1) {
                     rightVArc.addAll(right.vrts);
@@ -1207,6 +1300,7 @@ public class MeshRefinement {
                     }*/
                     tp.vrts.add(leftVArc.get(j)); // = 0
                     Vector n = Point.subtractPoints(prevProbe, leftVArc.get(j)).makeUnit();
+                    //n.changeVector(prevProbe, leftVArc.get(j)).makeUnit();
                     tp.vrts.add(new Point(n.getFloatData()));
 
                     tp.vertices.add(leftVArc.get(j)); // = 0
@@ -1254,12 +1348,302 @@ public class MeshRefinement {
                 }
                 leftVArc.clear();
                 leftVArc.addAll(rightVArc);
-                prevProbe = currProbe;
+                prevProbe.setAsMidpoint(currProbe, currProbe);
             }
         } catch (Exception e){
             e.printStackTrace();
             tp.valid = false;
             System.err.println("tp id: " + tp.id);
+        }
+    }
+
+    private static void _meshRefine(List<SphericalPatch> patches, int threadIdx){
+        threads_working.getAndIncrement();
+        long startTime = System.currentTimeMillis();
+        int step = patches.size() / THREAD_COUNT;
+        Queue<Face> facesToRefine = new LinkedList<>();
+        List<Face> newFaces = new ArrayList<>(1000);
+        Vector u = v[threadIdx];
+        for (int i = threadIdx * step; i < ((threadIdx == 3) ? patches.size() : (threadIdx + 1) * step); ++i) {
+            SphericalPatch sp = patches.get(i);
+            if (!sp.convexPatch && !sp.trimmed){
+                for (Boundary b : sp.boundaries){
+                    for (Arc a : b.arcs){
+                        for (Point p : a.refined.vrts){
+                            p.arc = a;
+                        }
+                    }
+                }
+            }
+            if (!sp.convexPatch && sp.id == 918) {
+                int triv = 5;
+            }
+            if (!sp.valid) {
+                continue;
+            }
+            facesToRefine.clear();
+            facesToRefine.addAll(sp.faces);
+            sp.faces.clear();
+            newFaces.clear();
+            Map<Integer, Map<Integer, Integer>> splitMap = (sp.convexPatch) ? convexEdgeSplitMap.get(sp.id) : concaveEdgeSplitMap.get(sp.id);
+            while (!facesToRefine.isEmpty()){
+                Face face = facesToRefine.poll();
+                Point a = sp.vertices.get(face.a);
+                Point b = sp.vertices.get(face.b);
+                Point c = sp.vertices.get(face.c);
+                if (!face.valid){
+                    continue;
+                }
+                if (!face.divisible){
+                    int fads = 43;
+                }
+                if (sp.id == 918 && !sp.convexPatch && arcPointsInFace(face, sp.vertices) > 1){
+                    int _sf = 43;
+                }
+                boolean arcFace = isArcFace(face, sp.vertices);
+                if (!face.divisible || (arcFace && !canSubdivideArcFace(face, sp)) || (face.forceRefine && isSmallTriangle(face, sp, 1.6 * SesConfig.edgeLimit))){
+                    if (isSplit(a, b, sp) || (Point.distance(a, b) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                        int sID = (a._id > b._id) ? b._id : a._id;
+                        int bID = (a._id > b._id) ? a._id : b._id;
+                        PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        if (!splitMap.containsKey(sID)){
+                            splitMap.put(sID, new TreeMap<>());
+                        }
+                        Map<Integer, Integer> map = splitMap.get(sID);
+                        Point d;
+                        if (!map.containsKey(bID)){
+                            d = Point.translatePoint(a, u.changeVector(b, a).multiply(0.5f));
+                            //d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
+                            //v.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius);
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            //d = Point.translatePoint(sp.sphere.center, v);
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d._id = sp.nextVertexID++;
+                            sp.vertices.add(d);
+                            map.put(bID, d._id);
+                        }
+                        d = sp.vertices.get(splitMap.get(sID).get(bID));
+                        Face nF = new Face(a._id, d._id, c._id);
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        nF.divisible = false;
+                        facesToRefine.add(nF);
+                        nF = new Face(b._id, c._id, d._id);
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        nF.divisible = false;
+                        facesToRefine.add(nF);
+                        face.valid = false;
+                    } else if (isSplit(b, c, sp) || (Point.distance(b, c) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                        int sID = (b._id > c._id) ? c._id : b._id;
+                        int bID = (b._id > c._id) ? b._id : c._id;
+                        PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        if (!splitMap.containsKey(sID)){
+                            splitMap.put(sID, new TreeMap<>());
+                        }
+                        Map<Integer, Integer> map = splitMap.get(sID);
+                        Point d;
+                        if (!map.containsKey(bID)){
+                            d = Point.translatePoint(b, u.changeVector(c, b).multiply(0.5f));
+                            //d = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d._id = sp.nextVertexID++;
+                            sp.vertices.add(d);
+                            map.put(bID, d._id);
+                        }
+                        d = sp.vertices.get(splitMap.get(sID).get(bID));
+                        Face nF = new Face(b._id, d._id, a._id);
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        nF.divisible = false;
+                        facesToRefine.add(nF);
+                        nF = new Face(c._id, a._id, d._id);
+                        nF.divisible = false;
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        facesToRefine.add(nF);
+                        face.valid = false;
+                    } else if (isSplit(c, a, sp) || (Point.distance(c, a) - 1.6 * SesConfig.edgeLimit) > 0.0){
+                        int sID = (a._id > c._id) ? c._id : a._id;
+                        int bID = (a._id > c._id) ? a._id : c._id;
+                        PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                        if (!splitMap.containsKey(sID)){
+                            splitMap.put(sID, new TreeMap<>());
+                        }
+                        Map<Integer, Integer> map = splitMap.get(sID);
+                        Point d;
+                        if (!map.containsKey(bID)){
+                            //d = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
+                            d = Point.translatePoint(a, u.changeVector(c, a).multiply(0.5f));
+                            //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                            d._id = sp.nextVertexID++;
+                            sp.vertices.add(d);
+                            map.put(bID, d._id);
+                        }
+                        d = sp.vertices.get(splitMap.get(sID).get(bID));
+                        Face nF = new Face(c._id, d._id, b._id);
+                        nF.divisible = false;
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        facesToRefine.add(nF);
+                        nF = new Face(a._id, b._id, d._id);
+                        nF.divisible = false;
+                        PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                        facesToRefine.add(nF);
+                        face.valid = false;
+                    } else {
+                        newFaces.add(face);
+                    }
+                    //continue;
+                } else if (face.forceRefine ||
+                        Point.distance(a, b) - 1.6 * SesConfig.edgeLimit > 0.0 ||
+                        Point.distance(b, c) - 1.6 * SesConfig.edgeLimit > 0.0 ||
+                        Point.distance(c, a) - 1.6 * SesConfig.edgeLimit > 0.0){
+                    int sID = (a._id > b._id) ? b._id : a._id;
+                    int bID = (a._id > b._id) ? a._id : b._id;
+
+                    /*if (face.forceRefine){
+                        sID = b._id;
+                        bID = a._id;
+                    } else {
+                        sID = a._id;//(a._id > b._id) ? b._id : a._id;
+                        bID = b._id;//(a._id > b._id) ? a._id : b._id;
+                    }*/
+
+                    if (!splitMap.containsKey(sID)){
+                        splitMap.put(sID, new TreeMap<>());
+                    }
+                    Map<Integer, Integer> map = splitMap.get(sID);
+                    Point d;
+                    if (!map.containsKey(bID)){
+                        //d = Point.translatePoint(a, Point.subtractPoints(b, a).multiply(0.5f));
+                        //d = Point.translatePoint(sp.sphere.center, Point.subtractPoints(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        d = Point.translatePoint(a, u.changeVector(b, a).multiply(0.5f));
+                        d.assignTranslation(sp.sphere.center, u.changeVector(d, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        sp.vertices.add(d);
+                        d._id = sp.nextVertexID++;
+                        map.put(bID, d._id);
+                        try {
+                            Optional<Face> op = sp.edgeFacesMap.get(sID).get(bID).stream().filter(_f -> _f != face).findFirst();
+                            if (op.isPresent()) {
+                                facesToRefine.add(op.get());
+                                op.get().forceRefine = true;
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                    d = sp.vertices.get(map.get(bID));
+
+                    sID = (b._id > c._id) ? c._id : b._id;
+                    bID = (b._id > c._id) ? b._id : c._id;
+
+                    if (!splitMap.containsKey(sID)){
+                        splitMap.put(sID, new TreeMap<>());
+                    }
+                    map = splitMap.get(sID);
+                    Point e;
+                    if (!map.containsKey(bID)){
+                        //e = Point.translatePoint(b, Point.subtractPoints(c, b).multiply(0.5f));
+                        //e = Point.translatePoint(sp.sphere.center, Point.subtractPoints(e, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        e = Point.translatePoint(b, u.changeVector(c, b).multiply(0.5f));
+                        e.assignTranslation(sp.sphere.center, u.changeVector(e, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        sp.vertices.add(e);
+                        e._id = sp.nextVertexID++;
+                        map.put(bID, e._id);
+                        try {
+                            Optional<Face> op = sp.edgeFacesMap.get(sID).get(bID).stream().filter(_f -> _f != face).findFirst();
+                            if (op.isPresent()) {
+                                facesToRefine.add(op.get());
+                                op.get().forceRefine = true;
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                    e = sp.vertices.get(map.get(bID));
+
+                    //sID = (a._id > b._id) ? b._id : a._id;
+                    //bID = (a._id > b._id) ? a._id : b._id;
+
+                    sID = (a._id > c._id) ? c._id : a._id;
+                    bID = (a._id > c._id) ? a._id : c._id;
+
+                    if (!splitMap.containsKey(sID)){
+                        splitMap.put(sID, new TreeMap<>());
+                    }
+                    map = splitMap.get(sID);
+                    Point f;
+                    if (!map.containsKey(bID)){
+                        //f = Point.translatePoint(a, Point.subtractPoints(c, a).multiply(0.5f));
+                        //f = Point.translatePoint(sp.sphere.center, Point.subtractPoints(f, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        f = Point.translatePoint(a, u.changeVector(c, a).multiply(0.5f));
+                        f.assignTranslation(sp.sphere.center, u.changeVector(f, sp.sphere.center).makeUnit().multiply(sp.sphere.radius));
+                        sp.vertices.add(f);
+                        f._id = sp.nextVertexID++;
+                        map.put(bID, f._id);
+                        try {
+                            Optional<Face> op = sp.edgeFacesMap.get(sID).get(bID).stream().filter(_f -> _f != face).findFirst();
+                            if (op.isPresent()) {
+                                facesToRefine.add(op.get());
+                                op.get().forceRefine = true;
+                            }
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                    f = sp.vertices.get(map.get(bID));
+
+                    PatchUtil.removeFaceFromEdgeFacesMap(sp, face);
+                    Face nF = new Face(a._id, d._id, f._id);
+                    PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                    facesToRefine.add(nF);
+                    nF = new Face(b._id, e._id, d._id);
+                    PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                    facesToRefine.add(nF);
+                    nF = new Face(c._id, f._id, e._id);
+                    PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                    facesToRefine.add(nF);
+                    nF = new Face(d._id, e._id, f._id);
+                    PatchUtil.addFaceToEdgeFacesMap(sp, nF);
+                    facesToRefine.add(nF);
+                    face.valid = false;
+                } else {
+                    newFaces.add(face);
+                }
+            }
+            for (Face f : newFaces){
+                Point a = sp.vertices.get(f.a);
+                Point b = sp.vertices.get(f.b);
+                Point c = sp.vertices.get(f.c);
+                /*if (!f.divisible && (Point.distance(a, b) - 1.6 * SesConfig.edgeLimit > 0.0 || Point.distance(b, c) - 1.6 * SesConfig.edgeLimit > 0.0 || Point.distance(c, a) - 1.6 * SesConfig.edgeLimit > 0.0)) {
+                    System.out.println("nondivisible long face");
+                }*/
+                if (f.valid){
+                    sp.faces.add(f);
+                }
+            }
+            _triangles[threadIdx] += sp.faces.size();
+        }
+
+        System.out.println("REFINE COMPLETE, thd: " + threadIdx + " in " + (System.currentTimeMillis() - startTime) + " ms");
+        //threads_working.decrementAndGet();
+        threads_done.incrementAndGet();
+        if (threads_done.get() == THREAD_COUNT){
+            if (SesConfig.useGUI) {
+                System.out.println("PUSHING DATA TO GPU");
+                if (patches.get(0).convexPatch) {
+                    MainWindow.mainWindow.pushConvex();
+                } else {
+                    MainWindow.mainWindow.pushConcave();
+                    trianglesGenerated.addAndGet(_triangles[0]);
+                    trianglesGenerated.addAndGet(_triangles[1]);
+                    trianglesGenerated.addAndGet(_triangles[2]);
+                    trianglesGenerated.addAndGet(_triangles[3]);
+                    System.out.println("Total number of faces generated: " + trianglesGenerated.get());
+                }
+            }
+            free.set(true);
+            if (!patches.get(0).convexPatch){
+                finished.set(true);
+            }
         }
     }
 }

@@ -53,13 +53,16 @@ public class Arc {
         this.center = center;
         this.radius = radius;
         id = nextID++;
-
+        normal = new Vector(0, 0, 0);
         vrts = new ArrayList<>();
         lines = new ArrayList<>();
     }
-
+    private static Vector n = new Vector(0, 0, 0);
+    private static Vector v = new Vector(0, 0, 0);
+    private static Vector v2 = new Vector(0, 0, 0);
+    private static Plane plane = new Plane(new Point(0, 0, 0), new Vector(0, 0, 0));
     public boolean isInside(Point p){
-        if (Math.abs(new Plane(this.center, this.normal).checkPointLocation(p)) > 0.001){
+        if (Math.abs(plane.redefine(this.center, this.normal).checkPointLocation(p)) > 0.001) {//Math.abs(new Plane(this.center, this.normal).checkPointLocation(p)) > 0.001){
             return false;
         }
         if (Point.distance(p, end1) < 0.001 || Point.distance(p, end2) < 0.001){
@@ -68,11 +71,16 @@ public class Arc {
         if (Math.abs(Point.distance(p, center) - radius) > 0.001){
             return false;
         }
-        Vector v = Point.subtractPoints(p, center).makeUnit();
-        Vector n = (halfCircle) ? normal : Vector.getNormalVector(toEnd1, toEnd2).makeUnit();
+        //Vector v = Point.subtractPoints(p, center).makeUnit();
+        v.changeVector(p, center).makeUnit();
+        //Vector n = (halfCircle) ? normal : Vector.getNormalVector(toEnd1, toEnd2).makeUnit();
+        n = (halfCircle) ? n.changeVector(normal) : n.assignNormalVectorOf(toEnd1, toEnd2).makeUnit();
+        if (Math.abs(Math.abs(toEnd1.dotProduct(toEnd2)) - 1.0) < 0.001 && toEnd1.dotProduct(toEnd2) < 0.0){
+            n.changeVector(normal);
+        }
         double alpha = Math.acos(toEnd1.dotProduct(toEnd2));
         if (n.dotProduct(normal) > 0.0){
-            if (Vector.getNormalVector(toEnd1, v).makeUnit().dotProduct(n) < 0.0){
+            if (v2.assignNormalVectorOf(toEnd1, v).makeUnit().dotProduct(n) < 0.0) {//Vector.getNormalVector(toEnd1, v).makeUnit().dotProduct(n) < 0.0){
                 return false;
             }
             if (Math.acos(v.dotProduct(toEnd1)) - alpha < 0.0 && Math.acos(v.dotProduct(toEnd2)) - alpha < 0.0){
@@ -82,12 +90,12 @@ public class Arc {
             /*if (Math.acos(v.dotProduct(toEnd1)) - alpha > 0.0 || Math.acos(v.dotProduct(toEnd2)) - alpha > 0.0){
                 return true;
             }*/
-            if (Vector.getNormalVector(toEnd1, v).makeUnit().dotProduct(n) > 0.0 && Math.acos(toEnd1.dotProduct(v)) - alpha < 0.0){
+            if (v2.assignNormalVectorOf(toEnd1, v).makeUnit().dotProduct(n) > 0.0 && Math.acos(toEnd1.dotProduct(v)) - alpha < 0.0) {//Vector.getNormalVector(toEnd1, v).makeUnit().dotProduct(n) > 0.0 && Math.acos(toEnd1.dotProduct(v)) - alpha < 0.0){
                 return false;
             }
 
             n.multiply(-1);
-            if (Vector.getNormalVector(toEnd2, v).makeUnit().dotProduct(n) > 0.0 && Math.acos(toEnd2.dotProduct(v)) - alpha < 0.0){
+            if (v2.assignNormalVectorOf(toEnd2, v).makeUnit().dotProduct(n) > 0.0 && Math.acos(toEnd2.dotProduct(v)) - alpha < 0.0) {//Vector.getNormalVector(toEnd2, v).makeUnit().dotProduct(n) > 0.0 && Math.acos(toEnd2.dotProduct(v)) - alpha < 0.0){
                 return false;
             }
             return true;
@@ -106,6 +114,7 @@ public class Arc {
     }
 
     public void setNormal(Vector n){
-        normal = new Vector(n);
+        //normal = new Vector(n);
+        normal.changeVector(n);
     }
 }

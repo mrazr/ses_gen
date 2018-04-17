@@ -75,6 +75,9 @@ public class Arc {
         v.changeVector(p, center).makeUnit();
         //Vector n = (halfCircle) ? normal : Vector.getNormalVector(toEnd1, toEnd2).makeUnit();
         n = (halfCircle) ? n.changeVector(normal) : n.assignNormalVectorOf(toEnd1, toEnd2).makeUnit();
+        if (Math.abs(Math.abs(toEnd1.dotProduct(toEnd2)) - 1.0) < 0.001 && toEnd1.dotProduct(toEnd2) < 0.0){
+            n.changeVector(normal);
+        }
         double alpha = Math.acos(toEnd1.dotProduct(toEnd2));
         if (n.dotProduct(normal) > 0.0){
             if (v2.assignNormalVectorOf(toEnd1, v).makeUnit().dotProduct(n) < 0.0) {//Vector.getNormalVector(toEnd1, v).makeUnit().dotProduct(n) < 0.0){

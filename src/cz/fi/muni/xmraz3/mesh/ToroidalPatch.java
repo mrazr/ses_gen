@@ -21,7 +21,7 @@ public class ToroidalPatch {
     public List<Vector> normals;
     public List<Face> faces;
 
-    public int vbo[] = new int[1];
+    //public int vbo[] = new int[1];
     public int vboOffset;
     //public int faceCount;
     public boolean circular = false;

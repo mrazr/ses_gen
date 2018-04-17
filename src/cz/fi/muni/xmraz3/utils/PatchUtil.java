@@ -53,7 +53,9 @@ public class PatchUtil {
             //Arc_ bottom = (leftL.end2 == tp.convexPatchArcs.get(0).end2) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
             Arc bottom = (Point.distance(leftL.end2, tp.convexPatchArcs.get(0).end2) < 0.001) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
             Arc top = (tp.convexPatchArcs.get(0) == bottom) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
-
+            if (leftL.owner.id == 2974 || rightL.owner.id == 2974){
+                int g = 32;
+            }
             if (leftL.owner.intersectingPatches.contains(rightL.owner.id)){
                 Arc cpl1 = leftL.owner.boundaries.get(0).arcs.stream().filter(a -> a.intersecting).findFirst().get();
                 Arc cpl2 = rightL.owner.boundaries.get(0).arcs.stream().filter(a -> a.intersecting).findFirst().get();
@@ -541,7 +543,7 @@ public class PatchUtil {
                                 System.out.println("possible intermezzo for " + cpl.owner.id);
                             }*/
                         if ((k.isInside(in1) && arc.isInside(in1)) || (k.isInside(in2) && arc.isInside(in2))){
-                            System.out.println("INTERMEZZO for " + arc.owner.id);
+                            //System.out.println("INTERMEZZO for " + arc.owner.id);
                             found = true;
                         }
                         if (k.isInside(in1) && arc.isInside(in1)){
@@ -574,7 +576,7 @@ public class PatchUtil {
                 for (Point p : pointOfIntersection){
                     System.out.println(p.toString());
                 }*/
-            System.err.println("FOUND IT");
+            //System.err.println("FOUND IT");
             for (Boundary b : sp.boundaries){
                 for (Arc a : b.arcs){
                     a.valid = false;
@@ -1650,9 +1652,16 @@ public class PatchUtil {
                 //List<Arc> exclude = new ArrayList<>();
                 intersectionPoints.clear();
                 exclude.clear();
+                if (sp2.id == 5179 && sp.id == 2959){
+                    int fads = 32;
+                }
+                if (sp.id == 181){
+                    int _p = 42;
+                }
                 findIntersectionPoints(sp, center, radius, intersectionPoints, exclude);
                 /*if (!moip.get(sp.id).containsKey(sp2.id)) {
                     intersectionPoints = new ArrayList<>();
+
                     findIntersectionPoints(sp, center, radius, intersectionPoints, null);
                     if (!pointsLieOnPatch(sp2, intersectionPoints)){
                         intersectionPoints.clear();
@@ -1678,12 +1687,11 @@ public class PatchUtil {
                     }
                 }*/
 
-                if (sp.id == 6102){
-                    int fads = 32;
-                }
+
                 currInt = intersectionPoints;
                 currCirc = p;
                 currRad = radius;
+                toRemove.clear();
                 if (intersectionPoints.size() > 1) {
                     if (planes.get(sp.id).stream().noneMatch(plane -> plane.isIdenticalWith(p))) {
                         planes.get(sp.id).add(p);
@@ -1703,7 +1711,11 @@ public class PatchUtil {
                     Boundary newB = ArcUtil.generateCircularBoundary(p, radius);
                     boolean nest = false;
                     List<Boundary> removeFromSP = new ArrayList<>();
+                    List<Boundary> processed = new ArrayList<>();
                     for (Boundary b : sp.boundaries){
+                        if (removeFromSP.contains(b) || processed.contains(b)){
+                            continue;
+                        }
                         boolean isInside = true;
                         for (Arc a : b.arcs){
                             Plane rho = new Plane(a.center, a.normal);
@@ -1727,7 +1739,8 @@ public class PatchUtil {
                                 for (Boundary nb : newB.nestedBoundaries) {
                                     nb.nestedBoundaries.add(newB);
                                 }
-                                List<Boundary> toRemove = new ArrayList<>();
+                                //List<Boundary> toRemove = new ArrayList<>();
+                                toRemove.clear();
                                 for (Boundary nb : newB.nestedBoundaries){
                                     for (Arc a : nb.arcs){
                                         if (!a.vrts.stream().allMatch(v -> p.checkPointLocation(v) > 0.0)){
@@ -1741,6 +1754,7 @@ public class PatchUtil {
                                 for (Boundary nb : newB.nestedBoundaries){
                                     nb.nestedBoundaries.removeAll(toRemove);
                                 }
+                                processed.addAll(newB.nestedBoundaries);
                                 nest = true;
                                 //System.out.println("nestted b " + sp.id);
                             }
@@ -1754,7 +1768,7 @@ public class PatchUtil {
 
                 }
             }
-
+            planes.get(sp.id).clear();
             /*for (int i = 0; i < possibleIntersections.size(); ++i){
                 for (Boundary b : sp.boundaries){
                     boolean isInside = true;
@@ -1848,6 +1862,11 @@ public class PatchUtil {
                                 Point _p = new Point(in1);
                                 _p.arc = a;
                                 intersectionPoints.add(_p);
+                                if (a.cuspTriangle != null){
+                                    if (!a.vrts.stream().allMatch(point -> p1.checkPointLocation(point) > 0.0 || p1.distanceFromPlane(point) < 0.002)){
+                                        intersectionPoints.remove(_p);
+                                    }
+                                }
                             }
                         }
                         if (a.isInside(in2)){// && ArcUtil.findContainingArc(in2, p1, sp, null) != null) {
@@ -1855,6 +1874,11 @@ public class PatchUtil {
                                 Point _p = new Point(in2);
                                 _p.arc = a;
                                 intersectionPoints.add(_p);
+                                if (a.cuspTriangle != null){
+                                    if (!a.vrts.stream().allMatch(point -> p1.checkPointLocation(point) > 0.0 || p1.distanceFromPlane(point) < 0.002)){
+                                        intersectionPoints.remove(_p);
+                                    }
+                                }
                             }
                         }
                     }

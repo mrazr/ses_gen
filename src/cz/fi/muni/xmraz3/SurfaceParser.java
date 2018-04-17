@@ -85,12 +85,24 @@ public class SurfaceParser {
             Surface.probeTree.setIdenticalExcluded(true);
 
             PatchUtil.processSelfIntersectingTori();
+            //System.out.println("MEMORY AFTER processSelfIntersection: ");
+            //getMemory();
             PatchUtil.processSelfIntersectingConcavePatches();
+            //System.out.println("MEMORY AFTER processSelfIntersectingConc: ");
+            //getMemory();
             PatchUtil.processIntersectingConcavePatches();
+            //System.out.println("MEMORY AFTER processIntersectingConc: ");
+            //getMemory();
             System.out.println("Trimmed triangles: " + Surface.trimmedTriangles + " / " + Surface.triangles.size());
             ArcUtil.refineArcsOnConvexPatches();
+            //System.out.println("MEMORY AFTER refineConvex: ");
+            //getMemory();
             ArcUtil.nestConvexPatchBoundaries();
+            //System.out.println("MEMORY AFTER nestConvex: ");
+            //getMemory();
             ArcUtil.refineArcsOnConcavePatches();
+            //System.out.println("MEMORY AFTER refineConc: ");
+            //getMemory();
             if (SesConfig.useGUI) {
                 MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
             }
@@ -104,7 +116,11 @@ public class SurfaceParser {
                     exportSTLText(SesConfig.stlFile);
                 }
             }
+            //System.out.println("MEMORY AFTER mesh+refine: ");
+            //getMemory();
             fillCommonVertices();
+            //System.out.println("MEMORY AFTER fillCommon: ");
+            //getMemory();
             //System.gc();
         } catch (Exception e){
             System.out.println(e.getMessage());
@@ -372,11 +388,11 @@ public class SurfaceParser {
 
                         ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);*/
 
-                        System.out.println("refined circle loop: " + atom1.id + ", " + atom2.id);
+                        //System.out.println("refined circle loop: " + atom1.id + ", " + atom2.id);
                     }
                 }
             }
-            System.out.println("Constructed circular loop for: " + atom1.id + " and " + atom2.id);
+            //System.out.println("Constructed circular loop for: " + atom1.id + " and " + atom2.id);
             return;
         } else if (Point.distance(probe1.center, probe2.center) < 0.0001){
             //System.out.println("small atom id: " + atom1Id + " " + atom2Id);
@@ -1456,5 +1472,10 @@ public class SurfaceParser {
         } catch (IOException e){
             e.printStackTrace();
         }
+    }
+
+    public static void getMemory(){
+        Runtime r = Runtime.getRuntime();
+        System.out.println((r.totalMemory() - r.freeMemory()) + " / " + r.totalMemory() + " used");
     }
 }

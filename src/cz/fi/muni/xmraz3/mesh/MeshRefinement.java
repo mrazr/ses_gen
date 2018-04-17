@@ -1620,6 +1620,7 @@ public class MeshRefinement {
                     sp.faces.add(f);
                 }
             }
+            _triangles[threadIdx] += sp.faces.size();
         }
 
         System.out.println("REFINE COMPLETE, thd: " + threadIdx + " in " + (System.currentTimeMillis() - startTime) + " ms");
@@ -1632,6 +1633,11 @@ public class MeshRefinement {
                     MainWindow.mainWindow.pushConvex();
                 } else {
                     MainWindow.mainWindow.pushConcave();
+                    trianglesGenerated.addAndGet(_triangles[0]);
+                    trianglesGenerated.addAndGet(_triangles[1]);
+                    trianglesGenerated.addAndGet(_triangles[2]);
+                    trianglesGenerated.addAndGet(_triangles[3]);
+                    System.out.println("Total number of faces generated: " + trianglesGenerated.get());
                 }
             }
             free.set(true);

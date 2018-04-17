@@ -1,5 +1,6 @@
 package cz.fi.muni.xmraz3.gui;
 
+import cz.fi.muni.xmraz3.SurfaceParser;
 import cz.fi.muni.xmraz3.gui.controllers.AtomLoadingController;
 import cz.fi.muni.xmraz3.gui.controllers.MainPanelController;
 import javafx.application.Application;
@@ -42,6 +43,8 @@ public class MainPanel extends Application {
                     if (AtomLoadingController.task != null && AtomLoadingController.task.isRunning()){
                         AtomLoadingController.task.cancel();
                     }
+                    //System.out.println("BEFORE EXIT");
+                    //SurfaceParser.getMemory();
                     System.exit(0);
                 }
             });

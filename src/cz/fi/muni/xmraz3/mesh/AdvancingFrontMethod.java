@@ -561,7 +561,7 @@ public class AdvancingFrontMethod {
         }
         Boundary b = cp.boundaries.get(0);
         //timeout = 3000;
-        verbose = (cp.id == 918);
+        verbose = false; //(cp.id == 918);
         loopDetected = false;
         this.patch = cp;
         //meshFaceList = cp.faces;

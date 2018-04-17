@@ -479,9 +479,9 @@ public class ArcUtil {
                     if (iterator > sp.arcs.size() + 10) {
                         loopEndIdx++;
                         if (loopEndIdx >= queue.size()) {
-                            System.err.println("Cycle detected for atom id:" + sp.id);
-                            System.out.println("Iterator: " + iterator);
-                            System.out.println("Queue size: " + queue.size());
+                            //System.err.println("Cycle detected for atom id:" + sp.id);
+                            //System.out.println("Iterator: " + iterator);
+                            //System.out.println("Queue size: " + queue.size());
                             //Main.convexPatches.remove(sp);
                             sp.valid = (sp.boundaries.size() > 0);
                             return;
@@ -494,7 +494,7 @@ public class ArcUtil {
                     }
                     iterator++;
                     if (queue.size() == 0) {
-                        System.err.println("Atom " + sp.id);
+                        //System.err.println("Atom " + sp.id);
                         setValid = false;
                         break;
                     }

@@ -1365,7 +1365,26 @@ public class PatchUtil {
                 }
                 /*sp.boundaries.removeAll(toRemove);
                 sp.boundaries.addAll(newBS);*/
+                //if (newBS.size() > 2){
+                //    System.out.println("three new boundaries for: " + sp.id);
+                //}
+
                 updatePatchBoundaries(sp, toRemove, newBS);
+                for (Boundary b : newBS){
+                    if (b.nestedBoundaries.size() > 0){
+                        continue;
+                    }
+                    boolean valid = false;
+                    for (Arc a : b.arcs){
+                        if (a.cuspTriangle != null || a.torus != null){
+                            valid = true;
+                            break;
+                        }
+                    }
+                    if (!valid){
+                        System.out.println("possible invalid boundary for: " + sp.id);
+                    }
+                }
                 boolean check = checkBoundaryOwn(sp);
             }
         } catch (Exception e){
@@ -1693,10 +1712,15 @@ public class PatchUtil {
                 currRad = radius;
                 toRemove.clear();
                 if (intersectionPoints.size() > 1) {
+                    if (!pointsLieOnPatch(sp2, intersectionPoints) && sp.patchNormal.dotProduct(sp2.patchNormal) > 0.8){
+                        //System.out.println("positive dot product for: " + sp.id + " and " + sp2.id);
+                        continue;
+                    }
                     if (planes.get(sp.id).stream().noneMatch(plane -> plane.isIdenticalWith(p))) {
                         planes.get(sp.id).add(p);
                         //System.out.println("about to: " + sp.id);\
                         sp.intersectingPatches.add(sp2.id);
+
                         generateNewBoundaries2(sp, intersectionPoints, p, radius, sp2.id,false);
                         i++;
                         currIter++;
@@ -2350,6 +2374,9 @@ public class PatchUtil {
                     a = endArc;
                 }
                 if (end == origin){
+                    a = endArc;
+                }
+                if (isOptimal(start, startArc, circle)){
                     a = endArc;
                 }
                 /*if (bridge){

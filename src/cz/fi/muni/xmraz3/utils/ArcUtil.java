@@ -1131,6 +1131,9 @@ public class ArcUtil {
             if (sp.boundaries.size() == 0) {
                 ArcUtil.linkArcs(sp);
             }
+            if (sp.id == 872 || sp.id == 885){
+                int ca = 42;
+            }
             for (Boundary b : sp.boundaries) {
                 if (b.arcs.size() < 2){
                     int c = 4;
@@ -1143,7 +1146,7 @@ public class ArcUtil {
                         continue;
                     }
                     Arc op = a.opposite;
-                    if (sp.id == 3734 && op.owner.id == 3783){
+                    if (sp.id == 872 && op.owner.id == 885){
                         int fgd = 3;
                     }
                     if (op.owner.boundaries.size() == 0){

@@ -142,11 +142,11 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     //private AtomicBoolean cpUpdate = new AtomicBoolean(false);
 
 
-    private float[] toriPatchCol = {33 / 255.f, 161 / 255.f, 235 / 255.f};
+    private float[] toriPatchCol = {51 / 255.f, 77 / 255.f, 177 / 255.f};
     //private float[] concavePatchSelCol = {234 / 255.f, 165 / 255.f, 33 / 255.f};
-    private float[] concavePatchCol = {118 / 255.f, 220 / 255.f, 33 / 255.f};
+    private float[] concavePatchCol = {31 / 255.f, 143 / 255.f, 0 / 255.f};
     //private float[] convexPatchSelCol = {234 / 255.f, 165 / 255.f, 33 / 255.f};
-    private float[] convexPatchCol = {1.0f, 89 / 255.f, 100 / 255.f};
+    private float[] convexPatchCol = {197 / 255.f, 20 / 255.f, 20 / 255.f};
     private float[] selectedPatchCol = {1.f, 231 / 255.f, 76 / 255.f};
     private float[] hoveredPatchCol = {.8f, .8f, .8f};
     private float[] pointColor = {137 / 255.f, 66 / 255.f, 244 / 255.f};
@@ -263,6 +263,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     private int uniSelectedMeshCountLoc = -1;
     private int uniAmbientStrengthLoc = -1;
     private int uniMvInverseLoc = -1;
+    private int uniLightPosLoc = -1;
+    private int uniCameraPosLoc = -1;
     private IntBuffer zeroes = GLBuffers.newDirectIntBuffer(new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
     private boolean render = false;
@@ -275,8 +277,29 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     private int convexFaceCountShow;
 
     private IntBuffer mouseSelectPixelBuffer = GLBuffers.newDirectIntBuffer(1);
-
-
+    private int colorChange = -1;
+    private float[] newColor = new float[3];
+    public void changeColor(int meshType, float r, float g, float b){
+        newColor[0] = r;
+        newColor[1] = g;
+        newColor[2] = b;
+        colorChange = meshType;
+        float[] ptr = convexPatchCol;
+        switch (meshType){
+            case 0:
+                ptr = convexPatchCol;
+                break;
+            case 1:
+                ptr = concavePatchCol;
+                break;
+            case 2:
+                ptr = toriPatchCol;
+                break;
+        }
+        ptr[0] = r;
+        ptr[1] = g;
+        ptr[2] = b;
+    }
     public void sendPatchesLists(List<SphericalPatch> convex, List<SphericalPatch> concave){
         stopRendering.set(true);
         while (!stoppedRendering.get()){
@@ -500,9 +523,13 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         window.setResizable(true);
         //slerping = true;
         Screen sc = window.getScreen();
+        //window.get
         MonitorDevice mon = sc.getPrimaryMonitor();
+        window.setPosition(mon.getViewport().getX() + mon.getViewport().getWidth() / 2 - window.getWidth() / 2,
+                mon.getViewport().getY() + mon.getViewport().getHeight() / 2 - window.getHeight() / 2);
         //window.setPosition(mon.getViewport().getWidth() / 2 - window.getWidth() / 2, mon.getViewport().getHeight() / 2 - window.getHeight() / 2);
-        window.setPosition(0, 0 + window.getInsets().getTopHeight());
+        //window.setPosition(0, 0 + window.getInsets().getTopHeight());
+
         animator = new Animator(window);
         animator.start();
 
@@ -618,6 +645,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         uniAmbientStrengthLoc = gl.glGetUniformLocation(mainProgram, "ambientStrength");
         uniSelectedMeshCountLoc = gl.glGetUniformLocation(mainProgram, "selectedMeshCount");
         uniMvInverseLoc = gl.glGetUniformLocation(mainProgram, "mvInverse");
+        uniCameraPosLoc = gl.glGetUniformLocation(mainProgram, "cameraPos");
+        uniLightPosLoc = gl.glGetUniformLocation(mainProgram, "lighPos");
         //rectProgram = Util.createShaderProgram("rect.vert", "rect.frag");
         selProgram = GLUtil.createShaderProgram(getClass().getClassLoader().getResourceAsStream("resources/shaders/sel2.vert"), getClass().getClassLoader().getResourceAsStream("resources/shaders/sel.frag"));
         //selProgram = GLUtil.createShaderProgram("./resources/shaders/sel2.vert", "./resources/shaders/sel.frag");

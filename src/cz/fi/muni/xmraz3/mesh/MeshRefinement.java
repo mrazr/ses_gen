@@ -728,7 +728,7 @@ public class MeshRefinement {
         /*for (int i = sp.arcPointCount; i < sp.vertices.size(); ++i){
             vertices.add(sp.vertices.get(i));
         }*/
-        if (!sp.convexPatch && sp.id == 918){
+        if (!sp.convexPatch){
             return;
         }
         int end = sp.vertices.size() - sp.arcPointCount;
@@ -1378,7 +1378,7 @@ public class MeshRefinement {
             if (!sp.convexPatch && sp.id == 918) {
                 int triv = 5;
             }
-            if (!sp.valid) {
+            if (!sp.valid || !sp.convexPatch) {
                 continue;
             }
             facesToRefine.clear();

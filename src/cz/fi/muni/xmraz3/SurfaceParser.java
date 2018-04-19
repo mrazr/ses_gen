@@ -460,7 +460,7 @@ public class SurfaceParser {
     private static Vector v3 = new Vector(0, 0, 0);
     private static void constructConcavePatchArcs(Sphere probe, int atom1, int atom2, int atom3){
         try {
-            if (Surface.triangles.size() == 6498 || Surface.triangles.size() == 1351){
+            if (Surface.triangles.size() == 2931 || Surface.triangles.size() == 1351){
                 int t = 3;
             }
             SphericalPatch a1 = Surface.convexPatches.get(atom1);
@@ -476,12 +476,29 @@ public class SurfaceParser {
             probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
             mid.assignTranslation(probe.center, probeMid);
             //mid = Point.translatePoint(probe.center, probeMid);
+
+            Vector _v1 = Point.subtractPoints(a2.sphere.center, a1.sphere.center).makeUnit();
+            Vector _v2 = Point.subtractPoints(a3.sphere.center, a1.sphere.center).makeUnit();
+            Vector _n = Vector.getNormalVector(_v1, _v2).makeUnit();
+            Plane _plane = new Plane(a1.sphere.center, _n);
+            if (_plane.checkPointLocation(probe.center) < 0.0){
+                _n.multiply(-1.0);
+            }
+
+            //Point p1;
+            //Point p2;
+            //Point p3;
+
             SphericalPatch cpatch = new SphericalPatch(probe, false);
+            cpatch.patchNormal = _n;
             Arc cpl1 = new Arc(probe.center, probe.radius);
             cpl1.vrts.add(a1touch);
             cpl1.vrts.add(mid);
             cpl1.vrts.add(a2touch);
 
+            //p1 = Surface.convexPatches.get(atom1).sphere.center;
+            //p2 = Surface.convexPatches.get(atom2).sphere.center;
+            //p3 = Surface.convexPatches.get(atom3).sphere.center;
             //cpl1.end1 = a1touch;
             //cpl1.end2 = a2touch;
                 /*cpl1.toEnd1 = Point.subtractPoints(cpl1.end1, cpl1.center).makeUnit();

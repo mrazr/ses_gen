@@ -561,7 +561,7 @@ public class AdvancingFrontMethod {
         }
         Boundary b = cp.boundaries.get(0);
         //timeout = 3000;
-        verbose = false; //(cp.id == 918);
+        verbose = (cp.id == 6966);
         loopDetected = false;
         this.patch = cp;
         //meshFaceList = cp.faces;
@@ -580,7 +580,7 @@ public class AdvancingFrontMethod {
         this.distTolerance = dTolerance;
         this.baseLength =  baseLength;
         this.height = height;
-        this.pointEdgeDistTolerance = 0.3 * baseLength;
+        this.pointEdgeDistTolerance = 0.4 * baseLength;
         //vrtsOffset = 0;
         b = cp.boundaries.get(0);
         for (Boundary c : cp.boundaries){
@@ -756,11 +756,30 @@ public class AdvancingFrontMethod {
                     }
                 }
             }
+
+            if (verbose && patch.faces.size() == 22){
+                System.out.println("Angle next: " + Math.toDegrees(alpha1));
+                System.out.println("Angle prev: " + Math.toDegrees(alpha2));
+                System.out.println("Limit angle: " + Math.toDegrees(this.minAlpha));
+
+            }
             List<Point> trueCands = new ArrayList<>();
             trueCands.clear();
             //THIS IS WHERE criterionPointEdgeDistance() was
             if (candidates.isEmpty() || true) {
                 criterionPointEdgeDistance();
+            }
+            if (verbose && patch.faces.size() == 22){
+                System.out.println(candidates.size());
+                for (Point p : candidates){
+                    if (p == e.prev.p1){
+                        System.out.println("PREV");
+                    }else if (p == e.next.p2){
+                        System.out.println("NEXT");
+                    } else {
+                        System.out.println("OTHER");
+                    }
+                }
             }
             while (candidates.contains(e.p1)) {
                 candidates.remove(e.p1);
@@ -955,12 +974,25 @@ public class AdvancingFrontMethod {
             if (ef == e.prev || ef == e.next){
                 continue;
             }
+            boolean scream = (verbose && patch.faces.size() == 22 && ef == e.prev.prev.prev);
+            if (scream){
+                System.out.println("im going to scream");
+            }
             if (/*ef.p1 != e.p1 && ef.p1 != e.p2*/true){
                 double dist = pointEdgeDistance(ef.p1, e);
+                if (scream){
+                    System.out.println(dist + " < " + (pointEdgeDistTolerance + baseLength));
+                }
                 if (dist < baseLength + pointEdgeDistTolerance){
+                    if (scream){
+                        System.out.println("dist < baseLen + pdistan");
+                    }
                     //Vector midToefP1 = Point.subtractPoints(ef.p1, midPoint).makeUnit();
                     aV1.changeVector(ef.p1, midPoint).makeUnit();
                     if (aV1.dotProduct(tangentInMiddle) > 0.0){
+                        if (scream){
+                            System.out.println("aviDotprod + tangMiddle");
+                        }
                         pfp1.p1 = ef.p1;
                         pfp1.p2 = e.p1;
                         pfp2.p1 = ef.p1;
@@ -970,6 +1002,9 @@ public class AdvancingFrontMethod {
                         ignore.add(ef);
                         if (!checkForIntersectingEdges(pfp1, pfp2, facets, ignore) && !checkForIntersectingEdges(pfp1, pfp2, pastFacets, ignore)){
                             if (nodeEdgeMap.get(ef.p1.afmIdx).size() > 0 && !(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, ef.p1))) < 0.01)) {
+                                if (scream){
+                                    System.out.println("checked for itnersert");
+                                }
                                 if (ef.p1 != e.p2) {
                                     candidates.add(ef.p1);
                                     //ef.p1.afmSelect = 2;
@@ -1191,7 +1226,16 @@ public class AdvancingFrontMethod {
         //Surface.numoftriangles++;
         numOfTriangles++;
         //System.out.println("Bridge with e.prev");
-        e = newFacet.next;
+        n1.changeVector(newFacet.p1, patch.sphere.center).makeUnit();
+        n2.changeVector(newFacet.p2, patch.sphere.center).makeUnit();
+        double alpha1 = computeAngle(aV1.changeVector(newFacet.prev.p1, newFacet.p1).makeUnit(), aV2.changeVector(newFacet.p2, newFacet.p1).makeUnit(), n1);
+        double alpha2 = computeAngle(aV1.changeVector(newFacet.p1, newFacet.p2).makeUnit(), aV2.changeVector(newFacet.next.p2, newFacet.p2).makeUnit(), n2);
+        if (alpha1 - alpha2 < 0.0){
+            e = newFacet.prev;
+        } else {
+            e = newFacet.next;
+        }
+        //e = newFacet.next;
         newFacet.loopID = activeLoop;
     }
 
@@ -1256,7 +1300,16 @@ public class AdvancingFrontMethod {
         PatchUtil.addFaceToEdgeFacesMap(patch, nF);
         //Surface.numoftriangles++;
         numOfTriangles++;
-        e = newFacet.next;
+        n1.changeVector(newFacet.p1, patch.sphere.center).makeUnit();
+        n2.changeVector(newFacet.p2, patch.sphere.center).makeUnit();
+        double alpha1 = computeAngle(aV1.changeVector(newFacet.prev.p1, newFacet.p1).makeUnit(), aV2.changeVector(newFacet.p2, newFacet.p1).makeUnit(), n1);
+        double alpha2 = computeAngle(aV1.changeVector(newFacet.p1, newFacet.p2).makeUnit(), aV2.changeVector(newFacet.next.p2, newFacet.p2).makeUnit(), n2);
+        if (alpha1 - alpha2 < 0.0){
+            e = newFacet.prev;
+        } else {
+            e = newFacet.next;
+        }
+        //e = newFacet.next;
         newFacet.loopID = activeLoop;
     }
 

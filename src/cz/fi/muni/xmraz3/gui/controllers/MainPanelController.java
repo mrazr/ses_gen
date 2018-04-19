@@ -4,6 +4,7 @@ import cz.fi.muni.xmraz3.Surface;
 import cz.fi.muni.xmraz3.SesConfig;
 import cz.fi.muni.xmraz3.SurfaceParser;
 import cz.fi.muni.xmraz3.gui.MainPanel;
+import cz.fi.muni.xmraz3.gui.MainWindow;
 import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
@@ -26,6 +27,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Modality;
@@ -100,7 +102,12 @@ public class MainPanelController {
     private Spinner<Double> spinnerEdgeAngle;
     @FXML
     private Button btnTriangulate;
-
+    @FXML
+    private ColorPicker atomColorPick;
+    @FXML
+    private ColorPicker triangleColorPick;
+    @FXML
+    private ColorPicker torusColorPick;
     @FXML
     private Slider sldMouseSensitivity;
     private boolean tlpExclusiveExpand = false;
@@ -131,6 +138,35 @@ public class MainPanelController {
                 txtFolder.fireEvent(ae);
                 //txtFolder.fireEvent();
                 //startParsingJSON(selectedFolder.getAbsolutePath());
+            }
+        });
+        atomColorPick.setValue(Color.rgb(197, 20, 20));
+        triangleColorPick.setValue(Color.rgb(31, 143, 0));
+        torusColorPick.setValue(Color.rgb(51, 77, 179));
+        atomColorPick.valueProperty().addListener(new ChangeListener<Color>() {
+            @Override
+            public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color newValue) {
+                if (MainWindow.mainWindow != null) {
+                    MainWindow.mainWindow.changeColor(0, (float) newValue.getRed(), (float) newValue.getGreen(), (float) newValue.getBlue());
+                }
+            }
+        });
+
+        triangleColorPick.valueProperty().addListener(new ChangeListener<Color>() {
+            @Override
+            public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color newValue) {
+                if (MainWindow.mainWindow != null) {
+                    MainWindow.mainWindow.changeColor(1, (float) newValue.getRed(), (float) newValue.getGreen(), (float) newValue.getBlue());
+                }
+            }
+        });
+
+        torusColorPick.valueProperty().addListener(new ChangeListener<Color>() {
+            @Override
+            public void changed(ObservableValue<? extends Color> observable, Color oldValue, Color newValue) {
+                if (MainWindow.mainWindow != null) {
+                    MainWindow.mainWindow.changeColor(2, (float) newValue.getRed(), (float) newValue.getGreen(), (float) newValue.getBlue());
+                }
             }
         });
 

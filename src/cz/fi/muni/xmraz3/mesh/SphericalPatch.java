@@ -2,6 +2,7 @@ package cz.fi.muni.xmraz3.mesh;
 
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Sphere;
+import cz.fi.muni.xmraz3.math.Vector;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.TreeMap;
 
 public class SphericalPatch {
     public Sphere sphere;
+    public Vector patchNormal;
     public List<Arc> arcs;
     public List<Boundary> boundaries;
     public Map<Integer, List<ToroidalPatch>> tori;

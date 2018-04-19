@@ -6,6 +6,7 @@ import cz.fi.muni.xmraz3.gui.controllers.MainPanelController;
 import javafx.application.Application;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Rectangle2D;
@@ -15,6 +16,7 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
+import java.awt.*;
 import java.io.IOException;
 
 public class MainPanel extends Application {
@@ -49,7 +51,23 @@ public class MainPanel extends Application {
                 }
             });
             //primaryStage.setResizable(false); //causes different dimensions than from those when resizable is set to true
+            Screen primaryScreen = Screen.getPrimary();
+            ObservableList<Screen> screens = Screen.getScreens();
+            if (screens.size() > 1){
+                Rectangle rect = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration().getBounds();
+                for (Screen s : screens){
+                    if (s.getBounds().getMinX() == rect.x){
+                        primaryScreen = s;
+                        break;
+                    }
+                }
+            }
+            Rectangle2D primRect = primaryScreen.getVisualBounds();
+            primaryStage.setX(primRect.getMinX() + primRect.getWidth() / 2 - scene.getWidth() / 2);
+            primaryStage.setY(primRect.getMinY() + primRect.getHeight() / 2 - scene.getHeight() / 2);
             primaryStage.show();
+            //primaryStage.toFront();
+            scene.getWindow().centerOnScreen();
             primaryStage.xProperty().addListener(new ChangeListener<Number>() {
                 @Override
                 public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
@@ -70,6 +88,10 @@ public class MainPanel extends Application {
             /*Rectangle2D primScreenBounds = Screen.getPrimary().getVisualBounds();
             primaryStage.setX((primScreenBounds.getWidth() - primaryStage.getWidth()) / 2);
             primaryStage.setY((primScreenBounds.getHeight() - primaryStage.getHeight()) / 2);*/
+            /*for (Screen sc : Screen.getScreens()){
+                System.out.println(sc.toString());
+            }*/
+
 
         } catch (IOException e){
             e.printStackTrace();

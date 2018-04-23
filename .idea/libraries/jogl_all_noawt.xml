@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="jogl-all-noawt">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/jogamp-all-platforms/jar/jogl-all-noawt.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

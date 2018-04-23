@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="math.geom2d:javaGeom:0.11.1" type="repository">
+    <properties maven-id="math.geom2d:javaGeom:0.11.1" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/math/geom2d/javaGeom/0.11.1/javaGeom-0.11.1.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -140,7 +140,8 @@ public class MainPanelController {
                 //startParsingJSON(selectedFolder.getAbsolutePath());
             }
         });
-        atomColorPick.setValue(Color.rgb(197, 20, 20));
+        //atomColorPick.setValue(Color.rgb(197, 20, 20));
+        atomColorPick.setValue(Color.valueOf("Gray"));
         triangleColorPick.setValue(Color.rgb(31, 143, 0));
         torusColorPick.setValue(Color.rgb(51, 77, 179));
         atomColorPick.valueProperty().addListener(new ChangeListener<Color>() {
@@ -556,6 +557,9 @@ public class MainPanelController {
                             });
                         }
                     });
+                    MainPanel.atomView.changeColor(0, (float)atomColorPick.getValue().getRed(), (float)atomColorPick.getValue().getGreen(), (float)atomColorPick.getValue().getBlue());
+                    MainPanel.atomView.changeColor(1, (float)triangleColorPick.getValue().getRed(), (float)triangleColorPick.getValue().getGreen(), (float)triangleColorPick.getValue().getBlue());
+                    MainPanel.atomView.changeColor(2, (float)torusColorPick.getValue().getRed(), (float)torusColorPick.getValue().getGreen(), (float)torusColorPick.getValue().getBlue());
                     chkPinToView.setDisable(false);
                     cmbResolution.setDisable(false);
                     chkPinToView.fire();

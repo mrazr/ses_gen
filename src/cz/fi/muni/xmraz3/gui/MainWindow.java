@@ -49,7 +49,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     public Stage controlPanel;
     //public boolean isPinned = false;
     public BooleanProperty isPinned = new SimpleBooleanProperty(false);
-    GL4 gl;
+    private GL4 gl;
 
     List<Point> vrts;
     List<Edge> lines;
@@ -78,7 +78,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     private int[] ebo = new int[1];
     private int numOfVrts = 0;
     private int numOfIndices = 0;
-    boolean buffersInitialized = false;
+    private boolean buffersInitialized = false;
 
     boolean captureMouse = false;
 
@@ -633,6 +633,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         //mainProgram = GLUtil.createShaderProgram("resources/shaders/main.vert", "resources/shaders/main.frag");
         //mainProgram = GLUtil.createShaderProgram(MainWindow.class.getResource("main.vert").toString(), MainWindow.class.getResource("main.frag").toString());
         //mainProgram = GLUtil.createShaderProgram("main.vert", "main.frag");
+        System.out.println("Graphics vendor: " + gl.glGetString(GL.GL_VENDOR));
         uniMeshColorLoc = gl.glGetUniformLocation(mainProgram, "col");
         uniProjMatLoc = gl.glGetUniformLocation(mainProgram, "projMat");
         uniViewMatLoc = gl.glGetUniformLocation(mainProgram, "viewMat");
@@ -894,6 +895,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 hoverAtom = mouseSelectPixelBuffer.get();
                 //System.out.println("id: " + hoverAtom);
                 gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, 0);
+                //System.out.println(hoverAtom);
             }
             //PMVMatrix modelMat = new PMVMatrix();
             //modelMat.glLoadIdentity();
@@ -1066,6 +1068,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 //gl.glUniform1iv(uniVertexOffsets, 0, boffsets);
                 selectInitialized = true;
             }
+            gl.glUseProgram(selProgram);
             gl.glBindFramebuffer(GL.GL_FRAMEBUFFER, fbo[0]);
             gl.glEnable(GL.GL_DEPTH_TEST);
             gl.glClearColor(-1.f, -1.f, -1.f, -1.f);
@@ -1076,7 +1079,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             gl.glTexBuffer(GL4.GL_TEXTURE_BUFFER, GL4.GL_R32I, tbo[0]);
             gl.glUniform1i(uniVertexOffsets, 0);
 
-            //gl.glUseProgram(selProgram);
+
             int viewLoc = gl.glGetUniformLocation(selProgram, "viewMat");
             int projLoc = gl.glGetUniformLocation(selProgram, "proj_matrix");
             int modelLoc = gl.glGetUniformLocation(selProgram, "modelMat");
@@ -1938,7 +1941,6 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             }
         }
     }
-
     @Override
     public void keyReleased(KeyEvent keyEvent) {
         if (keyEvent.isAutoRepeat()){
@@ -2020,7 +2022,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                         convexPatchesSelect.remove((Object)hoverSelectID);
                     }
                 }
-                System.out.println("atom id: " + hoverSelectID);
+                //System.out.println("atom id: " + hoverSelectID);
             } else if (meshType == CONCAVE){
                 selectedConcaveP.set(hoverSelectID);
                 if (!addToSelection && !removeSelection){
@@ -2033,7 +2035,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                         concavePatchesSelect.remove((Object)hoverSelectID);
                     }
                 }
-                System.out.println("triangle id: " + hoverSelectID);
+                //System.out.println("triangle id: " + hoverSelectID);
                 linkNeighbors.clear();
             } else {
                 selectedToriP.set(hoverSelectID);
@@ -2048,7 +2050,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                         toriPatchesSelect.remove((Object)hoverSelectID);
                     }
                 }
-                System.out.println("tori id: " + hoverSelectID);
+                //System.out.println("tori id: " + hoverSelectID);
             }
         }
         /*if (hoverAtom > -1){

@@ -10,7 +10,7 @@ uniform mat4 proj_matrix;
 uniform int start;
 uniform int end;
 uniform int globalOffset;
-uniform samplerBuffer u_offset_Tex;
+uniform isamplerBuffer u_offset_Tex;
 flat in int atomID;
 
 void main(void)

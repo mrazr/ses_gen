@@ -157,11 +157,14 @@ public class Vector {
         int zero = -1;
         int first = -1;
         int second = -1;
+        boolean twoZeroes = false;
         double[] data = this.getData();
         for (int i = 0; i < 3; i++){
             if (Math.abs(data[i]) < 0.0001){
                 if (zero < 0) {
                     zero = i;
+                } else {
+                    twoZeroes = true;
                 }
             } else {
                 if (first < 0){
@@ -169,6 +172,16 @@ public class Vector {
                 } else if (second < 0){
                     second = i;
                 }
+            }
+        }
+        if (twoZeroes){
+            switch (first){
+                case 0:
+                    return new Vector(0, 1.0, 0);
+                case 1:
+                    return new Vector(1.0, 0, 0);
+                case 2:
+                    return new Vector(1.0, 0.0, 0.0);
             }
         }
         if (zero >= 0){

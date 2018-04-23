@@ -459,6 +459,9 @@ public class ArcUtil {
     public static void linkArcs(SphericalPatch sp) {
         try {
             //List<Arc> queue = new ArrayList<>(sp.arcs);
+            if (sp.id == 516){
+                int x = 3;
+            }
             queue.clear();
             queue.addAll(sp.arcs);
             boolean setValid = true;
@@ -474,6 +477,7 @@ public class ArcUtil {
                 Point pivot = l.end2;
                 int i = 0;
                 int iterator = 0;
+                setValid = true;
                 //while (Math.abs(loopEnd.dotProduct(pivot) - 1) >= 0.00001) {
                 while (Point.distance(loopEnd, pivot) > 0.001) {//Point.subtractPoints(loopEnd, pivot).sqrtMagnitude() > 0.001) {
                     if (iterator > sp.arcs.size() + 10) {
@@ -538,7 +542,7 @@ public class ArcUtil {
                 /*if (newB.size() < 2){
                     setValid = false;
                 }*/
-                if (setValid) {
+                if (setValid && newB.size() > 1) {
                     newB.get(0).end1 = l.end2;
                     newB.get(0).lines.get(0).p1 = l.end2;
                     newB.get(0).vrts.remove(0);
@@ -555,6 +559,7 @@ public class ArcUtil {
                         sp.vertices.add(v);
                     }
                     loopEndIdx = 0;
+                    sp.valid = true;
                 } else {
                     sp.valid = (sp.boundaries.size() > 0);
                 }

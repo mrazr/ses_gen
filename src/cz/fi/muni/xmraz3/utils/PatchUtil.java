@@ -2582,6 +2582,11 @@ public class PatchUtil {
         return Vector.getNormalVector(Point.subtractPoints(b, a).makeUnit(), Point.subtractPoints(c, a).makeUnit()).makeUnit();
     }
 
+    public static Vector computeTriangleNormal(Point a, Point b, Point c, Vector in){
+        in.assignNormalVectorOf(v1.changeVector(b, a).makeUnit(), v2.changeVector(c, a).makeUnit()).makeUnit();
+        return in;
+    }
+
     private static boolean pointsLieOnPatch(SphericalPatch sp, List<Point> points){
         for (Boundary b : sp.boundaries){
             for (Arc a : b.arcs){
@@ -2687,4 +2692,6 @@ public class PatchUtil {
         Point __p = Point.translatePoint(circle.p, ak);
         return circle.checkPointLocation(__p);
     }
+
+
 }

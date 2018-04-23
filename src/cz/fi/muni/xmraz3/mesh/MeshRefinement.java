@@ -698,7 +698,11 @@ public class MeshRefinement {
                     if (afm.loop){
                         System.out.println((a.convexPatch) ? "convex " + i + "looped" : "concave" + i + " looped");
                     } else {
-                        optimizeMesh(a, 0.5 * Surface.maxEdgeLen, threadId);
+                        if (a.convexPatch && a.id == -1764){
+
+                        } else {
+                            optimizeMesh(a, 0.5 * Surface.maxEdgeLen, threadId);
+                        }
                     }
                     if (!a.convexPatch && a.id == 225){
                         System.out.println("A:");
@@ -744,6 +748,14 @@ public class MeshRefinement {
             Point c = vertices.get(f.c);
             Point v1;
             Point v2;
+            /*if (sp.convexPatch) {
+                u.changeVector(a, sp.sphere.center).makeUnit();
+                Vector n_ = new Vector(0, 0, 0);
+                PatchUtil.computeTriangleNormal(a, b, c, n_);
+                if (Math.abs(n_.dotProduct(u)) < 0.2) {
+                    System.out.println("VERY Suspicious triangle: " + sp.id);
+                }
+            }*/
             if (Point.distance(a, b) - 0.75 * len < 0.0){
                 v1 = a;
                 v2 = b;
@@ -760,6 +772,7 @@ public class MeshRefinement {
                 //System.out.println("ARC POINT, continuing");
                 continue;
             }
+
             //int sID = (v1._id > v2._id) ? v2._id : v1._id;
             //int bID = (v1._id > v2._id) ? v1._id : v2._id;
             Map<Integer, List<Face>> vertexFaceMap = (sp.convexPatch) ? convexVertexFaceMap.get(sp.id) : concaveVertexFaceMap.get(sp.id);
@@ -818,6 +831,9 @@ public class MeshRefinement {
             Point a = vertices.get(f.a);
             Point b = vertices.get(f.b);
             Point c = vertices.get(f.c);
+            //if (!isEquilateral(a, b, c)){
+            //    f.divisible = false;
+            //}
             if (a._id < 0){
                 a._id = id++;
                 sp.vertices.add(a);
@@ -1375,10 +1391,10 @@ public class MeshRefinement {
                     }
                 }
             }
-            if (!sp.convexPatch && sp.id == 918) {
-                int triv = 5;
+            if (!sp.valid) {
+                continue;
             }
-            if (!sp.valid || !sp.convexPatch) {
+            if (sp.id == -1764 && sp.convexPatch){
                 continue;
             }
             facesToRefine.clear();
@@ -1397,6 +1413,9 @@ public class MeshRefinement {
                 if (!face.divisible){
                     int fads = 43;
                 }
+                /*if (!isEquilateral(a, b, c)){
+                    face.divisible = false;
+                }*/
                 if (sp.id == 918 && !sp.convexPatch && arcPointsInFace(face, sp.vertices) > 1){
                     int _sf = 43;
                 }
@@ -1645,5 +1664,18 @@ public class MeshRefinement {
                 finished.set(true);
             }
         }
+    }
+
+    private static boolean isEquilateral(Point a, Point b, Point c){
+        double ab = Point.distance(a, b);
+        double bc = Point.distance(b, c);
+        if (Math.abs(Math.max(ab, bc) / Math.min(ab, bc) - 1.0) > 0.3){
+            return false;
+        }
+        double ac = Point.distance(a, c);
+        if (Math.abs(Math.max(ab, ac) / Math.min(ab, ac) - 1.0) > 0.3){
+            return false;
+        }
+        return true;
     }
 }

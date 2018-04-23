@@ -20,7 +20,13 @@ public class AdvancingFrontMethod {
 
     private double maxEdge;
     private double baseLength;
+    private double baseDistTolerance;
+    private double basePointEdgeDistTolerance;
 
+    private double refineDistTolerance;
+    private double refinePointEdgeDistTolerance;
+
+    private double edgeLength;
 
     public static Vector computeTangentVector(Vector edgeVector, Vector norm1, Vector norm2){
         Vector addV = Vector.addVectors(norm1, norm2).multiply(0.5f);
@@ -534,10 +540,19 @@ public class AdvancingFrontMethod {
     }
 
     public void _initializeConvexAFM(SphericalPatch a, double mAlpha, double dTolerance, double height, double edgeLength, double baseLength){
+        verbose = (a.id == 8588);
         loopDetected = false;
         minAlpha = mAlpha;
         distTolerance = dTolerance;
         pointEdgeDistTolerance = 0.3 * baseLength;
+
+        baseDistTolerance = 0.2 * baseLength;
+        basePointEdgeDistTolerance = 0.3 * baseLength;
+
+        refineDistTolerance = 0.2 * edgeLength;
+        refinePointEdgeDistTolerance = 0.3 * edgeLength;
+        maxEdge = edgeLength;
+
         this.height = height;
         this.baseLength = baseLength;
         //this.atom = a;
@@ -581,6 +596,12 @@ public class AdvancingFrontMethod {
         this.baseLength =  baseLength;
         this.height = height;
         this.pointEdgeDistTolerance = 0.4 * baseLength;
+
+        this.baseDistTolerance = 0.2 * baseLength;
+        this.basePointEdgeDistTolerance = 0.4 * baseLength;
+        this.refineDistTolerance = 0.2 * edgeLength;
+        this.refinePointEdgeDistTolerance = 0.4 * edgeLength;
+
         //vrtsOffset = 0;
         b = cp.boundaries.get(0);
         for (Boundary c : cp.boundaries){
@@ -655,6 +676,9 @@ public class AdvancingFrontMethod {
     }
 
     public boolean newMesh(){
+        edgeLength = baseLength;
+        distTolerance = baseDistTolerance;
+        pointEdgeDistTolerance = basePointEdgeDistTolerance;
         loop = false;
         if (patchComplete){
             this._initializeDataStructures();
@@ -695,6 +719,17 @@ public class AdvancingFrontMethod {
                 }
                 continue;
             }
+
+            if (e.p1.arcPoint && e.p2.arcPoint && ArcUtil.getCommonArc(e.p1, e.p2) != null){
+                this.distTolerance = refineDistTolerance;
+                this.pointEdgeDistTolerance = refinePointEdgeDistTolerance;
+                this.edgeLength = maxEdge;
+            } else {
+                this.distTolerance = baseDistTolerance;
+                this.pointEdgeDistTolerance = basePointEdgeDistTolerance;
+                this.edgeLength = baseLength;
+            }
+
             n1 = n1.changeVector(e.p1, patch.sphere.center).makeUnit();
             n2 = n2.changeVector(e.p2, patch.sphere.center).makeUnit();
             e1ToE2 = e1ToE2.changeVector(e.p2, e.p1);
@@ -983,7 +1018,7 @@ public class AdvancingFrontMethod {
                 if (scream){
                     System.out.println(dist + " < " + (pointEdgeDistTolerance + baseLength));
                 }
-                if (dist < baseLength + pointEdgeDistTolerance){
+                if (dist < edgeLength + pointEdgeDistTolerance){
                     if (scream){
                         System.out.println("dist < baseLen + pdistan");
                     }
@@ -1016,7 +1051,7 @@ public class AdvancingFrontMethod {
             }
             if (/*ef.p2 != e.p1 && ef.p2 != e.p2*/true){
                 double dist = pointEdgeDistance(ef.p2, e);
-                if (dist < baseLength + pointEdgeDistTolerance){
+                if (dist < edgeLength + pointEdgeDistTolerance){
                     //Vector midToefP1 = Point.subtractPoints(ef.p2, midPoint).makeUnit();
                     aV1.changeVector(ef.p2, midPoint).makeUnit();
                     if (aV2.dotProduct(tangentInMiddle) > 0){

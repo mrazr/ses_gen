@@ -540,7 +540,7 @@ public class AdvancingFrontMethod {
     }
 
     public void _initializeConvexAFM(SphericalPatch a, double mAlpha, double dTolerance, double height, double edgeLength, double baseLength){
-        verbose = (a.id == 8588);
+        verbose = false; //(a.id == 8588);
         loopDetected = false;
         minAlpha = mAlpha;
         distTolerance = dTolerance;
@@ -576,7 +576,7 @@ public class AdvancingFrontMethod {
         }
         Boundary b = cp.boundaries.get(0);
         //timeout = 3000;
-        verbose = (cp.id == 6966);
+        verbose = false;//(cp.id == 6966);
         loopDetected = false;
         this.patch = cp;
         //meshFaceList = cp.faces;
@@ -680,6 +680,10 @@ public class AdvancingFrontMethod {
         distTolerance = baseDistTolerance;
         pointEdgeDistTolerance = basePointEdgeDistTolerance;
         loop = false;
+
+        edgeLength = maxEdge;
+        distTolerance = refineDistTolerance;
+        pointEdgeDistTolerance = refinePointEdgeDistTolerance;
         if (patchComplete){
             this._initializeDataStructures();
         }
@@ -740,8 +744,8 @@ public class AdvancingFrontMethod {
             midNormal = midNormal.changeVector(midPoint, patch.sphere.center).makeUnit();
             //tangentInMiddle = Vector.getNormalVector(midNormal, midVec).makeUnit();
             tangentInMiddle.assignNormalVectorOf(midNormal, midVec).makeUnit();
-            double realHeight = Math.sqrt(Math.pow(baseLength, 2) - Math.pow(e1ToE2.sqrtMagnitude() * 0.5, 2));
-            double realMinAlpha = Math.asin(realHeight / baseLength) + Math.toRadians(1);
+            double realHeight = Math.sqrt(Math.pow(edgeLength, 2) - Math.pow(e1ToE2.sqrtMagnitude() * 0.5, 2));
+            double realMinAlpha = Math.asin(realHeight / edgeLength) + Math.toRadians(1);
             realMinAlpha = (realMinAlpha > Math.toRadians(120)) ? Math.toRadians(120) : realMinAlpha;
 
             if (lastTangent == null){
@@ -757,7 +761,7 @@ public class AdvancingFrontMethod {
             //double alpha2 = computeAngle(Point.subtractPoints(e.prev.p1, e.prev.p2).makeUnit(), Point.subtractPoints(e.p2, e.p1).makeUnit(), n1);
             double alpha2 = computeAngle(aV1.changeVector(e.prev.p1, e.prev.p2).makeUnit(), aV2.changeVector(e.p2, e.p1).makeUnit(), n1);
 
-            if (alpha1 < this.minAlpha) {//realMinAlpha){//this.minAlpha){
+            if (alpha1 < realMinAlpha) {//realMinAlpha){//this.minAlpha){
                 if (nodeEdgeMap.get(eR.p2.afmIdx).size() > 0) {
                     e1.p1 = e.p1;
                     e1.p2 = eR.p2;
@@ -774,7 +778,7 @@ public class AdvancingFrontMethod {
                     }
                 }
             }
-            if (alpha2 < this.minAlpha){
+            if (alpha2 < realMinAlpha){
                 if (nodeEdgeMap.get(eL.p1.afmIdx).size() > 0) {
                     e1.p1 = e.p1;
                     e1.p2 = eL.p1;
@@ -834,10 +838,10 @@ public class AdvancingFrontMethod {
             //so far no suitable points to form a new triangle with the edge e, let's create a test point
             if (candidates.isEmpty()){
                 double height2; //assign such height so that the newly formed edges will have +- length of Surface.maxEdgeLen
-                if (baseLength - 0.05f - e1ToE2.sqrtMagnitude() * 0.5f < 0.f){
+                if (edgeLength - 0.05f - e1ToE2.sqrtMagnitude() * 0.5f < 0.f){
                     height2 = (e1ToE2.sqrtMagnitude() * 0.5f) * Math.tan(Math.toRadians(30));
                 } else {
-                    height2 = Math.sqrt(Math.pow(baseLength - 0.05f, 2) - Math.pow(e1ToE2.sqrtMagnitude() * 0.5f, 2));
+                    height2 = Math.sqrt(Math.pow(edgeLength - 0.05f, 2) - Math.pow(e1ToE2.sqrtMagnitude() * 0.5f, 2));
                 }
                 Point pTest = generateNewTestPoint(midNormal, e1ToE2, patch.sphere.radius, height2, midPoint, true);
                 //test whether there are any edges close enough to pTest so the triangle might be formed with them instead of pTest

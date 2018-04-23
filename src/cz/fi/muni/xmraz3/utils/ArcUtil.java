@@ -984,7 +984,7 @@ public class ArcUtil {
 
     public static void refineArcsOnConcavePatches(){
         for (SphericalPatch sp : Surface.triangles) {
-
+            sp.trimmed = true;
             sp.vertices.clear();
             sp.nextVertexID = 0;
             for (Boundary b : sp.boundaries) {

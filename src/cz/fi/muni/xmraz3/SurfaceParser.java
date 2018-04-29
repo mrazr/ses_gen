@@ -57,6 +57,7 @@ public class SurfaceParser {
     }
 
     public static void ses_start(String folder) {
+        long _startTime = System.currentTimeMillis();
         MeshRefinement.reset();
         Surface.triangles.clear();
         Surface.rectangles.clear();
@@ -80,6 +81,8 @@ public class SurfaceParser {
 
             System.out.println("Convex patches: " + Surface.convexPatches.size());
             System.out.println("Triangles: " + Surface.triangles.size());
+            System.out.println("Min alpha: " + SesConfig.minAlpha);
+            System.out.println("Edge length: " + SesConfig.edgeLimit);
 
             constructProbeTree();
             Surface.probeTree.setIdenticalExcluded(true);
@@ -103,11 +106,15 @@ public class SurfaceParser {
             ArcUtil.refineArcsOnConcavePatches();
             //System.out.println("MEMORY AFTER refineConc: ");
             //getMemory();
+            // ;
+            long _endOfParsing = System.currentTimeMillis();
+            System.out.println("Parsing and construction and trimming of boundaries took " + (_endOfParsing - _startTime) + " milliseconds");
             if (SesConfig.useGUI) {
                 MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
             }
             MeshRefinement.startMeshing();
             if (SesConfig.objFile != null || SesConfig.stlFile != null){
+                fillCommonVertices();
                 while (!MeshRefinement.finished.get()){}
                 if (SesConfig.objFile != null){
                     exportOBJ(SesConfig.objFile, (char)7);
@@ -116,12 +123,12 @@ public class SurfaceParser {
                     exportSTLText(SesConfig.stlFile);
                 }
             }
-            //System.out.println("MEMORY AFTER mesh+refine: ");
-            //getMemory();
-            fillCommonVertices();
-            //System.out.println("MEMORY AFTER fillCommon: ");
-            //getMemory();
-            //System.gc();
+            int mbytes = 1024 * 1024;
+            float maxHeapSize = (float)Runtime.getRuntime().maxMemory() / mbytes;
+            float heapSize = (float)Runtime.getRuntime().totalMemory() / mbytes;
+            float freeMemory = (float)Runtime.getRuntime().freeMemory() / mbytes;
+            System.out.println("Heap size: " + heapSize + " / " + maxHeapSize + " MB");
+            System.out.println("Heap usage: " + (heapSize - freeMemory) + " / " + heapSize + " MB");
         } catch (Exception e){
             System.out.println(e.getMessage());
         }
@@ -138,7 +145,7 @@ public class SurfaceParser {
             //sp.faceCount = 0;
             //sp.vertices.clear();
         }
-        System.out.println("convex reset done");
+        //System.out.println("convex reset done");
         ArcUtil.refineArcsOnConvexPatches();
         for (SphericalPatch sp : Surface.triangles){
             ArcUtil.resetArcs(sp);
@@ -146,14 +153,16 @@ public class SurfaceParser {
             sp.faces.clear();
             //sp.faceCount = 0;
         }
-        System.out.println("concave reset done");
+        //System.out.println("concave reset done");
         ArcUtil.refineArcsOnConcavePatches();
         MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
         MeshRefinement.startMeshing();
+        fillCommonVertices();
     }
 
     private static void fillCommonVertices(){
         Surface.commonVrts.clear();
+        Surface.normals.clear();
         int idx = 1;
         for (SphericalPatch a : Surface.convexPatches){
             for (Boundary b : a.boundaries){

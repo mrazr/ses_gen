@@ -668,7 +668,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         gl.glLineWidth(0.5f);
         gl.glCullFace(GL.GL_BACK);
         float aspect = 800 / (float)600;
-        pMat = GLUtil.perspective(60.f, aspect, 0.1f, 100.f);
+        pMat = GLUtil.perspective(60.f, aspect, 0.1f, 200.f);
         lastTick = System.currentTimeMillis();
         //List<Point> vrts = new ArrayList<>();
         //for (int i = 0; i < data.length; i += 3){

@@ -659,7 +659,6 @@ public class MeshRefinement {
 
     public static void generateBaseMesh(int start, int end, List<SphericalPatch> patches, int threadId) {
         free.set(false);
-        System.out.println("started meshing");
         threads_working.incrementAndGet();
         AdvancingFrontMethod afm = new AdvancingFrontMethod();
         long startTime = System.currentTimeMillis();
@@ -701,7 +700,7 @@ public class MeshRefinement {
                         if (a.convexPatch && a.id == -1764){
 
                         } else {
-                            optimizeMesh(a, 0.5 * Surface.maxEdgeLen, threadId);
+                            //optimizeMesh(a, 0.5 * SesConfig.edgeLimit, threadId);
                         }
                     }
                     if (!a.convexPatch && a.id == 225){
@@ -713,13 +712,13 @@ public class MeshRefinement {
             }
         }
         long endTime = System.currentTimeMillis();
-        System.out.println("Meshed in " + (endTime - startTime) + " ms");
+        System.out.println(((patches.get(0).convexPatch) ? "Convex" : "Concave" ) + " patches meshed in " + (endTime - startTime) + " ms");
         threads_working.decrementAndGet();
         threads_done.incrementAndGet();
         //trianglesGenerated.addAndGet(afm.numOfTriangles);
         if (threadId == 0){
             while (threads_done.get() != THREAD_COUNT);
-            System.out.println("STARTING REFINING");
+            //System.out.println("STARTING REFINING");
             threads_done.set(0);
             MeshRefinement.refinement.start(patches);
         }
@@ -1011,6 +1010,7 @@ public class MeshRefinement {
 
     public static void startMeshing(){
         finished.set(false);
+        long startTime = System.currentTimeMillis();
         for (ToroidalPatch tp : Surface.rectangles){
             tp.vertices.clear();
             tp.normals.clear();
@@ -1020,6 +1020,7 @@ public class MeshRefinement {
             meshToroidalPatch(tp);
             _triangles[0] += tp.faces.size();
         }
+        System.out.println("Toroidal patches meshed in " + (System.currentTimeMillis() - startTime) + " milliseconds");
         if (SesConfig.useGUI){
             MainWindow.mainWindow.pushTori();
         }
@@ -1038,7 +1039,6 @@ public class MeshRefinement {
         }
         while (!MeshRefinement.free.get()){}
         MeshRefinement.threads_done.set(0);
-        System.out.println("starting to mesh concave");
         step = SesConfig.trianglesCount / 4;
         for (int i = 0; i < 4; ++i){
             final int start = i;
@@ -1051,6 +1051,7 @@ public class MeshRefinement {
             };
             (new Thread(r)).start();
         }
+        while (!MeshRefinement.free.get()){}
     }
 
     public static void meshToroidalPatch(ToroidalPatch tp){
@@ -1391,7 +1392,8 @@ public class MeshRefinement {
                     }
                 }
             }
-            if (!sp.valid) {
+            if (!sp.valid || true) {
+                _triangles[threadIdx] += sp.faces.size();
                 continue;
             }
             if (sp.id == -1764 && sp.convexPatch){
@@ -1642,21 +1644,21 @@ public class MeshRefinement {
             _triangles[threadIdx] += sp.faces.size();
         }
 
-        System.out.println("REFINE COMPLETE, thd: " + threadIdx + " in " + (System.currentTimeMillis() - startTime) + " ms");
+        //System.out.println("REFINE COMPLETE, thd: " + threadIdx + " in " + (System.currentTimeMillis() - startTime) + " ms");
         //threads_working.decrementAndGet();
         threads_done.incrementAndGet();
         if (threads_done.get() == THREAD_COUNT){
+            trianglesGenerated.addAndGet(_triangles[0]);
+            trianglesGenerated.addAndGet(_triangles[1]);
+            trianglesGenerated.addAndGet(_triangles[2]);
+            trianglesGenerated.addAndGet(_triangles[3]);
+            System.out.println("Total number of faces generated: " + trianglesGenerated.get());
             if (SesConfig.useGUI) {
                 System.out.println("PUSHING DATA TO GPU");
                 if (patches.get(0).convexPatch) {
                     MainWindow.mainWindow.pushConvex();
                 } else {
                     MainWindow.mainWindow.pushConcave();
-                    trianglesGenerated.addAndGet(_triangles[0]);
-                    trianglesGenerated.addAndGet(_triangles[1]);
-                    trianglesGenerated.addAndGet(_triangles[2]);
-                    trianglesGenerated.addAndGet(_triangles[3]);
-                    System.out.println("Total number of faces generated: " + trianglesGenerated.get());
                 }
             }
             free.set(true);

@@ -1609,8 +1609,8 @@ public class PatchUtil {
 
     private static Map<Integer, List<Plane>> planes = new TreeMap<>();
     private static Map<Integer, Map<Integer, List<Point>>> moip = new TreeMap<>();
-    private static Map<Integer, Map<Integer, PatchBridge>> bridgeArcs = new TreeMap<>();
-    private static Map<Integer, List<ArcDivide>> divides = new TreeMap<>();
+    //private static Map<Integer, Map<Integer, PatchBridge>> bridgeArcs = new TreeMap<>();
+    //private static Map<Integer, List<ArcDivide>> divides = new TreeMap<>();
     private static SphericalPatch curr;
     private static Plane currCirc;
     private static double currRad;
@@ -2600,59 +2600,59 @@ public class PatchUtil {
         return false;
     }
 
-    private static void trimConcavePatch(SphericalPatch sp, SphericalPatch sp2, boolean force){
-        Point center = new Point(0, 0, 0);
-        double radius = computeIntersectionCircle(sp.sphere.center, sp2.sphere.center, center, SesConfig.probeRadius);
-        Vector nV = Point.subtractPoints(sp.sphere.center, center).makeUnit();
-        Plane p = new Plane(center, nV);
-        List<Point> intersectionPoints = new ArrayList<>();
-        List<Arc> excludeArcs = new ArrayList<>();
-        if (divides.containsKey(sp.id)){
-            divides.get(sp.id).stream().forEach(arcDivide -> {
-                intersectionPoints.add(arcDivide.intersection);
-                excludeArcs.add(arcDivide.newArc);
-            });
-        }
-        findIntersectionPoints(sp, center, radius, intersectionPoints, excludeArcs);
-        if (intersectionPoints.size() > 1){
-            sp.intersectingPatches.add(sp2.id);
-            generateNewBoundaries2(sp, intersectionPoints, p, radius, sp2.id, force);
-        }
-    }
+//    private static void trimConcavePatch(SphericalPatch sp, SphericalPatch sp2, boolean force){
+//        Point center = new Point(0, 0, 0);
+//        double radius = computeIntersectionCircle(sp.sphere.center, sp2.sphere.center, center, SesConfig.probeRadius);
+//        Vector nV = Point.subtractPoints(sp.sphere.center, center).makeUnit();
+//        Plane p = new Plane(center, nV);
+//        List<Point> intersectionPoints = new ArrayList<>();
+//        List<Arc> excludeArcs = new ArrayList<>();
+//        if (divides.containsKey(sp.id)){
+//            divides.get(sp.id).stream().forEach(arcDivide -> {
+//                intersectionPoints.add(arcDivide.intersection);
+//                excludeArcs.add(arcDivide.newArc);
+//            });
+//        }
+//        findIntersectionPoints(sp, center, radius, intersectionPoints, excludeArcs);
+//        if (intersectionPoints.size() > 1){
+//            sp.intersectingPatches.add(sp2.id);
+//            generateNewBoundaries2(sp, intersectionPoints, p, radius, sp2.id, force);
+//        }
+//    }
 
-    private static void putNewBridgeArc(int sp1, int sp2, Arc a){
-        int small = Math.min(sp1, sp2);
-        int big = Math.max(sp1, sp2);
-        if (!bridgeArcs.containsKey(small)){
-            bridgeArcs.put(small, new TreeMap<>());
-        }
-        Map<Integer, PatchBridge> map = bridgeArcs.get(small);
-        if (!map.containsKey(big)){
-            map.put(big, new PatchBridge());
-        }
-        PatchBridge pb = map.get(big);
-        pb.intersections.add(a.end1);
-        pb.intersections.add(a.end2);
-        pb.bridges.add(a);
-    }
+//    private static void putNewBridgeArc(int sp1, int sp2, Arc a){
+//        int small = Math.min(sp1, sp2);
+//        int big = Math.max(sp1, sp2);
+//        if (!bridgeArcs.containsKey(small)){
+//            bridgeArcs.put(small, new TreeMap<>());
+//        }
+//        Map<Integer, PatchBridge> map = bridgeArcs.get(small);
+//        if (!map.containsKey(big)){
+//            map.put(big, new PatchBridge());
+//        }
+//        PatchBridge pb = map.get(big);
+//        pb.intersections.add(a.end1);
+//        pb.intersections.add(a.end2);
+//        pb.bridges.add(a);
+//    }
 
-    private static Arc retrieveBridgeArc(int sp1, int sp2, Point in1, Point in2){
-        int small = Math.min(sp1, sp2);
-        int big = Math.max(sp1, sp2);
-        if (!bridgeArcs.containsKey(small)){
-            return null;
-        }
-        Map<Integer, PatchBridge> map = bridgeArcs.get(small);
-        if (!map.containsKey(big)){
-            return null;
-        }
-        PatchBridge pb = map.get(big);
-        Optional<Arc> arc = pb.bridges.stream().filter(a -> Point.distance(a.end1, in1) < 0.001 && Point.distance(a.end2, in2) < 0.001).findFirst();
-        if (arc.isPresent()){
-            return arc.get();
-        }
-        return null;
-    }
+//    private static Arc retrieveBridgeArc(int sp1, int sp2, Point in1, Point in2){
+//        int small = Math.min(sp1, sp2);
+//        int big = Math.max(sp1, sp2);
+//        if (!bridgeArcs.containsKey(small)){
+//            return null;
+//        }
+//        Map<Integer, PatchBridge> map = bridgeArcs.get(small);
+//        if (!map.containsKey(big)){
+//            return null;
+//        }
+//        PatchBridge pb = map.get(big);
+//        Optional<Arc> arc = pb.bridges.stream().filter(a -> Point.distance(a.end1, in1) < 0.001 && Point.distance(a.end2, in2) < 0.001).findFirst();
+//        if (arc.isPresent()){
+//            return arc.get();
+//        }
+//        return null;
+//    }
 
     private static boolean _check(SphericalPatch sp){
         for (Boundary b : sp.boundaries){

@@ -141,7 +141,8 @@ public class MainPanelController {
             }
         });
         //atomColorPick.setValue(Color.rgb(197, 20, 20));
-        atomColorPick.setValue(Color.valueOf("Gray"));
+        //atomColorPick.setValue(Color.valueOf("Gray"));
+        atomColorPick.setValue(Color.rgb(204, 102, 51));
         triangleColorPick.setValue(Color.rgb(31, 143, 0));
         torusColorPick.setValue(Color.rgb(51, 77, 179));
         atomColorPick.valueProperty().addListener(new ChangeListener<Color>() {

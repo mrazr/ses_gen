@@ -446,6 +446,7 @@ public class AdvancingFrontMethod {
     Vector v3 = new Vector(0, 0, 0);
     Vector n = new Vector(0, 0, 0);
     Point testPoint = new Point(0, 0, 0);
+    Point tempTestPoint = new Point(0, 0, 0);
     public int numOfTriangles = 0;
 
     private boolean incorrectNumberOfIncEdges(Point p){
@@ -540,7 +541,7 @@ public class AdvancingFrontMethod {
     }
 
     public void _initializeConvexAFM(SphericalPatch a, double mAlpha, double dTolerance, double height, double edgeLength, double baseLength){
-        verbose = false; //(a.id == 8588);
+        verbose = false;//(a.id == 2014);
         loopDetected = false;
         minAlpha = mAlpha;
         distTolerance = dTolerance;
@@ -691,11 +692,15 @@ public class AdvancingFrontMethod {
         int empty = 0;
         boolean faceGenerated = false;
         while (facets.size() > 0){
+            pastFacets.clear();
             if (concavePatch && patch.id == 918){
                 int f = 4;
             }
             faceGenerated = false;
             dontConsider.clear();
+            if (verbose && patch.faces.size() > 20){
+                time = (long)0;
+            }
             if (System.currentTimeMillis() - time > timeout){
                 if (currentTry < maxNumberOfRestarts){
                     time = System.currentTimeMillis();
@@ -724,7 +729,7 @@ public class AdvancingFrontMethod {
                 continue;
             }
 
-            if (e.p1.arcPoint && e.p2.arcPoint && ArcUtil.getCommonArc(e.p1, e.p2) != null){
+            if (e.p1.arcPoint && e.p2.arcPoint && ArcUtil.getCommonArc(e.p1, e.p2) != null || true){
                 this.distTolerance = refineDistTolerance;
                 this.pointEdgeDistTolerance = refinePointEdgeDistTolerance;
                 this.edgeLength = maxEdge;
@@ -769,12 +774,37 @@ public class AdvancingFrontMethod {
                     e2.p2 = eR.p2;
                     ignore.clear();
                     ignore.add(e);
-                    if (!checkForIntersectingEdges(e1, e2, facets, ignore)){
+                    /*if (!checkForIntersectingEdges(e1, e2, facets, ignore)){
                         if (!patch.convexPatch && patch.id == 814 && !hasCorrectOrientation(eR.p2)){
                             System.out.println("for 814 adding incorrect eRp2");
                         }
+                        if (verbose && patch.faces.size() == 37){
+                            System.out.println("Added next edge to candidates");
+                        }
                         candidates.add(eR.p2);
                         //eR.p2.afmSelect = 1;
+                    }*/
+
+                    boolean intersects = false;
+                    for (Edge ek : facets){
+                        if (ek == e || ek == e.prev || ek == e.next){
+                            continue;
+                        }
+                        if (checkForIntersectingEdges(e1, ek, patch.sphere.radius, patch.sphere.center)){
+                            if (pointEdgeDistance(ek.p1, e1) - pointEdgeDistance(ek.p2, e1) > 0.0){
+                                candidates.add(ek.p2);
+                            } else {
+                                candidates.add(ek.p1);
+                            }
+                            intersects = true;
+                            break;
+                        }
+                    }
+                    if (!intersects){
+                        candidates.add(eR.p2);
+                        if (verbose && patch.faces.size() > 16){
+                            System.out.println("Added next edge to candidates");
+                        }
                     }
                 }
             }
@@ -786,12 +816,36 @@ public class AdvancingFrontMethod {
                     e2.p2 = eL.p1;
                     ignore.clear();
                     ignore.add(e);
-                    if (!checkForIntersectingEdges(e1, e2, facets, ignore)){
+                    /*if (!checkForIntersectingEdges(e1, e2, facets, ignore)){
                         if (!patch.convexPatch && patch.id == 814 && !hasCorrectOrientation(eL.p1)) {
                             System.out.println("for 814 adding incorrect eLP1");
                         }
+                        if (verbose && patch.faces.size() == 37){
+                            System.out.println("Added prev edge to candidates");
+                        }
                         candidates.add(eL.p1);
                         //eL.p1.afmSelect = 1;
+                    }*/
+                    boolean intersects = false;
+                    for (Edge ek : facets){
+                        if (ek == e || ek == e.prev || ek == e.next){
+                            continue;
+                        }
+                        if (checkForIntersectingEdges(e2, ek, patch.sphere.radius, patch.sphere.center)){
+                            if (pointEdgeDistance(ek.p1, e2) - pointEdgeDistance(ek.p2, e2) > 0.0){
+                                candidates.add(ek.p2);
+                            } else {
+                                candidates.add(ek.p1);
+                            }
+                            intersects = true;
+                            break;
+                        }
+                    }
+                    if (!intersects){
+                        candidates.add(eL.p1);
+                        if (verbose && patch.faces.size() > 16){
+                            System.out.println("Added prev edge to candidates");
+                        }
                     }
                 }
             }
@@ -826,6 +880,9 @@ public class AdvancingFrontMethod {
             while (candidates.contains(e.p2)){
                 candidates.remove(e.p2);
             }
+            if (verbose && patch.faces.size() > 16){
+                System.out.println("Cand size: " + candidates.size());
+            }
             for (Point p : candidates){
                 if (computeAngle(aV1.changeVector(p, e.p1).makeUnit(), aV2.changeVector(e.p2, e.p1).makeUnit(), n1) > Math.toRadians(SesConfig.minAlpha)
                         || computeAngle(aV1.changeVector(e.p1, e.p2).makeUnit(), aV2.changeVector(p, e.p2).makeUnit(), n2) > Math.toRadians(SesConfig.minAlpha) || (Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, p))) < 0.0)) {//PatchUtil.computeTriangleNormal(e.p1, e.p2, p))) < 0.01)) {
@@ -835,6 +892,9 @@ public class AdvancingFrontMethod {
             }
             candidates.clear();
             candidates.addAll(trueCands);
+            if (verbose && patch.faces.size() > 16){
+                System.out.println("true Cand size: " + candidates.size());
+            }
             //so far no suitable points to form a new triangle with the edge e, let's create a test point
             if (candidates.isEmpty()){
                 double height2; //assign such height so that the newly formed edges will have +- length of Surface.maxEdgeLen
@@ -872,12 +932,56 @@ public class AdvancingFrontMethod {
                         //if (!(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, e.next.p2))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.next.p2)){
                         if (!(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, e.next.p2))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.next.p2)){
                             //System.out.println(patch.id + " adding invalid vertex nextp2");
-                            candidates.add(e.next.p2);
+                            //eL.p1 = e.p1;
+                            //eL.p2 = e.next.p2;
+                            boolean intersects = false;
+                            for (Edge ek : facets){
+                                if (ek == e || ek == e.prev || ek == e.next){
+                                    continue;
+                                }
+                                if (checkForIntersectingEdges(eR, ek, patch.sphere.radius, patch.sphere.center)){
+                                    if (pointEdgeDistance(ek.p1, eR) - pointEdgeDistance(ek.p2, eR) > 0.0){
+                                        candidates.add(ek.p2);
+                                    } else {
+                                        candidates.add(ek.p1);
+                                    }
+                                    intersects = true;
+                                    break;
+                                }
+                            }
+                            if (!intersects){
+                                candidates.add(e.next.p2);
+                                if (verbose && patch.faces.size() > 16){
+                                    System.out.println("Added next edge to candidates later");
+                                }
+                            }
                         }
                         //if (!(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, e.prev.p1))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.prev.p1)){
                         if (!(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, e.prev.p1))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.prev.p1)){
                             //System.out.println(patch.id + " adding invalid vertex prevp1");
-                            candidates.add(e.prev.p1);
+                            //eL.p1 = e.p2;
+                            //eL.p2 = e.prev.p1;
+                            boolean intersects = false;
+                            for (Edge ek : facets){
+                                if (ek == e || ek == e.prev || ek == e.next){
+                                    continue;
+                                }
+                                if (checkForIntersectingEdges(eL, ek, patch.sphere.radius, patch.sphere.center)){
+                                    if (pointEdgeDistance(ek.p1, eL) - pointEdgeDistance(ek.p2, eL) > 0.0){
+                                        candidates.add(ek.p2);
+                                    } else {
+                                        candidates.add(ek.p1);
+                                    }
+                                    intersects = true;
+                                    break;
+                                }
+                            }
+                            if (!intersects){
+                                candidates.add(e.prev.p1);
+                                if (verbose && patch.faces.size() > 16){
+                                    System.out.println("Added prev edge to candidates later");
+                                }
+                            }
                         }
                     } else {
                         /*double h = height2;
@@ -1269,7 +1373,7 @@ public class AdvancingFrontMethod {
         n2.changeVector(newFacet.p2, patch.sphere.center).makeUnit();
         double alpha1 = computeAngle(aV1.changeVector(newFacet.prev.p1, newFacet.p1).makeUnit(), aV2.changeVector(newFacet.p2, newFacet.p1).makeUnit(), n1);
         double alpha2 = computeAngle(aV1.changeVector(newFacet.p1, newFacet.p2).makeUnit(), aV2.changeVector(newFacet.next.p2, newFacet.p2).makeUnit(), n2);
-        if (alpha1 - alpha2 < 0.0){
+        if (alpha1 - alpha2 < 0.0 && false){
             e = newFacet.prev;
         } else {
             e = newFacet.next;
@@ -1343,7 +1447,7 @@ public class AdvancingFrontMethod {
         n2.changeVector(newFacet.p2, patch.sphere.center).makeUnit();
         double alpha1 = computeAngle(aV1.changeVector(newFacet.prev.p1, newFacet.p1).makeUnit(), aV2.changeVector(newFacet.p2, newFacet.p1).makeUnit(), n1);
         double alpha2 = computeAngle(aV1.changeVector(newFacet.p1, newFacet.p2).makeUnit(), aV2.changeVector(newFacet.next.p2, newFacet.p2).makeUnit(), n2);
-        if (alpha1 - alpha2 < 0.0){
+        if (alpha1 - alpha2 < 0.0 && false){
             e = newFacet.prev;
         } else {
             e = newFacet.next;

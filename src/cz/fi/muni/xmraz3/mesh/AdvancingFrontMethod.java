@@ -6,6 +6,7 @@ import cz.fi.muni.xmraz3.SesConfig;
 import cz.fi.muni.xmraz3.Surface;
 import cz.fi.muni.xmraz3.math.Plane;
 import cz.fi.muni.xmraz3.math.Point;
+import cz.fi.muni.xmraz3.math.Sphere;
 import cz.fi.muni.xmraz3.math.Vector;
 import cz.fi.muni.xmraz3.utils.ArcUtil;
 import cz.fi.muni.xmraz3.utils.PatchUtil;
@@ -102,7 +103,7 @@ public class AdvancingFrontMethod {
         //Vector v = new Vector(nvector[0], nvector[1], nvector[2]);
         //v.makeUnit().multiply(height);
         aV2.changeVector(nvector[0], nvector[1], nvector[2]).makeUnit().multiply(height);
-        Point ret = Point.translatePoint(origin, aV2);
+        //Point ret = Point.translatePoint(origin, aV2);
         testPoint.assignTranslation(origin, aV2);
         /*
         if (vret.sqrtMagnitude() < 0.01){
@@ -151,12 +152,14 @@ public class AdvancingFrontMethod {
         }
 
         if (aV1.dotProduct(v2e1) * aV1.dotProduct(v2e2) < 0){
-            Plane p1 = new Plane(atomCenter, aV1);
+            //Plane p1 = new Plane(atomCenter, aV1);
+            ro1.redefine(atomCenter, aV1);
             //Vector ne2 = Vector.getNormalVector(v2e1, v2e2).makeUnit();
             aV2.assignNormalVectorOf(v2e1, v2e2).makeUnit();
-            Plane p2 = new Plane(atomCenter, aV2);
+            //Plane p2 = new Plane(atomCenter, aV2);
+            ro2.redefine(atomCenter, aV2);
             //p1.getIntersectionVector(p2);
-            if (!p1.assignIntersectionVectorTo(intersection, p2)){//no intersection vector was computed
+            if (!ro1.assignIntersectionVectorTo(intersection, ro2)){//no intersection vector was computed
                 return false;
             }
             if (intersection.dotProduct(ve1) < 0 || intersection.dotProduct(ve2) < 0){
@@ -168,6 +171,55 @@ public class AdvancingFrontMethod {
                 return true;
             }
         }
+        return false;
+    }
+    Plane ro1 = new Plane(new Point(0, 0, 0), new Vector(0, 0, 0));
+    Plane ro2 = new Plane(new Point(0, 0, 0), new Vector(0, 0, 0));
+    Point _pint1 = new Point(0, 0, 0);
+    Point _pint2 = new Point(0, 0, 0);
+    private boolean checkForIntersectingEdges2(Edge e1, Edge e2){
+//        ve1.changeVector(e1.p1, patch.sphere.center).makeUnit();
+//        ve2.changeVector(e1.p2, patch.sphere.center).makeUnit();
+//
+//        v2e1.changeVector(e2.p1, patch.sphere.center).makeUnit();
+//        v2e2.changeVector(e2.p2, patch.sphere.center).makeUnit();
+//
+//        ro1.redefine(patch.sphere.center, ve1, ve2);
+//        ro2.redefine(patch.sphere.center, v2e1, v2e2);
+//        if (!Sphere.compute2CirclesIntersection(ro1, ro2, patch.sphere.radius, _pint1, _pint2)){
+//            return false;
+//        }
+//        intersection.changeVector(_pint1, patch.sphere.center).makeUnit();
+//        double angle1 = Math.acos(ve1.dotProduct(ve2));
+//        double angle2 = Math.acos(v2e1.dotProduct(v2e2));
+//        if (angle1 - Math.acos(ve1.dotProduct(intersection)) > 0.0 &&
+//                angle1 - Math.acos(ve2.dotProduct(intersection)) > 0.0 &&
+//                angle2 - Math.acos(v2e1.dotProduct(intersection)) > 0.0 &&
+//                angle2 - Math.acos(v2e2.dotProduct(intersection)) > 0.0){
+//            return true;
+//        }
+//
+//        intersection.changeVector(_pint2, patch.sphere.center).makeUnit();
+//        //angle1 = Math.acos(ve1.dotProduct(ve2));
+//        //angle2 = Math.acos(v2e1.dotProduct(v2e2));
+//        if (angle1 - Math.acos(ve1.dotProduct(intersection)) > 0.0 &&
+//                angle1 - Math.acos(ve2.dotProduct(intersection)) > 0.0 &&
+//                angle2 - Math.acos(v2e1.dotProduct(intersection)) > 0.0 &&
+//                angle2 - Math.acos(v2e2.dotProduct(intersection)) > 0.0){
+//            return true;
+//        }
+//        return false;
+
+        ve1.changeVector(e1.p1, patch.sphere.center).makeUnit();
+        ve2.changeVector(e1.p2, patch.sphere.center).makeUnit();
+        ro1.redefine(patch.sphere.center, ve1, ve2);
+
+        v2e1.changeVector(e2.p1, patch.sphere.center).makeUnit();
+        v2e2.changeVector(e2.p2, patch.sphere.center).makeUnit();
+        ro2.redefine(patch.sphere.center, v2e1, v2e2);
+        intersection.assignNormalVectorOf(ro1.v, ro2.v);
+        intersection.multiply(patch.sphere.radius);
+        _pint1.assignTranslation(patch.sphere.center, intersection);
         return false;
     }
 
@@ -461,10 +513,13 @@ public class AdvancingFrontMethod {
             if (checkForIntersectingEdges(e1, k, patch.sphere.radius, patch.sphere.center) || checkForIntersectingEdges(e2, k, patch.sphere.radius, patch.sphere.center)){
                 return true;
             }
+            //if (checkForIntersectingEdges2(e1, k) || checkForIntersectingEdges2(e2, k)){
+            //    return true;
+            //}
         }
         return false;
     }
-
+    private List<Boundary> toProcess = new ArrayList<>();
     private void _initializeDataStructures(){
         if (atomComplete){
             processedBoundaries.clear();
@@ -503,7 +558,8 @@ public class AdvancingFrontMethod {
         }
         processedBoundaries.add(b);
         processedBoundaries.addAll(b.nestedBoundaries);
-        List<Boundary> toProcess = new ArrayList<>();
+        //List<Boundary> toProcess = new ArrayList<>();
+        toProcess.clear();
         toProcess.add(b);
         toProcess.addAll(b.nestedBoundaries);
         for (Boundary c : toProcess) {
@@ -541,7 +597,7 @@ public class AdvancingFrontMethod {
     }
 
     public void _initializeConvexAFM(SphericalPatch a, double mAlpha, double dTolerance, double height, double edgeLength, double baseLength){
-        verbose = false;//(a.id == 2014);
+        verbose = false && (a.id == 1993);
         loopDetected = false;
         minAlpha = mAlpha;
         distTolerance = dTolerance;
@@ -551,7 +607,7 @@ public class AdvancingFrontMethod {
         basePointEdgeDistTolerance = 0.3 * baseLength;
 
         refineDistTolerance = 0.2 * edgeLength;
-        refinePointEdgeDistTolerance = 0.3 * edgeLength;
+        refinePointEdgeDistTolerance = 0.4 * edgeLength;
         maxEdge = edgeLength;
 
         this.height = height;
@@ -728,8 +784,9 @@ public class AdvancingFrontMethod {
                 }
                 continue;
             }
+            activeLoop = e.loopID;
 
-            if (e.p1.arcPoint && e.p2.arcPoint && ArcUtil.getCommonArc(e.p1, e.p2) != null || true){
+            /*if (e.p1.arcPoint && e.p2.arcPoint && ArcUtil.getCommonArc(e.p1, e.p2) != null || true){
                 this.distTolerance = refineDistTolerance;
                 this.pointEdgeDistTolerance = refinePointEdgeDistTolerance;
                 this.edgeLength = maxEdge;
@@ -737,7 +794,11 @@ public class AdvancingFrontMethod {
                 this.distTolerance = baseDistTolerance;
                 this.pointEdgeDistTolerance = basePointEdgeDistTolerance;
                 this.edgeLength = baseLength;
-            }
+            }*/
+
+            this.distTolerance = refineDistTolerance;
+            this.pointEdgeDistTolerance = refinePointEdgeDistTolerance;
+            this.edgeLength = maxEdge;
 
             n1 = n1.changeVector(e.p1, patch.sphere.center).makeUnit();
             n2 = n2.changeVector(e.p2, patch.sphere.center).makeUnit();
@@ -787,7 +848,7 @@ public class AdvancingFrontMethod {
 
                     boolean intersects = false;
                     for (Edge ek : facets){
-                        if (ek == e || ek == e.prev || ek == e.next){
+                        if (ek == e || ek == e.prev || ek == e.next || ek.loopID != activeLoop){
                             continue;
                         }
                         if (checkForIntersectingEdges(e1, ek, patch.sphere.radius, patch.sphere.center)){
@@ -828,7 +889,7 @@ public class AdvancingFrontMethod {
                     }*/
                     boolean intersects = false;
                     for (Edge ek : facets){
-                        if (ek == e || ek == e.prev || ek == e.next){
+                        if (ek == e || ek == e.prev || ek == e.next || ek.loopID != activeLoop){
                             continue;
                         }
                         if (checkForIntersectingEdges(e2, ek, patch.sphere.radius, patch.sphere.center)){
@@ -936,7 +997,7 @@ public class AdvancingFrontMethod {
                             //eL.p2 = e.next.p2;
                             boolean intersects = false;
                             for (Edge ek : facets){
-                                if (ek == e || ek == e.prev || ek == e.next){
+                                if (ek == e || ek == e.prev || ek == e.next || ek.loopID != activeLoop){
                                     continue;
                                 }
                                 if (checkForIntersectingEdges(eR, ek, patch.sphere.radius, patch.sphere.center)){
@@ -963,7 +1024,7 @@ public class AdvancingFrontMethod {
                             //eL.p2 = e.prev.p1;
                             boolean intersects = false;
                             for (Edge ek : facets){
-                                if (ek == e || ek == e.prev || ek == e.next){
+                                if (ek == e || ek == e.prev || ek == e.next || ek.loopID != activeLoop){
                                     continue;
                                 }
                                 if (checkForIntersectingEdges(eL, ek, patch.sphere.radius, patch.sphere.center)){
@@ -1117,25 +1178,12 @@ public class AdvancingFrontMethod {
             if (ef == e.prev || ef == e.next){
                 continue;
             }
-            boolean scream = (verbose && patch.faces.size() == 22 && ef == e.prev.prev.prev);
-            if (scream){
-                System.out.println("im going to scream");
-            }
             if (/*ef.p1 != e.p1 && ef.p1 != e.p2*/true){
                 double dist = pointEdgeDistance(ef.p1, e);
-                if (scream){
-                    System.out.println(dist + " < " + (pointEdgeDistTolerance + baseLength));
-                }
-                if (dist < edgeLength + pointEdgeDistTolerance){
-                    if (scream){
-                        System.out.println("dist < baseLen + pdistan");
-                    }
+                if (dist < 2 * edgeLength + pointEdgeDistTolerance){
                     //Vector midToefP1 = Point.subtractPoints(ef.p1, midPoint).makeUnit();
                     aV1.changeVector(ef.p1, midPoint).makeUnit();
                     if (aV1.dotProduct(tangentInMiddle) > 0.0){
-                        if (scream){
-                            System.out.println("aviDotprod + tangMiddle");
-                        }
                         pfp1.p1 = ef.p1;
                         pfp1.p2 = e.p1;
                         pfp2.p1 = ef.p1;
@@ -1145,9 +1193,6 @@ public class AdvancingFrontMethod {
                         ignore.add(ef);
                         if (!checkForIntersectingEdges(pfp1, pfp2, facets, ignore) && !checkForIntersectingEdges(pfp1, pfp2, pastFacets, ignore)){
                             if (nodeEdgeMap.get(ef.p1.afmIdx).size() > 0 && !(Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, ef.p1))) < 0.01)) {
-                                if (scream){
-                                    System.out.println("checked for itnersert");
-                                }
                                 if (ef.p1 != e.p2) {
                                     candidates.add(ef.p1);
                                     //ef.p1.afmSelect = 2;
@@ -1159,7 +1204,7 @@ public class AdvancingFrontMethod {
             }
             if (/*ef.p2 != e.p1 && ef.p2 != e.p2*/true){
                 double dist = pointEdgeDistance(ef.p2, e);
-                if (dist < edgeLength + pointEdgeDistTolerance){
+                if (dist < 2 * edgeLength + pointEdgeDistTolerance){
                     //Vector midToefP1 = Point.subtractPoints(ef.p2, midPoint).makeUnit();
                     aV1.changeVector(ef.p2, midPoint).makeUnit();
                     if (aV2.dotProduct(tangentInMiddle) > 0){
@@ -1559,8 +1604,8 @@ public class AdvancingFrontMethod {
             facets.add(rightFacet);
             facets.add(leftFacet);
             pastFacets.add(e);
-            Vector rF = Point.subtractPoints(rightFacet.p2, rightFacet.p1).makeUnit();
-            Vector lF = Point.subtractPoints(leftFacet.p1, leftFacet.p2).makeUnit();
+            //Vector rF = Point.subtractPoints(rightFacet.p2, rightFacet.p1).makeUnit();
+            //Vector lF = Point.subtractPoints(leftFacet.p1, leftFacet.p2).makeUnit();
             //System.out.println("VEC: " + lF.dotProduct(rF));
             //newLines.add(rightFacet);
             //newLines.add(leftFacet);

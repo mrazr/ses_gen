@@ -22,19 +22,6 @@ public class GLUtil {
     public static int createShaderProgram(InputStream vert, InputStream frag){
         GL4 gl = (GL4) GLContext.getCurrentGL();
 
-        /*String vshaders[] =
-                {
-                        "#version 430 \n",
-                        "void main(void) \n",
-                        "{ gl_Position = vec4(0.0, 0.0, 0.0, 1.0); } \n"
-                };
-        String fshaders[] =
-                {
-                        "#version 430 \n",
-                        "out vec4 color; \n",
-                        "void main(void) \n",
-                        "{ if (gl_FragCoord.x > 512) color = vec4(1.0, 0.0, 1.0, 1.0); else color = vec4(0.0, 1.0, 0.0, 1.0);}"
-                };*/
         String[] vshaders = readShaderSource(vert);
         String[] fshaders = readShaderSource(frag);
 
@@ -51,7 +38,7 @@ public class GLUtil {
         if (vertCompiled[0] == 1)
         { System.out.println(". . . vertex compilation success.");
         } else
-        { System.out.println(". . . vertex compilation failed.");
+        { System.err.println(". . . vertex compilation failed.");
             printShaderLog(vshader);
         }
 
@@ -65,13 +52,13 @@ public class GLUtil {
         if (fragCompiled[0] == 1)
         { System.out.println(". . . fragment compilation success.");
         } else
-        { System.out.println(". . . fragment compilation failed.");
+        { System.err.println(". . . fragment compilation failed.");
             printShaderLog(fshader);
         }
 
         if ((vertCompiled[0] != 1) || (fragCompiled[0] != 1))
-        { System.out.println("\nCompilation error; return-flags:");
-            System.out.println(" vertCompiled = " + vertCompiled[0] + " ; fragCompiled = " + fragCompiled[0]);
+        { System.err.println("\nCompilation error; return-flags:");
+            System.err.println(" vertCompiled = " + vertCompiled[0] + " ; fragCompiled = " + fragCompiled[0]);
         } else
         {
             System.out.println("Successful compilation");
@@ -86,7 +73,7 @@ public class GLUtil {
         if (linked[0] == 1) {
             System.out.println(". . . linking succeeded.");
         } else {
-            System.out.println(". . . linking failed.");
+            System.err.println(". . . linking failed.");
             printProgramLog(vfprogram);
         }
         gl.glDeleteShader(vshader);

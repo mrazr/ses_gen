@@ -14,178 +14,30 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import smile.neighbor.KDTree;
 
 import java.io.*;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 
 /**
  * Created by radoslav on 27.2.2017.
+ * Class that handles loading, parsing of the analytic representation of the SES. Also handles exporting of the surface mesh.
  */
 public class SurfaceParser {
 
-    private static Map<Integer, Map<Integer, List<SphericalPatch>>> missingArcs = new TreeMap<>();
+    //these are used throughout the construction of circular arcs of spherical patches
+    private static Vector probeMid = new Vector(0, 0, 0);
+    private static Vector v1 = new Vector(0, 0, 0);
+    private static Vector v2 = new Vector(0, 0, 0);
+    private static Vector v3 = new Vector(0, 0, 0);
 
-    private static void updateMissingArcs(int atom1, int atom2, SphericalPatch triangle){
-        int smaller = (atom1 > atom2) ? atom2 : atom1;
-        int bigger = (smaller == atom1) ? atom2 : atom1;
-        if (!missingArcs.containsKey(smaller)){
-            missingArcs.put(smaller, new TreeMap<>());
-        }
-        Map<Integer, List<SphericalPatch>> mapList = missingArcs.get(smaller);
-        if (!mapList.containsKey(bigger)){
-            mapList.put(bigger, new ArrayList<>());
-        }
-        mapList.get(bigger).add(triangle);
-    }
 
-    private static void constructProbeTree(){
-        double[][] keys = new double[Surface.triangles.size()][3];
-        SphericalPatch values[] = new SphericalPatch[Surface.triangles.size()];
-        for (int i = 0; i < keys.length; ++i){
-            Point p = Surface.triangles.get(i).sphere.center;
-            keys[i] = p.getData();
-            values[i] = Surface.triangles.get(i);
-        }
-        Surface.probeTree = new KDTree<>(keys, values);
-    }
-
-    public static void ses_start(String folder) {
-        long _startTime = System.currentTimeMillis();
-        MeshRefinement.reset();
-        Surface.triangles.clear();
-        Surface.rectangles.clear();
-        Surface.atomsProcessed.set(0);
-        Surface.selfIntersectingRects.clear();
-        Surface.intersectingArcs.clear();
-        Surface.numoftriangles = 0;
-        SphericalPatch.nextConcaveID = SphericalPatch.nextConvexID = 0;
-        ToroidalPatch.nextID = 0;
-        Surface.triangles.ensureCapacity(SesConfig.trianglesCount);
-        Surface.rectangles.ensureCapacity(SesConfig.toriCount);
-        Surface.convexPatches = SurfaceParser.parseAtoms(Paths.get(folder).resolve("atoms.dat").toString());
-        Surface.centerOfgravity.x /= SesConfig.atomCount;
-        Surface.centerOfgravity.y /= SesConfig.atomCount;
-        Surface.centerOfgravity.z /= SesConfig.atomCount;
-        Surface.probeRadius.set(Double.doubleToLongBits(SesConfig.probeRadius));
-        SurfaceParser.parseConvexAndToriPatches(Paths.get(folder).resolve("rectangles.dat").toString());
-
-        try {
-            SurfaceParser.parseTriangles(Paths.get(folder).resolve("triangles.dat").toString());
-
-            System.out.println("Convex patches: " + Surface.convexPatches.size());
-            System.out.println("Triangles: " + Surface.triangles.size());
-            System.out.println("Min alpha: " + SesConfig.minAlpha);
-            System.out.println("Edge length: " + SesConfig.edgeLimit);
-
-            constructProbeTree();
-            Surface.probeTree.setIdenticalExcluded(true);
-
-            PatchUtil.processSelfIntersectingTori();
-            //System.out.println("MEMORY AFTER processSelfIntersection: ");
-            //getMemory();
-            PatchUtil.processSelfIntersectingConcavePatches();
-            //System.out.println("MEMORY AFTER processSelfIntersectingConc: ");
-            //getMemory();
-            PatchUtil.processIntersectingConcavePatches();
-            //System.out.println("MEMORY AFTER processIntersectingConc: ");
-            //getMemory();
-            System.out.println("Trimmed triangles: " + Surface.trimmedTriangles + " / " + Surface.triangles.size());
-            ArcUtil.refineArcsOnConvexPatches();
-            //System.out.println("MEMORY AFTER refineConvex: ");
-            //getMemory();
-            ArcUtil.nestConvexPatchBoundaries();
-            //System.out.println("MEMORY AFTER nestConvex: ");
-            //getMemory();
-            ArcUtil.refineArcsOnConcavePatches();
-            //System.out.println("MEMORY AFTER refineConc: ");
-            //getMemory();
-            // ;
-            long _endOfParsing = System.currentTimeMillis();
-            System.out.println("Parsing and construction and trimming of boundaries took " + (_endOfParsing - _startTime) + " milliseconds");
-            if (SesConfig.useGUI) {
-                MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
-            }
-            MeshRefinement.startMeshing();
-            if (SesConfig.objFile != null || SesConfig.stlFile != null){
-                fillCommonVertices();
-                while (!MeshRefinement.finished.get()){}
-                if (SesConfig.objFile != null){
-                    exportOBJ(SesConfig.objFile, (char)7);
-                }
-                if (SesConfig.stlFile != null){
-                    exportSTLText(SesConfig.stlFile);
-                }
-            }
-            int mbytes = 1024 * 1024;
-            float maxHeapSize = (float)Runtime.getRuntime().maxMemory() / mbytes;
-            float heapSize = (float)Runtime.getRuntime().totalMemory() / mbytes;
-            float freeMemory = (float)Runtime.getRuntime().freeMemory() / mbytes;
-            System.out.println("Heap size: " + heapSize + " / " + maxHeapSize + " MB");
-            System.out.println("Heap usage: " + (heapSize - freeMemory) + " / " + heapSize + " MB");
-        } catch (Exception e){
-            System.out.println(e.getMessage());
-        }
-    }
-
-    public static void remesh(){
-        MainWindow.mainWindow.requestFreeResources();
-        while (!MainWindow.mainWindow.getResourcesFreed()){}
-        MeshRefinement.reset();
-        for (SphericalPatch sp : Surface.convexPatches){
-            ArcUtil.resetArcs(sp);
-            sp.meshed = false;
-            sp.faces.clear();
-            //sp.faceCount = 0;
-            //sp.vertices.clear();
-        }
-        //System.out.println("convex reset done");
-        ArcUtil.refineArcsOnConvexPatches();
-        for (SphericalPatch sp : Surface.triangles){
-            ArcUtil.resetArcs(sp);
-            sp.meshed = false;
-            sp.faces.clear();
-            //sp.faceCount = 0;
-        }
-        //System.out.println("concave reset done");
-        ArcUtil.refineArcsOnConcavePatches();
-        MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
-        MeshRefinement.startMeshing();
-        fillCommonVertices();
-    }
-
-    private static void fillCommonVertices(){
-        Surface.commonVrts.clear();
-        Surface.normals.clear();
-        int idx = 1;
-        for (SphericalPatch a : Surface.convexPatches){
-            for (Boundary b : a.boundaries){
-                for (Point p : b.vrts){
-                    p.idx = idx++;
-                    Surface.commonVrts.add(p);
-                    Vector n = Point.subtractPoints(p, a.sphere.center).makeUnit();
-                    Surface.normals.add(n);
-                    //p.common = true;
-                }
-            }
-        }
-        for (SphericalPatch cp : Surface.triangles){
-            for (Point p : cp.boundaries.get(0).vrts){
-                p.idx = idx++;
-                Surface.commonVrts.add(p);
-                Vector n = Point.subtractPoints(cp.sphere.center, p).makeUnit();
-                Surface.normals.add(n);
-                //p.common = true;
-            }
-        }
-    }
-
+    //------------methods for parsing of input files-------------
     public static String loadFile(String filename) {
         FileInputStream in = null;
         try{
@@ -220,7 +72,7 @@ public class SurfaceParser {
         }
     }
 
-    public static List<SphericalPatch> parseForAtoms(String raw){
+    public static List<SphericalPatch> parseAtomsJSON(String raw){
         ArrayList<SphericalPatch> atList = new ArrayList<>();
         try{
             JSONParser parser = new JSONParser();
@@ -238,7 +90,6 @@ public class SurfaceParser {
                 Surface.centerOfgravity.z += z;
                 long atId = (long)at.get("id");
                 SphericalPatch spatch = new SphericalPatch(new Point(atom), Surface.scaleFactor * r, true);
-                //atMap.put(atId, ahatom);
                 atList.add(spatch);
             }
         } catch (ParseException e){
@@ -246,61 +97,9 @@ public class SurfaceParser {
         }
         return atList;
     }
-    static int rollingCount = 0;
-    public static void jsonParseConvexAndToriPatches(String raw, List<SphericalPatch> atoms, double pRadius){
-        try{
-            JSONParser parser = new JSONParser();
-            Object obj = parser.parse(raw);
-            JSONArray ar = (JSONArray)obj;
-            for (Object oj : ar){
-                JSONObject entry = (JSONObject)oj;
-                int atom1Id = ((Long)entry.get("atom1Id")).intValue();
-                int atom2Id = ((Long)entry.get("atom2Id")).intValue();
-                if (atom1Id == 2556 && atom2Id == 385){
 
-                }
-                SphericalPatch atom1 = atoms.get((int)atom1Id);
-                SphericalPatch atom2 = atoms.get((int)atom2Id);
-                JSONObject jProbe1 = (JSONObject)entry.get("probe1");
-                JSONObject jProbe2 = (JSONObject)entry.get("probe2");
-                JSONObject jProbeMid = (JSONObject)entry.get("center");
-                Sphere probe1 = new Sphere(new Point(jProbe1), pRadius);
-                Sphere probe2 = new Sphere(new Point(jProbe2), pRadius);
-                Sphere probeMid = new Sphere(new Point(jProbeMid), pRadius);
-
-                constructConvexPatchArc(atom1, atom2, probe1, probe2, probeMid);
-
-                rollingCount += 2;
-            }
-        } catch (ParseException e){
-            System.err.println(e.getMessage());
-        }
-    }
-
-    public static void parseConvexAndToriPatches(String filename){
-        System.out.println("RECTANGLES: " + filename);
-        int atom1Id, atom2Id;
-        try (DataInputStream in = new DataInputStream(new FileInputStream(filename))){
-            byte[] buffer = new byte[SesConfig.toriCount * 44];
-            in.read(buffer, 0, buffer.length);
-            ByteBuffer data = ByteBuffer.wrap(buffer);
-            for (int i = 0; i < SesConfig.toriCount; ++i){
-                atom1Id = data.getInt();
-                atom2Id = data.getInt();
-                Sphere centerProbe = new Sphere(new Point(data.getFloat(), data.getFloat(), data.getFloat()), SesConfig.probeRadius);
-                Sphere probe1 = new Sphere(new Point(data.getFloat(), data.getFloat(), data.getFloat()), SesConfig.probeRadius);
-                Sphere probe2 = new Sphere(new Point(data.getFloat(), data.getFloat(), data.getFloat()), SesConfig.probeRadius);
-                SphericalPatch atom1 = Surface.convexPatches.get(atom1Id);
-                SphericalPatch atom2 = Surface.convexPatches.get(atom2Id);
-                constructConvexPatchArc(atom1, atom2, probe1, probe2, centerProbe);
-            }
-        } catch (IOException e){
-            e.printStackTrace();
-        }
-    }
-
-    public static ArrayList<SphericalPatch> parseAtoms(String filename){
-        System.out.println("ATOMS: " + filename);
+    private static ArrayList<SphericalPatch> parseAtomsBinary(String filename){
+        //System.out.println("ATOMS: " + filename);
         double x, y, z, r;
         int id = -1;
         ArrayList<SphericalPatch> n = new ArrayList<>(SesConfig.atomCount);
@@ -322,8 +121,55 @@ public class SurfaceParser {
         return n;
     }
 
-    public static void parseTriangles(String filename){
-        System.out.println("TRIANGLES: " + filename);
+    private static void parseConvexAndToriPatchesBinary(String filename){
+        int atom1Id, atom2Id;
+        try (DataInputStream in = new DataInputStream(new FileInputStream(filename))){
+            byte[] buffer = new byte[SesConfig.toriCount * 44];
+            in.read(buffer, 0, buffer.length);
+            ByteBuffer data = ByteBuffer.wrap(buffer);
+            for (int i = 0; i < SesConfig.toriCount; ++i){
+                atom1Id = data.getInt();
+                atom2Id = data.getInt();
+                Sphere centerProbe = new Sphere(new Point(data.getFloat(), data.getFloat(), data.getFloat()), SesConfig.probeRadius);
+                Sphere probe1 = new Sphere(new Point(data.getFloat(), data.getFloat(), data.getFloat()), SesConfig.probeRadius);
+                Sphere probe2 = new Sphere(new Point(data.getFloat(), data.getFloat(), data.getFloat()), SesConfig.probeRadius);
+                SphericalPatch atom1 = Surface.convexPatches.get(atom1Id);
+                SphericalPatch atom2 = Surface.convexPatches.get(atom2Id);
+                constructConvexPatchArcs(atom1, atom2, probe1, probe2, centerProbe);
+            }
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void parseConvexAndToriPatchesJSON(String raw){
+        try{
+            JSONParser parser = new JSONParser();
+            Object obj = parser.parse(raw);
+            JSONArray ar = (JSONArray)obj;
+            for (Object oj : ar){
+                JSONObject entry = (JSONObject)oj;
+                int atom1Id = ((Long)entry.get("atom1Id")).intValue();
+                int atom2Id = ((Long)entry.get("atom2Id")).intValue();
+                SphericalPatch atom1 = Surface.convexPatches.get(atom1Id);
+                SphericalPatch atom2 = Surface.convexPatches.get(atom2Id);
+                JSONObject jProbe1 = (JSONObject)entry.get("probe1");
+                JSONObject jProbe2 = (JSONObject)entry.get("probe2");
+                JSONObject jProbeMid = (JSONObject)entry.get("center");
+                Sphere probe1 = new Sphere(new Point(jProbe1), SesConfig.probeRadius);
+                Sphere probe2 = new Sphere(new Point(jProbe2), SesConfig.probeRadius);
+                Sphere probeMid = new Sphere(new Point(jProbeMid), SesConfig.probeRadius);
+
+                constructConvexPatchArcs(atom1, atom2, probe1, probe2, probeMid);
+
+                rollingCount += 2;
+            }
+        } catch (ParseException e){
+            System.err.println(e.getMessage());
+        }
+    }
+
+    private static void parseTrianglesBinary(String filename){
         double x, y, z;
         int a1, a2, a3;
         try (DataInputStream in = new DataInputStream(new FileInputStream(filename))){
@@ -344,564 +190,7 @@ public class SurfaceParser {
         }
     }
 
-    private static void constructConvexPatchArc(SphericalPatch atom1, SphericalPatch atom2, Sphere probe1, Sphere probe2, Sphere probeMid){
-        if (Point.subtractPoints(probe1.center, probe2.center).sqrtMagnitude() < 0.0001 && Point.subtractPoints(probe1.center, probeMid.center).sqrtMagnitude() > 0.01){
-            //Vector a1Toa2 = Point.subtractPoints(atom2.sphere.center, atom1.sphere.center).makeUnit();
-            Arc[] atom1Arcs = ArcUtil.makeNewArc(atom1, atom2, Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probe2), Sphere.getContactPoint(atom1.sphere, probeMid), probeMid.center, true);
-            Arc[] atom2Arcs = ArcUtil.makeNewArc(atom2, atom1, Sphere.getContactPoint(atom2.sphere, probe1), Sphere.getContactPoint(atom2.sphere, probe2), Sphere.getContactPoint(atom2.sphere, probeMid), probeMid.center, true);
-            if (atom1.id == 767 && atom2.id == 772 || atom1.id == 772 && atom2.id == 767){
-                System.out.println("A");
-            }
-            for (Arc a : atom1Arcs){
-                for (Arc j : atom2Arcs){
-                    //Vector midtomid = Point.subtractPoints(j.mid, a.mid).makeUnit();
-                    //if (Math.abs(Math.abs(midtomid.dotProduct(a1Toa2)) - 1) < 0.001){
-                    if (Point.distance(a.midProbe, j.midProbe) < 0.001){
-                        a.opposite = j;
-                        j.opposite = a;
-                                /*RollingPatch rp = new RollingPatch();
-                                rp.circular = true;
-                                rp.midProbe = j.midProbe;
-                                rp.probe1 = probe1.center;
-                                rp.probe2 = probeMid.center;
-                                rp.cxpl1 = a;
-                                rp.cxpl2 = j;
-                                rp.convexPatchArcs.add(a);
-                                rp.convexPatchArcs.add(j);*/
-                        ToroidalPatch tp = new ToroidalPatch(probe1.center, probeMid.center, j.midProbe);
-                        tp.convexPatchArcs.add(a);
-                        tp.convexPatchArcs.add(j);
-                        tp.circular = true;
-
-                        if (atom1.id == 811 || atom1.id == 5231 || atom2.id == 811 || atom2.id == 5231){
-                            int afd = 4;
-                        }
-
-                        assignRollingPatchToAtoms(atom1, atom2, tp);
-                        Arc smallerRadius = (a.owner.sphere.radius <= j.owner.sphere.radius) ? a : j;
-                        Arc greaterRadius = (smallerRadius == a) ? j : a;
-                        ArcUtil.refineArc(greaterRadius, 0, true,1, false);
-                        greaterRadius.baseSubdivision = -1;
-                        ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, false,0, false);
-                        ArcUtil.buildEdges(greaterRadius);
-                        //int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
-                        int numOfDivs = ArcUtil.getSubdivisionLevel(greaterRadius);
-                        ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, true, numOfDivs, false);
-                        ArcUtil.buildEdges(smallerRadius);
-
-                        /*smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
-                        greaterRadius.refined = ArcUtil.dbgCloneArc(greaterRadius);
-
-                        smallerRadius.refined.owner = smallerRadius.owner;
-                        greaterRadius.refined.owner = greaterRadius.owner;
-
-                        ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);*/
-
-                        //System.out.println("refined circle loop: " + atom1.id + ", " + atom2.id);
-                    }
-                }
-            }
-            //System.out.println("Constructed circular loop for: " + atom1.id + " and " + atom2.id);
-            return;
-        } else if (Point.distance(probe1.center, probe2.center) < 0.0001){
-            //System.out.println("small atom id: " + atom1Id + " " + atom2Id);
-        }
-        //ConvexPatchArc l1 = atom1.makeNewLoop(Atom.getContactPoint(atom1, probe1), Atom.getContactPoint(atom1, probe2), Atom.getContactPoint(atom1, probeMid), atom2, probeMid.center,false)[0];
-        //ConvexPatchArc l2 = atom2.makeNewLoop(Atom.getContactPoint(atom2, probe2), Atom.getContactPoint(atom2, probe1), Atom.getContactPoint(atom2, probeMid), atom1, probeMid.center,false)[0];
-        Arc arc1 = ArcUtil.makeNewArc(atom1, atom2, Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probe2), Sphere.getContactPoint(atom1.sphere, probeMid), probeMid.center, false)[0];
-        Arc arc2 = ArcUtil.makeNewArc(atom2, atom1, Sphere.getContactPoint(atom2.sphere, probe2), Sphere.getContactPoint(atom2.sphere, probe1), Sphere.getContactPoint(atom2.sphere, probeMid), probeMid.center, false)[0];
-        arc1.opposite = arc2;
-        arc2.opposite = arc1;
-                /*RollingPatch rp = new RollingPatch();
-                rp.cxpl1 = arc1;
-                rp.cxpl2 = arc2;
-                rp.convexPatchArcs.add(arc1);
-                rp.convexPatchArcs.add(arc2);
-                rp.midProbe = probeMid.center;
-                rp.probe1 = probe1.center;
-                rp.probe2 = probe2.center;*/
-        ToroidalPatch tp = new ToroidalPatch(probe1.center, probe2.center, probeMid.center);
-        tp.convexPatchArcs.add(arc1);
-        tp.convexPatchArcs.add(arc2);
-        assignRollingPatchToAtoms(atom1, atom2, tp);
-        Arc smallerRadius = (arc1.owner.sphere.radius <= arc2.owner.sphere.radius) ? arc1 : arc2;
-        Arc greaterRadius = (smallerRadius == arc1) ? arc2 : arc1;
-        //ArcUtil.refineArc(smallerRadius, Main.maxEdgeLen, 2, false);
-        ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, false,0, false);
-        ArcUtil.buildEdges(greaterRadius);
-        //int numOfDivs = (int)(Math.log10(smallerRadius.lines.size() / 2) / Math.log10(2));
-        int numOfDivs = ArcUtil.getSubdivisionLevel(greaterRadius);
-        ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, true, numOfDivs, false);
-        ArcUtil.buildEdges(smallerRadius);
-        /*smallerRadius.refined = ArcUtil.dbgCloneArc(smallerRadius);
-        smallerRadius.refined.owner = smallerRadius.owner;
-        greaterRadius.refined = ArcUtil.dbgCloneArc(greaterRadius);
-        greaterRadius.refined.owner = greaterRadius.owner;
-        ArcUtil.refineOppositeArcs(smallerRadius.refined, greaterRadius.refined, SesConfig.edgeLimit, true);*/
-        if (smallerRadius.vrts.size() != greaterRadius.vrts.size()){
-            System.err.println("inconsistency detected");
-        }
-        //tp.width = Point.distance(Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probeMid)) + Point.distance(Sphere.getContactPoint(atom1.sphere, probeMid), Sphere.getContactPoint(atom1.sphere, probe2));
-        /*if (tp.width < 0.005){
-            //Surface.smallRectangles.add(tp);
-            //System.err.println("added small rectangle to data structure");
-        }*/
-        if (PatchUtil.getProbeAxisDistance(probe1.center, atom1.sphere.center, atom2.sphere.center) - SesConfig.probeRadius < 0.0){
-            Surface.selfIntersectingRects.add(tp);
-        }
-    }
-
-    public static void assignRollingPatchToAtoms(SphericalPatch s1, SphericalPatch s2, ToroidalPatch tp){
-        if (!s1.tori.containsKey(s2.id)){
-            s1.tori.put(s2.id, new ArrayList<>());
-        }
-        if (!s2.tori.containsKey(s1.id)){
-            s2.tori.put(s1.id, new ArrayList<>());
-        }
-        s1.tori.get(s2.id).add(tp);
-        s2.tori.get(s1.id).add(tp);
-        //rp.id = Main.rectangles.size();
-        Surface.rectangles.add(tp);
-    }
-    private static Vector probeMid = new Vector(0, 0, 0);
-    private static Vector v1 = new Vector(0, 0, 0);
-    private static Vector v2 = new Vector(0, 0, 0);
-    private static Vector v3 = new Vector(0, 0, 0);
-    private static void constructConcavePatchArcs(Sphere probe, int atom1, int atom2, int atom3){
-        try {
-            if (Surface.triangles.size() == 2931 || Surface.triangles.size() == 1351){
-                int t = 3;
-            }
-            SphericalPatch a1 = Surface.convexPatches.get(atom1);
-            SphericalPatch a2 = Surface.convexPatches.get(atom2);
-            SphericalPatch a3 = Surface.convexPatches.get(atom3);
-
-            Point a1touch = Sphere.getContactPoint(a1.sphere, probe);
-            Point a2touch = Sphere.getContactPoint(a2.sphere, probe);
-            Point a3touch = Sphere.getContactPoint(a3.sphere, probe);
-
-            Point mid = Point.getMidPoint(a1touch, a2touch);
-            //Vector probeMid = Point.subtractPoints(mid, probe.center).makeUnit().multiply(probe.radius);
-            probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
-            mid.assignTranslation(probe.center, probeMid);
-            //mid = Point.translatePoint(probe.center, probeMid);
-
-            Vector _v1 = Point.subtractPoints(a2.sphere.center, a1.sphere.center).makeUnit();
-            Vector _v2 = Point.subtractPoints(a3.sphere.center, a1.sphere.center).makeUnit();
-            Vector _n = Vector.getNormalVector(_v1, _v2).makeUnit();
-            Plane _plane = new Plane(a1.sphere.center, _n);
-            if (_plane.checkPointLocation(probe.center) < 0.0){
-                _n.multiply(-1.0);
-            }
-
-            //Point p1;
-            //Point p2;
-            //Point p3;
-
-            SphericalPatch cpatch = new SphericalPatch(probe, false);
-            cpatch.patchNormal = _n;
-            Arc cpl1 = new Arc(probe.center, probe.radius);
-            cpl1.vrts.add(a1touch);
-            cpl1.vrts.add(mid);
-            cpl1.vrts.add(a2touch);
-
-            //p1 = Surface.convexPatches.get(atom1).sphere.center;
-            //p2 = Surface.convexPatches.get(atom2).sphere.center;
-            //p3 = Surface.convexPatches.get(atom3).sphere.center;
-            //cpl1.end1 = a1touch;
-            //cpl1.end2 = a2touch;
-                /*cpl1.toEnd1 = Point.subtractPoints(cpl1.end1, cpl1.center).makeUnit();
-                cpl1.toEnd2 = Point.subtractPoints(cpl1.end2, cpl1.center).makeUnit();
-                cpl1.normal = Vector.getNormalVector(cpl1.toEnd1, cpl1.toEnd2).makeUnit();*/
-
-            ToroidalPatch tp = null;
-            if (a1 == null || a2 == null || a3 == null) {
-                System.out.println(" atom null");
-            }
-            if (a1.tori.get(atom2) == null) {
-                //System.out.println("corresponding rolling patch not found for " + atom1 + " " + atom2);
-                //continue;
-            } else {
-                for (ToroidalPatch tor : a1.tori.get(atom2)) {
-                    /*if (Point.subtractPoints(probe.center, tor.probe1).sqrtMagnitude() < 0.005 || Point.subtractPoints(probe.center, tor.probe2).sqrtMagnitude() < 0.005) {
-                        tp = tor;
-                    }*/
-                    if (Point.distance(probe.center, tor.probe1) < 0.005 || Point.distance(probe.center, tor.probe2) < 0.005){
-                        tp = tor;
-                    }
-                }
-            }
-            if (tp == null) {
-                //System.out.println("corresponding rolling patch not found");
-                System.out.println("corresponding rolling patch not found for " + atom1 + " " + atom2);
-                updateMissingArcs(atom1, atom2, cpatch);
-            } else {
-                tp.concavePatchArcs.add(cpl1);
-                cpl1.torus = tp;
-                if (tp.concavePatchArcs.size() == 2){
-                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
-                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
-                }
-                /*cpl1.vrts.clear();
-                Arc ar1 = (tp.convexPatchArcs.get(0).owner.id == atom1) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
-                Arc ar2 = (tp.convexPatchArcs.get(0) == ar1) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
-                cpl1.vrts.add((Point.distance(ar1.end1, a1touch) < 0.0001) ? ar1.end1 : ar1.end2);
-                cpl1.vrts.add(mid);
-                cpl1.vrts.add((Point.distance(ar2.end1, a2touch) < 0.0001) ? ar2.end1 : ar2.end2);*/
-            }
-                /*Vector v1mid = Point.subtractPoints(mid, a1touch).makeUnit();
-                Vector v1v2 = Point.subtractPoints(a2touch, a1touch).makeUnit();
-                Vector v1probe = Point.subtractPoints(probe.center, a1touch).makeUnit();*/
-            //Vector v1v2 = Point.subtractPoints(a2touch, a1touch).makeUnit();
-            //Vector v1mid = Point.subtractPoints(a3touch, a1touch).makeUnit();
-            //Vector v1probe = Point.subtractPoints(probe.center, a1.sphere.center).makeUnit();
-            v1.changeVector(a2touch, a1touch).makeUnit();//v1v2
-            v2.changeVector(a3touch, a1touch).makeUnit();//v1mid
-            v3.changeVector(probe.center, a1.sphere.center).makeUnit();//v1probe
-                /*if (AdvancingFrontMethod.determinant(v1v2, v1mid, v1probe) < 0){
-                    Util.reverserOrder(cpl1);
-                }*/
-            if (VectorUtil.determinantVec3(v1.getFloatData(), v2.getFloatData(), v3.getFloatData()) > 0.f) {
-                ArcUtil.reverseArc(cpl1, true);
-            }
-                /*Edge e1 = new Edge(0, 1);
-                Edge e2 = new Edge(1, 2);
-                e1.p1 = cpl1.vrts.get(0);
-                e1.p2 = mid;
-                e2.p1 = mid;
-                e2.p2 = cpl1.vrts.get(2);
-                e1.next = e2;
-                e2.prev = e1;*/
-                /*cpl1.endEdge1 = e1;
-                cpl1.endEdge2 = e2;
-                cpl1.end1 = cpl1.vrts.get(0);
-                cpl1.end2 = cpl1.vrts.get(2);
-                cpl1.lines.add(e1);
-                cpl1.lines.add(e2);*/
-                /*Edge edge = new Edge(0, 1);
-                edge.p1 = cpl1.vrts.get(0);
-                edge.p2 = cpl1.vrts.get(1);
-                cpl1.endEdge1 = edge;
-                cpl1.endEdge2 = edge;
-                edge.prev = edge;
-                edge.next = edge;
-                cpl1.lines.add(edge);
-                cpl1.end1 = cpl1.vrts.get(0);
-                cpl1.end2 = cpl1.vrts.get(1);*/
-            cpl1.end1 = cpl1.vrts.get(0);
-            cpl1.end2 = cpl1.vrts.get(2);
-            cpl1.mid = mid;
-
-            cpl1.setEndPoints(cpl1.vrts.get(0), cpl1.vrts.get(2), true);
-
-            cpl1.endEdge1 = new Edge(0, 1);
-            cpl1.endEdge1.p1 = cpl1.end1;
-            cpl1.endEdge1.p2 = cpl1.mid;
-            cpl1.endEdge2 = new Edge(1, 2);
-            cpl1.endEdge2.p1 = cpl1.mid;
-            cpl1.endEdge2.p2 = cpl1.end2;
-            cpl1.endEdge1.next = cpl1.endEdge2;
-            cpl1.endEdge2.prev = cpl1.endEdge1;
-
-            mid = Point.getMidPoint(a1touch, a3touch);
-            //probeMid = Point.subtractPoints(mid, probe.center).makeUnit().multiply(probe.radius);
-            probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
-            //mid = Point.translatePoint(probe.center, probeMid);
-            mid.assignTranslation(probe.center, probeMid);
-            Arc cpl2 = new Arc(probe.center, probe.radius);
-            cpl2.vrts.add(a3touch);
-            cpl2.vrts.add(mid);
-            cpl2.vrts.add(a1touch);
-            //cpl2.atom = probe;
-
-            tp = null;
-            if (atom1 == 2556 && atom2 == 3077 && atom3 == 3085) {
-                System.out.println(" ");
-            }
-            if (a1.tori.get(atom3) == null) {
-                //System.out.println("corresponding rolling patch not found for" + atom1 + " " + atom3);
-                //continue;
-            } else {
-                for (ToroidalPatch tor : a1.tori.get(atom3)) {
-                    /*if (Point.subtractPoints(probe.center, tor.probe1).sqrtMagnitude() < Surface.scaleFactor * 0.005 || Point.subtractPoints(probe.center, tor.probe2).sqrtMagnitude() < Surface.scaleFactor * 0.005) {
-                        tp = tor;
-                    }*/
-                    if (Point.distance(probe.center, tor.probe1) < 0.005 || Point.distance(probe.center, tor.probe2) < 0.005){
-                        tp = tor;
-                    }
-                }
-            }
-            if (tp == null) {
-                //System.out.println("corresponding rolling patch not found");
-                System.out.println("corresponding rolling patch not found for " + atom1 + " " + atom3);
-                //continue;
-                updateMissingArcs(atom1, atom3, cpatch);
-            } else {
-                tp.concavePatchArcs.add(cpl2);
-                cpl2.torus = tp;
-                if (tp.concavePatchArcs.size() == 2){
-                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
-                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
-                }
-                /*cpl2.vrts.clear();
-                Arc ar1 = (tp.convexPatchArcs.get(0).owner.id == atom3) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
-                Arc ar2 = (tp.convexPatchArcs.get(0) == ar1) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
-                cpl2.vrts.add((Point.distance(ar1.end1, a3touch) < 0.0001) ? ar1.end1 : ar1.end2);
-                cpl2.vrts.add(mid);
-                cpl2.vrts.add((Point.distance(ar2.end1, a1touch) < 0.0001) ? ar2.end1 : ar2.end2);*/
-            }
-                /*v1mid = Point.subtractPoints(mid, a1touch).makeUnit();
-                v1v2 = Point.subtractPoints(a3touch, a1touch).makeUnit();*/
-            //v1v2 = Point.subtractPoints(a1touch, a3touch).makeUnit();
-            //v1mid = Point.subtractPoints(a2touch, a3touch).makeUnit();
-            //v1probe = Point.subtractPoints(probe.center, a3.sphere.center).makeUnit();
-            v1.changeVector(a1touch, a3touch).makeUnit();//v1v2
-            v2.changeVector(a2touch, a3touch).makeUnit();//v1mid
-            v3.changeVector(probe.center, a3.sphere.center).makeUnit();//v1probe
-                /*if (AdvancingFrontMethod.determinant(v1v2, v1mid, v1probe) < 0){
-                    Util.reverserOrder(cpl2);
-                }*/
-            if (VectorUtil.determinantVec3(v1.getFloatData(), v2.getFloatData(), v3.getFloatData()) > 0.f) {
-                ArcUtil.reverseArc(cpl2, true);
-            }
-                /*e1 = new Edge(0, 1);
-                e2 = new Edge(1, 2);
-                e1.p1 = cpl2.vrts.get(0);
-                e1.p2 = mid;
-                e2.p1 = mid;
-                e2.p2 = cpl2.vrts.get(2);
-                e1.next = e2;
-                e2.prev = e1;*/
-                /*cpl2.endEdge1 = e1;
-                cpl2.endEdge2 = e2;
-                cpl2.end1 = cpl2.vrts.get(0);
-                cpl2.end2 = cpl2.vrts.get(2);
-                cpl2.lines.add(e1);
-                cpl2.lines.add(e2);*/
-                /*edge = new Edge(0, 1);
-                edge.p1 = cpl2.vrts.get(0);
-                edge.p2 = cpl2.vrts.get(1);
-                edge.next = edge;
-                edge.prev = edge;
-                cpl2.endEdge2 = edge;
-                cpl2.endEdge1 = edge;
-                cpl2.lines.add(edge);
-                cpl2.end1 = cpl2.vrts.get(0);
-                cpl2.end2 = cpl2.vrts.get(1);*/
-
-            //cpl2.end1 = cpl2.vrts.get(0);
-            //cpl2.end2 = cpl2.vrts.get(2);
-            cpl2.mid = mid;
-
-            //cpl2.toEnd1 = Point.subtractPoints(cpl2.end1, cpl2.center).makeUnit();
-            //cpl2.toEnd2 = Point.subtractPoints(cpl2.end2, cpl2.center).makeUnit();
-            //cpl2.normal = Vector.getNormalVector(cpl2.toEnd1, cpl2.toEnd2).makeUnit();
-            cpl2.setEndPoints(cpl2.vrts.get(0), cpl2.vrts.get(2), true);
-
-            cpl2.endEdge1 = new Edge(0, 1);
-            cpl2.endEdge1.p1 = cpl2.end1;
-            cpl2.endEdge1.p2 = cpl2.mid;
-            cpl2.endEdge2 = new Edge(1, 2);
-            cpl2.endEdge2.p1 = cpl2.mid;
-            cpl2.endEdge2.p2 = cpl2.end2;
-            cpl2.endEdge1.next = cpl2.endEdge2;
-            cpl2.endEdge2.prev = cpl2.endEdge1;
-
-            mid = Point.getMidPoint(a2touch, a3touch);
-            //probeMid = Point.subtractPoints(mid, probe.center).makeUnit().multiply(probe.radius);
-            probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
-            //mid = Point.translatePoint(probe.center, probeMid);
-            mid.assignTranslation(probe.center, probeMid);
-            Arc cpl3 = new Arc(probe.center, probe.radius);
-            cpl3.vrts.add(a2touch);
-            cpl3.vrts.add(mid);
-            cpl3.vrts.add(a3touch);
-            //cpl3.atom = probe;
-
-            tp = null;
-            if (a2.tori.get(atom3) == null) {
-               //System.out.println("corresponding rolling patch not found for " + atom2 + " " + atom3);
-                //continue;
-                if (atom1 == 224 || atom2 == 224 || atom3 == 224){
-                    System.out.println("for atom 224");
-                }
-            } else {
-                for (ToroidalPatch tor : a2.tori.get(atom3)) {
-                    /*if (Point.subtractPoints(probe.center, tor.probe1).sqrtMagnitude() < Surface.scaleFactor * 0.005 || Point.subtractPoints(probe.center, tor.probe2).sqrtMagnitude() < Surface.scaleFactor * 0.005) {
-                        tp = tor;
-                    }*/
-                    if (Point.distance(probe.center, tor.probe1) < 0.005 || Point.distance(probe.center, tor.probe2) < 0.005){
-                        tp = tor;
-                    }
-                }
-            }
-            if (tp == null) {
-                //System.out.println("corresponding rolling patch not found");
-                System.out.println("corresponding rolling patch not found for " + atom2 + " " + atom3);
-                //continue;
-                updateMissingArcs(atom2, atom3, cpatch);
-            } else {
-                tp.concavePatchArcs.add(cpl3);
-                cpl3.torus = tp;
-                if (tp.concavePatchArcs.size() == 2){
-                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
-                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
-                }
-                /*cpl3.vrts.clear();
-                Arc ar1 = (tp.convexPatchArcs.get(0).owner.id == atom2) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
-                Arc ar2 = (tp.convexPatchArcs.get(0) == ar1) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
-                cpl3.vrts.add((Point.distance(ar1.end1, a2touch) < 0.0001) ? ar1.end1 : ar1.end2);
-                cpl3.vrts.add(mid);
-                cpl3.vrts.add((Point.distance(ar2.end1, a3touch) < 0.0001) ? ar2.end1 : ar2.end2);*/
-            }
-                /*v1v2 = Point.subtractPoints(a3touch, a2touch).makeUnit();
-                v1mid = Point.subtractPoints(mid, a2touch).makeUnit();
-                v1probe = Point.subtractPoints(probe.center, a2touch).makeUnit();*/
-            //v1v2 = Point.subtractPoints(a3touch, a2touch).makeUnit();
-            //v1mid = Point.subtractPoints(a1touch, a2touch).makeUnit();
-            //v1probe = Point.subtractPoints(probe.center, a2.sphere.center).makeUnit();
-            v1.changeVector(a3touch, a2touch).makeUnit();//v1v2
-            v2.changeVector(a1touch, a2touch).makeUnit();//v1mid
-            v3.changeVector(probe.center, a2.sphere.center).makeUnit();//v1probe
-                /*if (AdvancingFrontMethod.determinant(v1v2, v1mid, v1probe) < 0){
-                    Util.reverserOrder(cpl3);
-                }*/
-            if (VectorUtil.determinantVec3(v1.getFloatData(), v2.getFloatData(), v3.getFloatData()) > 0.f) {
-                ArcUtil.reverseArc(cpl3, true);
-            }
-                /*e1 = new Edge(0, 1);
-                e2 = new Edge(1, 2);
-                e1.p1 = cpl3.vrts.get(0);
-                e1.p2 = mid;
-                e2.p1 = mid;
-                e2.p2 = cpl3.vrts.get(2);
-                e1.next = e2;
-                e2.prev = e1;*/
-                /*cpl3.endEdge1 = e1;
-                cpl3.endEdge2 = e2;
-                cpl3.end1 = cpl3.vrts.get(0);
-                cpl3.end2 = cpl3.vrts.get(2);
-                cpl3.lines.add(e1);
-                cpl3.lines.add(e2);*/
-                /*edge = new Edge(0, 1);
-                edge.p1 = cpl3.vrts.get(0);
-                edge.p2 = cpl3.vrts.get(1);
-                edge.next = edge;
-                edge.prev = edge;
-                cpl3.endEdge1 = edge;
-                cpl3.endEdge2 = edge;
-                cpl3.lines.add(edge);
-                cpl3.end1 = cpl3.vrts.get(0);
-                cpl3.end2 = cpl3.vrts.get(1);*/
-
-            //cpl3.end1 = cpl3.vrts.get(0);
-            //cpl3.end2 = cpl3.vrts.get(2);
-            cpl3.mid = mid;
-
-                /*cpl3.toEnd1 = Point.subtractPoints(cpl3.end1, cpl3.center).makeUnit();
-                cpl3.toEnd2 = Point.subtractPoints(cpl3.end2, cpl3.center).makeUnit();
-                cpl3.normal = Vector.getNormalVector(cpl3.toEnd1, cpl3.toEnd2).makeUnit();*/
-            cpl3.setEndPoints(cpl3.vrts.get(0), cpl3.vrts.get(2), true);
-
-            cpl3.endEdge1 = new Edge(0, 1);
-            cpl3.endEdge1.p1 = cpl3.end1;
-            cpl3.endEdge1.p2 = cpl3.mid;
-            cpl3.endEdge2 = new Edge(1, 2);
-            cpl3.endEdge2.p1 = cpl3.mid;
-            cpl3.endEdge2.p2 = cpl3.end2;
-            cpl3.endEdge1.next = cpl3.endEdge2;
-            cpl3.endEdge2.prev = cpl3.endEdge1;
-
-            //Point end = cpl1.vrts.get(2);
-            List<Arc> q = new ArrayList<>();
-            //q.add(cpl1);
-            q.add(cpl2);
-            q.add(cpl3);
-            Point start = cpl1.end1;
-            Point pivot = cpl1.end2;
-            Arc pivotLoop = cpl1;
-            int i = 0;
-            boolean ghost = false;
-            do {
-                if (q.size() == 0){
-                    System.out.println("");
-                }
-                Arc l = q.get(i);
-                if (Point.distance(pivot, l.end1) < 0.001) {//Point.subtractPoints(pivot, l.end1).sqrtMagnitude() < 0.0001) {
-                    pivotLoop.next = l;
-                    l.prev = pivotLoop;
-                    pivotLoop.endEdge2.next = l.endEdge1;
-                    l.endEdge1.prev = pivotLoop.endEdge2;
-                    pivot = l.end2;
-                    pivotLoop = l;
-                    q.remove(l);
-                    i = 0;
-                } else {
-                    i++;
-                    if (i >= q.size()) {
-                        ghost = true;
-                        break;
-                    }
-                }
-            } while (Point.distance(start, pivot) >= 0.0001);//Point.subtractPoints(start, pivot).sqrtMagnitude() >= 0.0001);
-
-            if (ghost) {
-                /*if (cpl1.torus.id == 0) {
-                    System.out.println("fdsa");
-                }*/
-                cpl1.owner = cpatch;
-                cpl2.owner = cpatch;
-                cpl3.owner = cpatch;
-                cpl1.valid = cpl2.valid = cpl3.valid = false;
-                return;
-            }
-            cpl1.prev = pivotLoop;
-            pivotLoop.next = cpl1;
-            pivotLoop.endEdge2.next = cpl1.endEdge1;
-            cpl1.endEdge1.prev = pivotLoop.endEdge2;
-            Boundary b = new Boundary();
-            //b.arcs = new ArrayList<>();
-            //b.vrts = new ArrayList<>();
-            //b.lines = new ArrayList<>();
-            b.arcs.add(cpl1);
-            b.arcs.add(cpl1.next);
-            b.arcs.add(cpl1.prev);
-            cpl1.bOwner = cpl2.bOwner = cpl3.bOwner = b;
-
-
-            cpatch.boundaries.add(b);
-            b.patch = cpatch;
-
-            //ConcavePatch cpatch = new ConcavePatch(b);
-            //cpatch.probe = probe.center;
-            //cpatch.id = Main.triangles.size();
-            //cpatch.probe2 = probe;
-
-            cpl1.owner = cpatch;
-            cpl2.owner = cpatch;
-            cpl3.owner = cpatch;
-            ArcUtil.refineArc(cpl1, Surface.maxEdgeLen, false, 0, false);
-            ArcUtil.refineArc(cpl2, Surface.maxEdgeLen, false, 0, false);
-            ArcUtil.refineArc(cpl3, Surface.maxEdgeLen, false, 0, false);
-            cpl1.valid = cpl2.valid = cpl3.valid = true;
-            ArcUtil.buildEdges(b, true);
-            //cpl1.circularLoop = false;
-            //cpl2.circularLoop = false;
-            //cpl3.circularLoop = false;
-                /*cpatch.atomIDs[0] = atom1;
-                cpatch.atomIDs[1] = atom2;
-                cpatch.atomIDs[2] = atom3;*/
-            //Vector u = Point.subtractPoints(cpl1.next.end2, cpl1.end2).makeUnit();
-            //Vector v = Point.subtractPoints(cpl1.end1, cpl1.end2).makeUnit();
-            //cpatch.plane = new Plane(cpl1.end1, Vector.getNormalVector(u, v).makeUnit());
-            //cpatch.planeNormal = Vector.getNormalVector(u, v).makeUnit();
-            Surface.triangles.add(cpatch);
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-    }
-
-    public static void jsonParseTriangles(String json){
+    public static void parseTrianglesJSON(String json){
         int atom1 = -1, atom2 = -1, atom3 = -1;
         //Point ea1 = null, ea2 = null, ea3 = null;
         //boolean found = false;
@@ -927,6 +216,461 @@ public class SurfaceParser {
             e.printStackTrace();
         }
     }
+
+
+    //----------construction of circular arcs of convex and concave patches-------------
+    private static void constructConvexPatchArcs(SphericalPatch atom1, SphericalPatch atom2, Sphere probe1, Sphere probe2, Sphere probeMid){
+        if (Point.distance(probe1.center, probe2.center) < 0.0001 && Point.distance(probe1.center, probeMid.center) > 0.01){
+            Arc[] atom1Arcs = ArcUtil.makeNewArc(atom1, atom2, Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probe2), Sphere.getContactPoint(atom1.sphere, probeMid), probeMid.center, true);
+            Arc[] atom2Arcs = ArcUtil.makeNewArc(atom2, atom1, Sphere.getContactPoint(atom2.sphere, probe1), Sphere.getContactPoint(atom2.sphere, probe2), Sphere.getContactPoint(atom2.sphere, probeMid), probeMid.center, true);
+            for (Arc a : atom1Arcs){
+                for (Arc j : atom2Arcs){
+                    if (Point.distance(a.midProbe, j.midProbe) < 0.001){
+                        a.opposite = j;
+                        j.opposite = a;
+                        ToroidalPatch tp = new ToroidalPatch(probe1.center, probeMid.center, j.midProbe);
+                        tp.convexPatchArcs.add(a);
+                        tp.convexPatchArcs.add(j);
+                        tp.circular = true;
+
+                        assignRollingPatchToAtoms(atom1, atom2, tp);
+                        Arc smallerRadius = (a.owner.sphere.radius <= j.owner.sphere.radius) ? a : j;
+                        Arc greaterRadius = (smallerRadius == a) ? j : a;
+                        ArcUtil.refineArc(greaterRadius, 0, true,1, false);
+                        greaterRadius.baseSubdivision = -1;
+                        ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, false,0, false);
+                        ArcUtil.buildEdges(greaterRadius);
+                        int numOfDivs = ArcUtil.getSubdivisionLevel(greaterRadius);
+                        ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, true, numOfDivs, false);
+                        ArcUtil.buildEdges(smallerRadius);
+                    }
+                }
+            }
+            return;
+        }
+        Arc arc1 = ArcUtil.makeNewArc(atom1, atom2, Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probe2), Sphere.getContactPoint(atom1.sphere, probeMid), probeMid.center, false)[0];
+        Arc arc2 = ArcUtil.makeNewArc(atom2, atom1, Sphere.getContactPoint(atom2.sphere, probe2), Sphere.getContactPoint(atom2.sphere, probe1), Sphere.getContactPoint(atom2.sphere, probeMid), probeMid.center, false)[0];
+        arc1.opposite = arc2;
+        arc2.opposite = arc1;
+        ToroidalPatch tp = new ToroidalPatch(probe1.center, probe2.center, probeMid.center);
+        tp.convexPatchArcs.add(arc1);
+        tp.convexPatchArcs.add(arc2);
+        assignRollingPatchToAtoms(atom1, atom2, tp);
+        Arc smallerRadius = (arc1.owner.sphere.radius <= arc2.owner.sphere.radius) ? arc1 : arc2;
+        Arc greaterRadius = (smallerRadius == arc1) ? arc2 : arc1;
+        ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, false,0, false);
+        ArcUtil.buildEdges(greaterRadius);
+        int numOfDivs = ArcUtil.getSubdivisionLevel(greaterRadius);
+        ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, true, numOfDivs, false);
+        ArcUtil.buildEdges(smallerRadius);
+        if (smallerRadius.vrts.size() != greaterRadius.vrts.size()){
+            if (SesConfig.verbose) {
+                System.err.println("inconsistency detected in: smallerRadius.vrts != greaterRadius.vrts");
+            }
+        }
+        //detect selfintersecting torus and add it to a list for later treatment
+        if (PatchUtil.getProbeAxisDistance(probe1.center, atom1.sphere.center, atom2.sphere.center) - SesConfig.probeRadius < 0.0){
+            Surface.selfIntersectingRects.add(tp);
+        }
+    }
+
+    private static void constructConcavePatchArcs(Sphere probe, int atom1, int atom2, int atom3){
+        try {
+            SphericalPatch a1 = Surface.convexPatches.get(atom1);
+            SphericalPatch a2 = Surface.convexPatches.get(atom2);
+            SphericalPatch a3 = Surface.convexPatches.get(atom3);
+
+            Point a1touch = Sphere.getContactPoint(a1.sphere, probe);
+            Point a2touch = Sphere.getContactPoint(a2.sphere, probe);
+            Point a3touch = Sphere.getContactPoint(a3.sphere, probe);
+
+            Point mid = Point.getMidPoint(a1touch, a2touch);
+            probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
+            mid.assignTranslation(probe.center, probeMid);
+
+            //Vector _v1 = Point.subtractPoints(a2.sphere.center, a1.sphere.center).makeUnit();
+            //Vector _v2 = Point.subtractPoints(a3.sphere.center, a1.sphere.center).makeUnit();
+            v1.changeVector(a2.sphere.center, a1.sphere.center).makeUnit();
+            v2.changeVector(a3.sphere.center, a1.sphere.center).makeUnit();
+            Vector _n = Vector.getNormalVector(v1, v2).makeUnit();
+            Plane _plane = new Plane(a1.sphere.center, _n);
+            if (_plane.checkPointLocation(probe.center) < 0.0){
+                _n.multiply(-1.0);
+            }
+
+            SphericalPatch cpatch = new SphericalPatch(probe, false);
+            cpatch.patchNormal = _n;
+            Arc cpl1 = new Arc(probe.center, probe.radius);
+            cpl1.vrts.add(a1touch);
+            cpl1.vrts.add(mid);
+            cpl1.vrts.add(a2touch);
+
+            ToroidalPatch tp = null;
+            /*if (a1 == null || a2 == null || a3 == null) { //should not happen
+                if (SesConfig.verbose) {
+                    System.out.println("One or more atoms of concave patch are null");
+                }
+            }*/
+            if (a1.tori.get(atom2) == null) {
+                //System.out.println("corresponding rolling patch not found for " + atom1 + " " + atom2);
+                //continue;
+            } else {
+                for (ToroidalPatch tor : a1.tori.get(atom2)) {
+                    if (Point.distance(probe.center, tor.probe1) < 0.005 || Point.distance(probe.center, tor.probe2) < 0.005){
+                        tp = tor;
+                    }
+                }
+            }
+            if (tp == null) {
+                if (SesConfig.verbose) {
+                    System.out.println("corresponding rolling patch not found for " + atom1 + " " + atom2);
+                }
+            } else {
+                tp.concavePatchArcs.add(cpl1);
+                cpl1.torus = tp;
+                if (tp.concavePatchArcs.size() == 2){
+                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
+                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
+                }
+            }
+
+            v1.changeVector(a2touch, a1touch).makeUnit();//v1v2
+            v2.changeVector(a3touch, a1touch).makeUnit();//v1mid
+            v3.changeVector(probe.center, a1.sphere.center).makeUnit();//v1probe
+            if (VectorUtil.determinantVec3(v1.getFloatData(), v2.getFloatData(), v3.getFloatData()) > 0.f) {
+                ArcUtil.reverseArc(cpl1, true);
+            }
+            cpl1.end1 = cpl1.vrts.get(0);
+            cpl1.end2 = cpl1.vrts.get(2);
+            cpl1.mid = mid;
+
+            cpl1.setEndPoints(cpl1.vrts.get(0), cpl1.vrts.get(2), true);
+
+            cpl1.endEdge1 = new Edge(0, 1);
+            cpl1.endEdge1.p1 = cpl1.end1;
+            cpl1.endEdge1.p2 = cpl1.mid;
+            cpl1.endEdge2 = new Edge(1, 2);
+            cpl1.endEdge2.p1 = cpl1.mid;
+            cpl1.endEdge2.p2 = cpl1.end2;
+            cpl1.endEdge1.next = cpl1.endEdge2;
+            cpl1.endEdge2.prev = cpl1.endEdge1;
+
+            mid = Point.getMidPoint(a1touch, a3touch);
+            probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
+            mid.assignTranslation(probe.center, probeMid);
+            Arc cpl2 = new Arc(probe.center, probe.radius);
+            cpl2.vrts.add(a3touch);
+            cpl2.vrts.add(mid);
+            cpl2.vrts.add(a1touch);
+
+
+            tp = null;
+            if (a1.tori.get(atom3) == null) {
+                //System.out.println("corresponding rolling patch not found for" + atom1 + " " + atom3);
+                //continue;
+            } else {
+                for (ToroidalPatch tor : a1.tori.get(atom3)) {
+                    if (Point.distance(probe.center, tor.probe1) < 0.005 || Point.distance(probe.center, tor.probe2) < 0.005){
+                        tp = tor;
+                    }
+                }
+            }
+            if (tp == null) {
+                System.out.println("corresponding rolling patch not found for " + atom1 + " " + atom3);
+            } else {
+                tp.concavePatchArcs.add(cpl2);
+                cpl2.torus = tp;
+                if (tp.concavePatchArcs.size() == 2){
+                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
+                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
+                }
+            }
+            v1.changeVector(a1touch, a3touch).makeUnit();//v1v2
+            v2.changeVector(a2touch, a3touch).makeUnit();//v1mid
+            v3.changeVector(probe.center, a3.sphere.center).makeUnit();//v1probe
+            if (VectorUtil.determinantVec3(v1.getFloatData(), v2.getFloatData(), v3.getFloatData()) > 0.f) {
+                ArcUtil.reverseArc(cpl2, true);
+            }
+            cpl2.mid = mid;
+
+            cpl2.setEndPoints(cpl2.vrts.get(0), cpl2.vrts.get(2), true);
+
+            cpl2.endEdge1 = new Edge(0, 1);
+            cpl2.endEdge1.p1 = cpl2.end1;
+            cpl2.endEdge1.p2 = cpl2.mid;
+            cpl2.endEdge2 = new Edge(1, 2);
+            cpl2.endEdge2.p1 = cpl2.mid;
+            cpl2.endEdge2.p2 = cpl2.end2;
+            cpl2.endEdge1.next = cpl2.endEdge2;
+            cpl2.endEdge2.prev = cpl2.endEdge1;
+
+            mid = Point.getMidPoint(a2touch, a3touch);
+            probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
+            mid.assignTranslation(probe.center, probeMid);
+            Arc cpl3 = new Arc(probe.center, probe.radius);
+            cpl3.vrts.add(a2touch);
+            cpl3.vrts.add(mid);
+            cpl3.vrts.add(a3touch);
+
+            tp = null;
+            if (a2.tori.get(atom3) == null) {
+            } else {
+                for (ToroidalPatch tor : a2.tori.get(atom3)) {
+                    if (Point.distance(probe.center, tor.probe1) < 0.005 || Point.distance(probe.center, tor.probe2) < 0.005){
+                        tp = tor;
+                    }
+                }
+            }
+            if (tp == null) {
+                System.out.println("corresponding rolling patch not found for " + atom2 + " " + atom3);
+            } else {
+                tp.concavePatchArcs.add(cpl3);
+                cpl3.torus = tp;
+                if (tp.concavePatchArcs.size() == 2){
+                    tp.concavePatchArcs.get(0).opposite = tp.concavePatchArcs.get(1);
+                    tp.concavePatchArcs.get(1).opposite = tp.concavePatchArcs.get(0);
+                }
+            }
+            v1.changeVector(a3touch, a2touch).makeUnit();//v1v2
+            v2.changeVector(a1touch, a2touch).makeUnit();//v1mid
+            v3.changeVector(probe.center, a2.sphere.center).makeUnit();//v1probe
+            if (VectorUtil.determinantVec3(v1.getFloatData(), v2.getFloatData(), v3.getFloatData()) > 0.f) {
+                ArcUtil.reverseArc(cpl3, true);
+            }
+            cpl3.mid = mid;
+
+            cpl3.setEndPoints(cpl3.vrts.get(0), cpl3.vrts.get(2), true);
+
+            cpl3.endEdge1 = new Edge(0, 1);
+            cpl3.endEdge1.p1 = cpl3.end1;
+            cpl3.endEdge1.p2 = cpl3.mid;
+            cpl3.endEdge2 = new Edge(1, 2);
+            cpl3.endEdge2.p1 = cpl3.mid;
+            cpl3.endEdge2.p2 = cpl3.end2;
+            cpl3.endEdge1.next = cpl3.endEdge2;
+            cpl3.endEdge2.prev = cpl3.endEdge1;
+
+            List<Arc> q = new ArrayList<>();
+            q.add(cpl2);
+            q.add(cpl3);
+            Point start = cpl1.end1;
+            Point pivot = cpl1.end2;
+            Arc pivotLoop = cpl1;
+            int i = 0;
+            boolean ghost = false;
+            do {
+                if (q.size() == 0){
+                    System.out.println("");
+                }
+                Arc l = q.get(i);
+                if (Point.distance(pivot, l.end1) < 0.001) {
+                    pivotLoop.next = l;
+                    l.prev = pivotLoop;
+                    pivotLoop.endEdge2.next = l.endEdge1;
+                    l.endEdge1.prev = pivotLoop.endEdge2;
+                    pivot = l.end2;
+                    pivotLoop = l;
+                    q.remove(l);
+                    i = 0;
+                } else {
+                    i++;
+                    if (i >= q.size()) {
+                        ghost = true;
+                        break;
+                    }
+                }
+            } while (Point.distance(start, pivot) >= 0.0001);
+
+            if (ghost) {
+                cpl1.owner = cpatch;
+                cpl2.owner = cpatch;
+                cpl3.owner = cpatch;
+                cpl1.valid = cpl2.valid = cpl3.valid = false;
+                return;
+            }
+            cpl1.prev = pivotLoop;
+            pivotLoop.next = cpl1;
+            pivotLoop.endEdge2.next = cpl1.endEdge1;
+            cpl1.endEdge1.prev = pivotLoop.endEdge2;
+            Boundary b = new Boundary();
+            b.arcs.add(cpl1);
+            b.arcs.add(cpl1.next);
+            b.arcs.add(cpl1.prev);
+            cpl1.bOwner = cpl2.bOwner = cpl3.bOwner = b;
+
+
+            cpatch.boundaries.add(b);
+            b.patch = cpatch;
+
+            cpl1.owner = cpatch;
+            cpl2.owner = cpatch;
+            cpl3.owner = cpatch;
+            ArcUtil.refineArc(cpl1, Surface.maxEdgeLen, false, 0, false);
+            ArcUtil.refineArc(cpl2, Surface.maxEdgeLen, false, 0, false);
+            ArcUtil.refineArc(cpl3, Surface.maxEdgeLen, false, 0, false);
+            cpl1.valid = cpl2.valid = cpl3.valid = true;
+            ArcUtil.buildEdges(b, true);
+            Surface.triangles.add(cpatch);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public static void assignRollingPatchToAtoms(SphericalPatch s1, SphericalPatch s2, ToroidalPatch tp){
+        if (!s1.tori.containsKey(s2.id)){
+            s1.tori.put(s2.id, new ArrayList<>());
+        }
+        if (!s2.tori.containsKey(s1.id)){
+            s2.tori.put(s1.id, new ArrayList<>());
+        }
+        s1.tori.get(s2.id).add(tp);
+        s2.tori.get(s1.id).add(tp);
+        Surface.rectangles.add(tp);
+    }
+
+    private static void constructProbeTree(){
+        double[][] keys = new double[Surface.triangles.size()][3];
+        SphericalPatch values[] = new SphericalPatch[Surface.triangles.size()];
+        for (int i = 0; i < keys.length; ++i){
+            Point p = Surface.triangles.get(i).sphere.center;
+            keys[i] = p.getData();
+            values[i] = Surface.triangles.get(i);
+        }
+        Surface.probeTree = new KDTree<>(keys, values);
+    }
+
+    //main method of this class, calls all of the methods used to parse, construct surface...
+    public static void ses_start(String folder) {
+        long _parseStartTime = System.currentTimeMillis();
+        MeshGeneration.reset();
+        Surface.triangles.clear();
+        Surface.rectangles.clear();
+        Surface.atomsProcessed.set(0);
+        Surface.selfIntersectingRects.clear();
+        Surface.intersectingArcs.clear();
+        Surface.numoftriangles = 0;
+        SphericalPatch.nextConcaveID = SphericalPatch.nextConvexID = 0;
+        ToroidalPatch.nextID = 0;
+        Surface.triangles.ensureCapacity(SesConfig.trianglesCount);
+        Surface.rectangles.ensureCapacity(SesConfig.toriCount);
+        Surface.convexPatches = SurfaceParser.parseAtomsBinary(Paths.get(folder).resolve("atoms.dat").toString());
+        Surface.centerOfgravity.x /= SesConfig.atomCount;
+        Surface.centerOfgravity.y /= SesConfig.atomCount;
+        Surface.centerOfgravity.z /= SesConfig.atomCount;
+        Surface.probeRadius.set(Double.doubleToLongBits(SesConfig.probeRadius));
+        SurfaceParser.parseConvexAndToriPatchesBinary(Paths.get(folder).resolve("rectangles.dat").toString());
+        try {
+            SurfaceParser.parseTrianglesBinary(Paths.get(folder).resolve("triangles.dat").toString());
+
+            constructProbeTree();
+            Surface.probeTree.setIdenticalExcluded(true);
+
+            PatchUtil.processSelfIntersectingTori();
+
+            PatchUtil.processSelfIntersectingConcavePatches();
+
+
+            PatchUtil.processIntersectingConcavePatches();
+
+            ArcUtil.refineArcsOnConvexPatches();
+
+            ArcUtil.nestConvexPatchBoundaries();
+
+            ArcUtil.refineArcsOnConcavePatches();
+
+            long _parseEndTime = System.currentTimeMillis();
+
+            if (SesConfig.useGUI) {
+                MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
+            }
+            MeshGeneration.startMeshing();
+            while (!MeshGeneration.finished.get()){}
+            if (SesConfig.useGUI){
+                MainWindow.mainWindow.pushTori();
+                MainWindow.mainWindow.pushConvex();
+                MainWindow.mainWindow.pushConcave();
+            }
+            if (SesConfig.objFile != null || SesConfig.stlFile != null){
+                fillCommonVertices();
+                while (!MeshGeneration.finished.get()){}
+                if (SesConfig.objFile != null){
+                    exportOBJ(SesConfig.objFile, (char)7);
+                }
+                if (SesConfig.stlFile != null){
+                    exportSTLText(SesConfig.stlFile);
+                }
+            }
+            if (SesConfig.verbose) {
+                System.out.println("Convex patches count: " + Surface.convexPatches.size());
+                System.out.println("Concave patches count: " + Surface.triangles.size());
+                System.out.println("Toroidal patches count: " + Surface.rectangles.size());
+                System.out.println("Average edge length: " + SesConfig.edgeLimit);
+                System.out.println("Parsing and construction and trimming of boundaries took " + (_parseEndTime - _parseStartTime) + " milliseconds");
+                int mbytes = 1024 * 1024;
+                float maxHeapSize = (float) Runtime.getRuntime().maxMemory() / mbytes;
+                float heapSize = (float) Runtime.getRuntime().totalMemory() / mbytes;
+                float freeMemory = (float) Runtime.getRuntime().freeMemory() / mbytes;
+                System.out.println("Heap size: " + heapSize + " / " + maxHeapSize + " MB");
+                System.out.println("Heap usage: " + (heapSize - freeMemory) + " / " + heapSize + " MB");
+            }
+        } catch (Exception e){
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public static void remesh(){
+        MainWindow.mainWindow.requestFreeResources();
+        while (!MainWindow.mainWindow.getResourcesFreed()){}
+        MeshGeneration.reset();
+        for (SphericalPatch sp : Surface.convexPatches){
+            ArcUtil.resetArcs(sp);
+            sp.meshed = false;
+            sp.faces.clear();
+            //sp.faceCount = 0;
+            //sp.vertices.clear();
+        }
+        ArcUtil.refineArcsOnConvexPatches();
+        for (SphericalPatch sp : Surface.triangles){
+            ArcUtil.resetArcs(sp);
+            sp.meshed = false;
+            sp.faces.clear();
+            //sp.faceCount = 0;
+        }
+        ArcUtil.refineArcsOnConcavePatches();
+        MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
+        MeshGeneration.startMeshing();
+        fillCommonVertices();
+    }
+
+    private static void fillCommonVertices(){
+        Surface.commonVrts.clear();
+        Surface.normals.clear();
+        int idx = 1;
+        for (SphericalPatch a : Surface.convexPatches){
+            for (Boundary b : a.boundaries){
+                for (Point p : b.vrts){
+                    p.idx = idx++;
+                    Surface.commonVrts.add(p);
+                    Vector n = Point.subtractPoints(p, a.sphere.center).makeUnit();
+                    Surface.normals.add(n);
+                    //p.common = true;
+                }
+            }
+        }
+        for (SphericalPatch cp : Surface.triangles){
+            for (Point p : cp.boundaries.get(0).vrts){
+                p.idx = idx++;
+                Surface.commonVrts.add(p);
+                Vector n = Point.subtractPoints(cp.sphere.center, p).makeUnit();
+                Surface.normals.add(n);
+                //p.common = true;
+            }
+        }
+    }
+
+    private static int rollingCount = 0;
+
+    //main export methods
 
     public static boolean exportOBJ(String filename, char mask){
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename))){
@@ -1266,31 +1010,8 @@ public class SurfaceParser {
         return true;
     }
 
-    public static void exportEdgesIntersection(Edge h, Edge g, Edge i, String f){
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(f))){
-            bw.write("v " + h.p1.toString());
-            bw.newLine();
-            bw.write("v " + h.p2.toString());
-            bw.newLine();
-            bw.write("v " + g.p1.toString());
-            bw.newLine();
-            bw.write("v " + g.p2.toString());
-            bw.newLine();
-            bw.write("v " + i.p1.toString());
-            bw.newLine();
-            bw.write("v " + i.p2.toString());
-            bw.newLine();
-            bw.write("l 1 2");
-            bw.newLine();
-            bw.write("l 3 4");
-            bw.newLine();
-            bw.write("l 5 6");
-            bw.flush();
-        } catch (IOException e){
-            e.printStackTrace();
-        }
-    }
 
+    //these have just a debug purpose
     public static void exportArcs(Arc l, Arc r, String f){
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(f))){
             for (Point v : l.vrts){
@@ -1498,10 +1219,5 @@ public class SurfaceParser {
         } catch (IOException e){
             e.printStackTrace();
         }
-    }
-
-    public static void getMemory(){
-        Runtime r = Runtime.getRuntime();
-        System.out.println((r.totalMemory() - r.freeMemory()) + " / " + r.totalMemory() + " used");
     }
 }

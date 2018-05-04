@@ -18,9 +18,7 @@ import cz.fi.muni.xmraz3.gui.controllers.MainPanelController;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Vector;
 import cz.fi.muni.xmraz3.mesh.*;
-import cz.fi.muni.xmraz3.utils.ArcUtil;
 import cz.fi.muni.xmraz3.utils.GLUtil;
-import cz.fi.muni.xmraz3.utils.PatchUtil;
 import graphicslib3D.*;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -32,7 +30,6 @@ import javafx.beans.value.ObservableValue;
 import javafx.stage.Stage;
 import smile.neighbor.Neighbor;
 
-import java.nio.Buffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
@@ -1364,7 +1361,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         long startTime = System.currentTimeMillis();
         for (int i = 0; i < end; ++i){
             ToroidalPatch tp = Surface.rectangles.get(i);
-            MeshRefinement.meshToroidalPatch(tp);
+            MeshGeneration.meshToroidalPatch(tp);
         }
         long endTime = System.currentTimeMillis();
         System.out.println("Tori meshed in " + (endTime - startTime) + " ms");
@@ -1554,8 +1551,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     public void keyPressed(KeyEvent keyEvent) {
 
         if (keyEvent.getKeyChar() == ','){
-            /*if (!MeshRefinement.refinement.isRunning()){
-                MeshRefinement.refinement.start();
+            /*if (!MeshRefinement.instance.isRunning()){
+                MeshRefinement.instance.start();
             }
             convexPushData2GPU.set(false);
             int half = convexPatchList.size() / 2;
@@ -1592,8 +1589,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         }
 
         if (keyEvent.getKeyChar() == '.'){
-            /*if (!MeshRefinement.refinement.isRunning()){
-                //MeshRefinement.refinement.start();
+            /*if (!MeshRefinement.instance.isRunning()){
+                //MeshRefinement.instance.start();
             }
             concavePushData2GPU.set(false);
             int half = concavePatchList.size() / 2;

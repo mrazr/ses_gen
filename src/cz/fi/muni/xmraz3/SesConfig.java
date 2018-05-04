@@ -22,6 +22,8 @@ public class SesConfig {
     public static String stlFile;
     @Parameter(description = "Folder containing the SES analytic data to be triangulated", validateWith = ValidatePath.class)
     public static String inputFolder;
-    @Parameter(names = "-gui", description = "Use gui, view the resulting mesh")
+    @Parameter(names = "-gui", description = "Use gui, view the resulting mesh directly.")
     public static boolean useGUI = false;
+    @Parameter(names = {"--verbose, -v"}, description = "Print out various debug info")
+    public static boolean verbose = false;
 }

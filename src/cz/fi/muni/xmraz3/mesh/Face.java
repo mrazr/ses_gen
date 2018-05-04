@@ -1,6 +1,5 @@
 package cz.fi.muni.xmraz3.mesh;
 
-import java.util.List;
 
 public class Face{
     public int a;

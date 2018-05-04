@@ -1622,11 +1622,11 @@ public class PatchUtil {
         SurfaceParser.exportCircle(currCirc, currRad, currInt.get(0), "/home/radoslav/objs/cir_" + curr.id + "_" + currIter + ".obj");
         SurfaceParser.exportPoints(currInt, currCirc.v, "/home/radoslav/objs/poi_" + curr.id + "_" + currIter + ".obj");
     }
-
+    static boolean farst = false;
     private static void trimConcavePatch(SphericalPatch sp){
         try {
             List<Neighbor<double[], SphericalPatch>> neighbors = new ArrayList<>();
-            Surface.probeTree.range(sp.sphere.center.getData(), 2 * SesConfig.probeRadius, neighbors);
+            Surface.probeTree.range(sp.sphere.center.getData(), 2 * SesConfig.probeRadius, neighbors); //causes slf4j warning
             Collections.sort(neighbors, new Comparator<Neighbor<double[], SphericalPatch>>() {
                 @Override
                 public int compare(Neighbor<double[], SphericalPatch> o1, Neighbor<double[], SphericalPatch> o2) {
@@ -1658,54 +1658,14 @@ public class PatchUtil {
                 Point center = new Point(0, 0, 0);
                 double radius = computeIntersectionCircle(sp.sphere.center, sp2.sphere.center, center, SesConfig.probeRadius);
                 Vector nV = Point.subtractPoints(sp.sphere.center, center).makeUnit();
-                /*if (!planes.containsKey(sp2.id)) {
-                    planes.put(sp2.id, new ArrayList<>());
-                }*/
 
                 if (Point.distance(sp.sphere.center, sp2.sphere.center) < 0.008){
                     continue;
                 }
                 Plane p = new Plane(center, nV);
-                //p1.redefine(center, nV);
-                //List<Point> intersectionPoints = new ArrayList<>();
-                //List<Arc> exclude = new ArrayList<>();
                 intersectionPoints.clear();
                 exclude.clear();
-                if (sp2.id == 5179 && sp.id == 2959){
-                    int fads = 32;
-                }
-                if (sp.id == 181){
-                    int _p = 42;
-                }
                 findIntersectionPoints(sp, center, radius, intersectionPoints, exclude);
-                /*if (!moip.get(sp.id).containsKey(sp2.id)) {
-                    intersectionPoints = new ArrayList<>();
-
-                    findIntersectionPoints(sp, center, radius, intersectionPoints, null);
-                    if (!pointsLieOnPatch(sp2, intersectionPoints)){
-                        intersectionPoints.clear();
-                    }
-                    if (!moip.containsKey(sp2.id)){
-                        moip.put(sp2.id, new TreeMap<>());
-                    }
-                    moip.get(sp2.id).put(sp.id, intersectionPoints);
-                } else {
-                    intersectionPoints = moip.get(sp.id).get(sp2.id);
-                }*/
-
-                /*if (intersectionPoints.size() > 0){
-                    if (!pointsLieOnPatch(sp2, intersectionPoints)) {
-                        //System.out.println("Found points lying on sp but not lying on sp2 " + sp.id + " " + sp2.id);
-                        continue;
-                    } else {
-                        if (!moip.containsKey(sp2.id)){
-                            moip.put(sp2.id, new TreeMap<>());
-
-                        }
-                        moip.get(sp2.id).put(sp.id, intersectionPoints);
-                    }
-                }*/
-
 
                 currInt = intersectionPoints;
                 currCirc = p;
@@ -1713,12 +1673,10 @@ public class PatchUtil {
                 toRemove.clear();
                 if (intersectionPoints.size() > 1) {
                     if (!pointsLieOnPatch(sp2, intersectionPoints) && sp.patchNormal.dotProduct(sp2.patchNormal) > 0.8){
-                        //System.out.println("positive dot product for: " + sp.id + " and " + sp2.id);
                         continue;
                     }
                     if (planes.get(sp.id).stream().noneMatch(plane -> plane.isIdenticalWith(p))) {
                         planes.get(sp.id).add(p);
-                        //System.out.println("about to: " + sp.id);\
                         sp.intersectingPatches.add(sp2.id);
 
                         generateNewBoundaries2(sp, intersectionPoints, p, radius, sp2.id,false);
@@ -1730,8 +1688,6 @@ public class PatchUtil {
                         }
                     }
                 } else if (intersectionPoints.size() == 0) {
-                    //laterId.add(sp2.id);
-                    //laterCirc.add(center);
                     Boundary newB = ArcUtil.generateCircularBoundary(p, radius);
                     boolean nest = false;
                     List<Boundary> removeFromSP = new ArrayList<>();
@@ -1743,14 +1699,9 @@ public class PatchUtil {
                         boolean isInside = true;
                         for (Arc a : b.arcs){
                             Plane rho = new Plane(a.center, a.normal);
-                            //isInside = isInside && rho.checkPointLocation(possibleIntersections.get(i).circle.p) > 0.0;
                             isInside = isInside && newB.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0);
                         }
                         if (isInside){
-                            //Intersection in = possibleIntersections.get(i);
-                            //Boundary newB = ArcUtil.generateCircularBoundary(in.circle, in.circleRadius);
-
-                            //b.nestedBoundaries.add(newB);
                             for (Boundary nb : b.nestedBoundaries){
                                 for (Arc a : nb.arcs){
                                     Plane rho = new Plane(a.center, a.normal);
@@ -1763,7 +1714,6 @@ public class PatchUtil {
                                 for (Boundary nb : newB.nestedBoundaries) {
                                     nb.nestedBoundaries.add(newB);
                                 }
-                                //List<Boundary> toRemove = new ArrayList<>();
                                 toRemove.clear();
                                 for (Boundary nb : newB.nestedBoundaries){
                                     for (Arc a : nb.arcs){
@@ -1780,7 +1730,6 @@ public class PatchUtil {
                                 }
                                 processed.addAll(newB.nestedBoundaries);
                                 nest = true;
-                                //System.out.println("nestted b " + sp.id);
                             }
                         }
                     }
@@ -1793,34 +1742,6 @@ public class PatchUtil {
                 }
             }
             planes.get(sp.id).clear();
-            /*for (int i = 0; i < possibleIntersections.size(); ++i){
-                for (Boundary b : sp.boundaries){
-                    boolean isInside = true;
-                    for (Arc a : b.arcs){
-                        Plane rho = new Plane(a.center, a.normal);
-                        isInside = isInside && rho.checkPointLocation(possibleIntersections.get(i).circle.p) > 0.0;
-                    }
-                    if (isInside){
-                        Intersection in = possibleIntersections.get(i);
-                        Boundary newB = ArcUtil.generateCircularBoundary(in.circle, in.circleRadius);
-                        b.nestedBoundaries.add(newB);
-                        newB.nestedBoundaries.add(b);
-                        sp.boundaries.add(newB);
-                        System.out.println("nestted b " + sp.id);
-                        return;
-                    }
-                }
-            }*/
-                /*intersectionPoints.clear();
-                findIntersectionPoints(sp2, center, radius, intersectionPoints, null);
-                p.changePlaneOrientation(p.v.multiply(-1));
-                if (intersectionPoints.size() > 1) {
-                    if (planes.get(sp2.id).stream().noneMatch(plane -> plane.isIdenticalWith(p))) {
-                        planes.get(sp2.id).add(p);
-                        generateNewBoundaries(sp2, intersectionPoints, p, radius);
-                    }
-                }*/
-            //System.out.println("");
             int a = 8777;
         } catch (Exception e){
             e.printStackTrace();
@@ -1988,9 +1909,6 @@ public class PatchUtil {
                 return;
             }
             SphericalPatch sp = arc.owner;
-            if (sp.id == 828 || sp.id == 2902){
-                System.out.println("ligh");
-            }
             //List<Point> intersectionPoints = new ArrayList<>();
             intersectionPoints.clear();
             //List<Arc> exclude = new ArrayList<>();

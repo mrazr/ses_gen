@@ -24,21 +24,13 @@ public class ArcUtil {
         try {
             int it = 0;
             if (a.mid == null){
-                //Vector v = Point.subtractPoints(a.end1, a.end2).multiply(0.5f);
-                //Point mid = Point.translatePoint(a.end2, v);
                 v.changeVector(a.end1, a.end2).multiply(0.5f);
                 mid.assignTranslation(a.end2, v);
-                //Vector toMid = Point.subtractPoints(mid, a.center).makeUnit().multiply(a.radius);
                 v.changeVector(mid, a.center).makeUnit().multiply(a.radius);
-                boolean useMid = false;
                 if (n.assignNormalVectorOf(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){//Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
                     v.multiply(-1.0);
-                    //useMid = true;
                 }
                 a.mid = Point.translatePoint(a.center, v);
-                /*if (useMid){
-                    a.vrts.add(1, a.mid);
-                }*/
             }
             double angle = getAngleR(a);
             if (!fixedCount && Math.toRadians(280) - angle < 0.0){
@@ -46,20 +38,15 @@ public class ArcUtil {
             } else if (!fixedCount && Math.PI - angle < 0.0){
                 refineArc(a, 0, true, 1, false);
             }
-            //while ((!fixedCount && Point.subtractPoints(a.vrts.get(0), a.vrts.get(1)).sqrtMagnitude() > 1.2 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
             while ((!fixedCount && Point.distance(a.vrts.get(0), a.vrts.get(1)) > Surface.refineFac * maxLen) || (fixedCount && it < numOfSubdivisions)) {
                 List<Point> newVerts = new ArrayList<>();
                 for (int i = 0; i < a.vrts.size() - ((fullCircle) ? 0 : 1); ++i) {
-                    Point v1 = a.vrts.get(i);
-                    Point v2 = (i < a.vrts.size() - 1) ? a.vrts.get(i + 1) : a.vrts.get(0);
                     Point tmp = null;
                     if (a.vrts.size() == 2){
                         if (a.mid != null) {
                             tmp = a.mid;
                         } else {
-                            //tmp = Point.translatePoint(a.end1, Point.subtractPoints(a.end2, a.end1).multiply(0.5f));
                             tmp = temp.assignTranslation(a.end1, v.changeVector(a.end2, a.end1).multiply(0.5f));
-                            //Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
                             v.changeVector(tmp, a.center).makeUnit().multiply(a.radius);
                             if (n.assignNormalVectorOf(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){//Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
                                 v.multiply(-1.0);
@@ -68,21 +55,16 @@ public class ArcUtil {
                         }
                     } else {
                         if (i < a.vrts.size() - 1) {
-                            //tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
                             tmp = temp.assignTranslation(a.vrts.get(i), v.changeVector(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
                         } else {
-                            //tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
                             tmp = temp.assignTranslation(a.vrts.get(i), v.changeVector(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
                         }
-                        //Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
                         v.changeVector(tmp, a.center).makeUnit().multiply(a.radius);
                         tmp = Point.translatePoint(a.center, v);
                     }
 
                     newVerts.add(a.vrts.get(i));
                     newVerts.add(tmp);
-                    //tmp._id = a.owner.nextVertexID++;
-                    //a.owner.vertices.add(tmp);
                     if (!fullCircle && i == a.vrts.size() - 2) {
                         newVerts.add(a.vrts.get(i + 1));
                     }
@@ -100,24 +82,15 @@ public class ArcUtil {
 
     public static void refineArc(Arc a, double maxLen, boolean fixedCount, int numOfSubdivisions, boolean fullCircle, Map<Integer, Map<Integer, Integer>> edgeSplit){
         try {
-            boolean convex = true;
             int it = 0;
             if (a.mid == null){
-                //Vector v = Point.subtractPoints(a.end1, a.end2).multiply(0.5f);
                 v.changeVector(a.end1, a.end2).multiply(0.5f);
-                //Point mid = Point.translatePoint(a.end2, v);
                 mid.assignTranslation(a.end2, v);
-                //Vector toMid = Point.subtractPoints(mid, a.center).makeUnit().multiply(a.radius);
                 v.changeVector(mid, a.center).makeUnit().multiply(a.radius);
-                boolean useMid = false;
                 if (n.assignNormalVectorOf(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){//Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
                     v.multiply(-1.0);
-                    //useMid = true;
                 }
                 a.mid = Point.translatePoint(a.center, v);
-                /*if (useMid){
-                    a.vrts.add(1, a.mid);
-                }*/
             }
             double angle = getAngleR(a);
             if (!fixedCount && Math.toRadians(280) - angle < 0.0){
@@ -125,27 +98,17 @@ public class ArcUtil {
             } else if (!fixedCount && Math.PI - angle < 0.0){
                 refineArc(a, 0, true, 1, false, edgeSplit);
             }
-            //while ((!fixedCount && Point.subtractPoints(a.vrts.get(0), a.vrts.get(1)).sqrtMagnitude() > 1.6 * maxLen) || (fixedCount && it < numOfSubdivisions)) {
             while ((!fixedCount && Point.distance(a.vrts.get(0), a.vrts.get(1)) > Surface.refineFac * maxLen) || (fixedCount && it < numOfSubdivisions)) {
                 List<Point> newVerts = new ArrayList<>();
                 for (int i = 0; i < a.vrts.size() - ((fullCircle) ? 0 : 1); ++i) {
-                    Point v1 = a.vrts.get(i);
-                    Point v2 = (i < a.vrts.size() - 1) ? a.vrts.get(i + 1) : a.vrts.get(0);
-                    int sID = (v1._id > v2._id) ? v2._id : v1._id;
-                    int bID = (v1._id > v2._id) ? v1._id : v2._id;
-                    /*if (!edgeSplit.containsKey(sID)){
-                        edgeSplit.put(sID, new TreeMap<>());
-                    }*/
                     Point tmp = null;
                     if (a.vrts.size() == 2){
                         if (a.mid != null) {
                             tmp = a.mid;
                         } else {
-                            //tmp = Point.translatePoint(a.end1, Point.subtractPoints(a.end2, a.end1).multiply(0.5f));
                             tmp = temp.assignTranslation(a.end1, v.changeVector(a.end2, a.end1).multiply(0.5f));
-                            //Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
                             v.changeVector(tmp, a.center).makeUnit().multiply(a.radius);
-                            if (n.assignNormalVectorOf(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0) {//Vector.getNormalVector(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0){
+                            if (n.assignNormalVectorOf(a.toEnd1, a.toEnd2).makeUnit().dotProduct(a.normal) < 0.0) {
                                 v.multiply(-1.0);
                             }
                             tmp = Point.translatePoint(a.center, v);
@@ -153,22 +116,17 @@ public class ArcUtil {
                     } else {
                         if (i < a.vrts.size() - 1) {
                             temp.assignTranslation(a.vrts.get(i), v.changeVector(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
-                            //tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
                         } else {
                             temp.assignTranslation(a.vrts.get(i), v.changeVector(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
-                            //tmp = Point.translatePoint(a.vrts.get(i), Point.subtractPoints(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
                         }
                         v.changeVector(temp, a.center).makeUnit().multiply(a.radius);
-                        //Vector toMid = Point.subtractPoints(tmp, a.center).makeUnit().multiply(a.radius);
                         tmp = Point.translatePoint(a.center, v);
                     }
 
                     newVerts.add(a.vrts.get(i));
                     newVerts.add(tmp);
                     tmp._id = a.owner.nextVertexID++;
-                    //tmp.a = a;
                     a.owner.vertices.add(tmp);
-                    //edgeSplit.get(sID).put(bID, tmp._id);
                     if (!fullCircle && i == a.vrts.size() - 2) {
                         newVerts.add(a.vrts.get(i + 1));
                     }
@@ -189,11 +147,7 @@ public class ArcUtil {
     }
 
     public static void refineOppositeArcs(Arc a1, Arc a2, double maxlen, boolean meshRefine, boolean convex){
-        List<Map<Integer, Map<Integer, Integer>>> edgeSplit = (convex) ? MeshRefinement.convexEdgeSplitMap : MeshRefinement.concaveEdgeSplitMap;
-        /*Arc shorter = (a1.radius - a2.radius > 0.0) ? a2 : a1;
-        Arc longer = (shorter == a2) ? a1 : a2;*/
-        //Arc longer = (getSubdivisionLevel(a1) >= getSubdivisionLevel(a2)) ? a1 : a2;
-        //Arc shorter = (longer == a1) ? a2 : a1;
+        //List<Map<Integer, Map<Integer, Integer>>> edgeSplit = (convex) ? MeshGeneration.convexEdgeSplitMap : MeshGeneration.concaveEdgeSplitMap;
         Arc longer = (a1.radius - a2.radius > 0.0) ? a1 : a2;
         Arc shorter = (a1 == longer) ? a2 : a1;
         if (!meshRefine) {
@@ -202,21 +156,11 @@ public class ArcUtil {
             int numOfDivs = getSubdivisionLevel(shorter) - currentLevel;
             refineArc(longer, 0, true, numOfDivs, false);
         } else {
-            /*for (int i = 0; i < a1.vrts.size() - 1; ++i){
-                Point v = a1.vrts.get(i);
-                v._id = a1.owner.nextVertexID++;
-                a1.owner.vertices.add(v);
-            }
-            for (int i = 0; i < a2.vrts.size() - 1; ++i){
-                Point v = a2.vrts.get(i);
-                v._id = a2.owner.nextVertexID++;
-                a2.owner.vertices.add(v);
-            }*/
             int currentLevel = getSubdivisionLevel(longer);
             int subdivisionDifference = currentLevel - getSubdivisionLevel(shorter);
-            refineArc(longer, maxlen, false, 0, false, edgeSplit.get(longer.owner.id));
+            refineArc(longer, maxlen, false, 0, false, null);//edgeSplit.get(longer.owner.id));
             int numOfDivs = subdivisionDifference + getSubdivisionLevel(longer) - currentLevel;
-            refineArc(shorter, 0, true, numOfDivs, false, edgeSplit.get(shorter.owner.id));
+            refineArc(shorter, 0, true, numOfDivs, false, null);//edgeSplit.get(shorter.owner.id));
             for (Point v : shorter.vrts){
                 v.arc = shorter;
             }
@@ -922,28 +866,28 @@ public class ArcUtil {
         a.vrts.stream().forEach(v -> v.isShared = true);
     }*/
 
-    public static void generateEdgeSplits(Arc a, SphericalPatch sp){
-        Map<Integer, Map<Integer, Integer>> edgeSplit = (sp.convexPatch) ? MeshRefinement.convexEdgeSplitMap.get(sp.id) : MeshRefinement.concaveEdgeSplitMap.get(sp.id);
-        generateEdgeSplits(0, a.vrts.size() - 1, a, edgeSplit);
-    }
+    //public static void generateEdgeSplits(Arc a, SphericalPatch sp){
+    //    Map<Integer, Map<Integer, Integer>> edgeSplit = (sp.convexPatch) ? MeshGeneration.convexEdgeSplitMap.get(sp.id) : MeshGeneration.concaveEdgeSplitMap.get(sp.id);
+    //    generateEdgeSplits(0, a.vrts.size() - 1, a, edgeSplit);
+    //}
 
-    private static void generateEdgeSplits(int start, int count, Arc a, Map<Integer, Map<Integer, Integer>> splits){
-        if (count == 1){
-            return;
-        }
-        Point v1 = a.vrts.get(start);
-        Point v2 = a.vrts.get(start + count);
-        Point v3 = a.vrts.get(start + count / 2);
-        int sID = (v1._id > v2._id) ? v2._id : v1._id;
-        int bID = (v1._id > v2._id) ? v1._id : v2._id;
-        if (!splits.containsKey(sID)){
-            splits.put(sID, new TreeMap<>());
-        }
-        Map<Integer, Integer> map = splits.get(sID);
-        map.put(bID, v3._id);
-        generateEdgeSplits(start, count / 2, a, splits);
-        generateEdgeSplits(start + count / 2, count / 2, a, splits);
-    }
+    //private static void generateEdgeSplits(int start, int count, Arc a, Map<Integer, Map<Integer, Integer>> splits){
+    //    if (count == 1){
+    //        return;
+    //    }
+    //    Point v1 = a.vrts.get(start);
+    //    Point v2 = a.vrts.get(start + count);
+    //    Point v3 = a.vrts.get(start + count / 2);
+    //    int sID = (v1._id > v2._id) ? v2._id : v1._id;
+    //    int bID = (v1._id > v2._id) ? v1._id : v2._id;
+    //    if (!splits.containsKey(sID)){
+    //        splits.put(sID, new TreeMap<>());
+    //    }
+    //    Map<Integer, Integer> map = splits.get(sID);
+    //    map.put(bID, v3._id);
+    //    generateEdgeSplits(start, count / 2, a, splits);
+    //    generateEdgeSplits(start + count / 2, count / 2, a, splits);
+    //}
 
     public static Arc getCommonArc(Point p1, Point p2){
         if (!p1.arcPoint || !p2.arcPoint){
@@ -989,9 +933,6 @@ public class ArcUtil {
             sp.nextVertexID = 0;
             for (Boundary b : sp.boundaries) {
                 ArcUtil.buildEdges(b, true);
-                if (sp.id == 918) {
-                    System.out.println("object of interest");
-                }
                 for (Point v : b.vrts) {
                     v._id = sp.nextVertexID++;
                     sp.vertices.add(v);
@@ -1002,7 +943,7 @@ public class ArcUtil {
                         a.refined = ArcUtil.dbgCloneArc(a);
                         a.refined.owner = a.owner;
                         if (a.owner.intersectingPatches.contains(a.opposite.owner.id) && a.cuspTriangle == null) {
-                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
+                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, null);//MeshGeneration.concaveEdgeSplitMap.get(a.owner.id));
                             a.opposite.refined = ArcUtil.cloneArc(a.refined);
                             ArcUtil.reverseArc(a.opposite.refined, true);
                             int c = 432;
@@ -1033,7 +974,7 @@ public class ArcUtil {
                             int c = 4;
                         }
                         try {
-                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, MeshRefinement.concaveEdgeSplitMap.get(a.owner.id));
+                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, null);//MeshGeneration.concaveEdgeSplitMap.get(a.owner.id));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -1053,7 +994,7 @@ public class ArcUtil {
                                 sp.vertices.add(v);
                             }
                         }
-                        generateEdgeSplits(a.refined, a.owner);
+                        //generateEdgeSplits(a.refined, a.owner);
                     }
                 }
                 ArcUtil.buildEdges(b, true);
@@ -1162,8 +1103,8 @@ public class ArcUtil {
                     op.refined = ArcUtil.dbgCloneArc(op);
                     op.refined.owner = op.owner;
                     ArcUtil.refineOppositeArcs(a.refined, op.refined, SesConfig.edgeLimit, true, true);
-                    ArcUtil.generateEdgeSplits(a.refined, sp);
-                    ArcUtil.generateEdgeSplits(op.refined, op.owner);
+                    //ArcUtil.generateEdgeSplits(a.refined, sp);
+                    //ArcUtil.generateEdgeSplits(op.refined, op.owner);
                     a.vrts.clear();
                     a.vrts.addAll(a.refined.vrts);
                     op.vrts.clear();

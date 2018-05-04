@@ -6,9 +6,7 @@ import cz.fi.muni.xmraz3.SesConfig;
 import cz.fi.muni.xmraz3.Surface;
 import cz.fi.muni.xmraz3.math.Plane;
 import cz.fi.muni.xmraz3.math.Point;
-import cz.fi.muni.xmraz3.math.Sphere;
 import cz.fi.muni.xmraz3.math.Vector;
-import cz.fi.muni.xmraz3.utils.ArcUtil;
 import cz.fi.muni.xmraz3.utils.PatchUtil;
 
 import java.util.ArrayList;
@@ -130,14 +128,27 @@ public class AdvancingFrontMethod {
     Vector addv2 = new Vector(0, 0, 0);
     Vector intersection = new Vector(0, 0, 0);
     Quaternion q = new Quaternion();
-
+    Point _mid1 = new Point(0, 0, 0);
+    Point _mid2 = new Point(0, 0, 0);
     private boolean checkForIntersectingEdges(Edge e1, Edge e2, double atomRad, Point atomCenter){
         if (e1.p1 == e2.p1 || e1.p1 == e2.p2 || e1.p2 == e2.p1 || e1.p2 == e2.p2){
             return false;
         }
 
+        _mid1.setAsMidpoint(e1.p1, e1.p2);
+        _mid2.setAsMidpoint(e2.p1, e2.p2);
+        double _d1 = Point.distance(e1.p1, e1.p2) * 0.5;
+        double _d2 = Point.distance(e2.p1, e2.p2) * 0.5;
+        _d1 += 0.1 * _d1;
+        _d2 += 0.1 * _d2;
+
+        if (Point.distance(_mid1, e2.p1) - _d1 > 0.0 && Point.distance(_mid1, e2.p2) - _d1 > 0.0
+                && Point.distance(_mid2, e1.p1) - _d2 > 0.0 && Point.distance(_mid2, e1.p2) - _d2 > 0.0){
+            return false;
+        }
+
         ve1 = ve1.changeVector(e1.p1, atomCenter).makeUnit();
-        ve2 = ve2.changeVector(e1.p2, atomCenter).makeUnit();
+        ve2 = ve2.changeVector(e1 .p2, atomCenter).makeUnit();
         //Vector addv1 = Vector.addVectors(ve1, ve2).makeUnit();
         addv1.assignAddition(ve1, ve2).makeUnit();
         //Vector ne1 = Vector.getNormalVector(ve1, ve2).makeUnit();
@@ -620,7 +631,7 @@ public class AdvancingFrontMethod {
         concavePatch = false;
         currentTry = 0;
         this.maxEdge = edgeLength;
-        vertexFaceMap = MeshRefinement.convexVertexFaceMap.get(patch.id);
+        //vertexFaceMap = MeshGeneration.convexVertexFaceMap.get(patch.id);
         pastFacets.clear();
     }
 
@@ -646,7 +657,7 @@ public class AdvancingFrontMethod {
         newPoints.clear();
         currentTry = 0;
         this.maxEdge = edgeLength;
-        vertexFaceMap = MeshRefinement.concaveVertexFaceMap.get(patch.id);
+        //vertexFaceMap = MeshGeneration.concaveVertexFaceMap.get(patch.id);
 
         this.minAlpha = mAlpha;
         this.distTolerance = dTolerance;
@@ -946,7 +957,7 @@ public class AdvancingFrontMethod {
             }
             for (Point p : candidates){
                 if (computeAngle(aV1.changeVector(p, e.p1).makeUnit(), aV2.changeVector(e.p2, e.p1).makeUnit(), n1) > Math.toRadians(SesConfig.minAlpha)
-                        || computeAngle(aV1.changeVector(e.p1, e.p2).makeUnit(), aV2.changeVector(p, e.p2).makeUnit(), n2) > Math.toRadians(SesConfig.minAlpha) || (Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, p))) < 0.0)) {//PatchUtil.computeTriangleNormal(e.p1, e.p2, p))) < 0.01)) {
+                        || computeAngle(aV1.changeVector(e.p1, e.p2).makeUnit(), aV2.changeVector(p, e.p2).makeUnit(), n2) > Math.toRadians(SesConfig.minAlpha)){// || (Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, p))) < 0.0)) {
                     continue;
                 }
                 trueCands.add(p);
@@ -1142,18 +1153,18 @@ public class AdvancingFrontMethod {
         Face nF = new Face(e.p1._id, e.p2._id, e.next.p2._id);
         patch.faces.add(nF);
         PatchUtil.addFaceToEdgeFacesMap(patch, nF);
-        if (!vertexFaceMap.containsKey(e.p1._id)) {
-            vertexFaceMap.put(e.p1._id, new ArrayList<>());
-        }
-        if (!vertexFaceMap.containsKey(e.p2._id)){
-            vertexFaceMap.put(e.p2._id, new ArrayList<>());
-        }
-        if (!vertexFaceMap.containsKey(e.next.p2._id)){
-            vertexFaceMap.put(e.next.p2._id, new ArrayList<>());
-        }
-        vertexFaceMap.get(e.p1._id).add(nF);
-        vertexFaceMap.get(e.p2._id).add(nF);
-        vertexFaceMap.get(e.next.p2._id).add(nF);
+        //if (!vertexFaceMap.containsKey(e.p1._id)) {
+        //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
+        //}
+        //if (!vertexFaceMap.containsKey(e.p2._id)){
+        //    vertexFaceMap.put(e.p2._id, new ArrayList<>());
+        //}
+        //if (!vertexFaceMap.containsKey(e.next.p2._id)){
+        //    vertexFaceMap.put(e.next.p2._id, new ArrayList<>());
+        //}
+        //vertexFaceMap.get(e.p1._id).add(nF);
+        //vertexFaceMap.get(e.p2._id).add(nF);
+        //vertexFaceMap.get(e.next.p2._id).add(nF);
 
         Surface.numoftriangles++;
         facets.remove(e);
@@ -1314,18 +1325,19 @@ public class AdvancingFrontMethod {
         facets.add(rightFacet);
         pastFacets.add(e);
         newPoints.add(pTest);
+
         Face nF = new Face(e.p1._id, e.p2._id, pTest._id);
         patch.faces.add(nF);
-        if (!vertexFaceMap.containsKey(e.p1._id)) {
-            vertexFaceMap.put(e.p1._id, new ArrayList<>());
-        }
-        if (!vertexFaceMap.containsKey(e.p2._id)){
-            vertexFaceMap.put(e.p2._id, new ArrayList<>());
-        }
-        vertexFaceMap.put(pTest._id, new ArrayList<>());
-        vertexFaceMap.get(e.p1._id).add(nF);
-        vertexFaceMap.get(e.p2._id).add(nF);
-        vertexFaceMap.get(pTest._id).add(nF);
+        //if (!vertexFaceMap.containsKey(e.p1._id)) {
+        //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
+        //}
+        //if (!vertexFaceMap.containsKey(e.p2._id)){
+        //    vertexFaceMap.put(e.p2._id, new ArrayList<>());
+        //}
+        //vertexFaceMap.put(pTest._id, new ArrayList<>());
+        //vertexFaceMap.get(e.p1._id).add(nF);
+        //vertexFaceMap.get(e.p2._id).add(nF);
+        //vertexFaceMap.get(pTest._id).add(nF);
         PatchUtil.addFaceToEdgeFacesMap(patch, nF);
         //Surface.numoftriangles++;
         numOfTriangles++;
@@ -1371,6 +1383,10 @@ public class AdvancingFrontMethod {
         nodeEdgeMap.get(e.p2.afmIdx).remove(e);
         nodeEdgeMap.get(e.p2.afmIdx).add(newFacet);
 
+        /*
+            it is safe to remove e.p1 from nodes list
+         */
+        nodes.remove(e.p1);
                     /*if (incorrectNumberOfIncEdges(e.p1)){
                         System.err.println("p1");
                         //time = System.currentTimeMillis();
@@ -1398,18 +1414,18 @@ public class AdvancingFrontMethod {
         }*/
         Face nF = new Face(e.p1._id, e.p2._id, newFacet.p1._id);
         patch.faces.add(nF);
-        if (!vertexFaceMap.containsKey(e.p1._id)) {
-            vertexFaceMap.put(e.p1._id, new ArrayList<>());
-        }
-        if (!vertexFaceMap.containsKey(e.p2._id)){
-            vertexFaceMap.put(e.p2._id, new ArrayList<>());
-        }
-        if (!vertexFaceMap.containsKey(newFacet.p1._id)){
-            vertexFaceMap.put(newFacet.p1._id, new ArrayList<>());
-        }
-        vertexFaceMap.get(e.p1._id).add(nF);
-        vertexFaceMap.get(e.p2._id).add(nF);
-        vertexFaceMap.get(newFacet.p1._id).add(nF);
+        //if (!vertexFaceMap.containsKey(e.p1._id)) {
+        //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
+        //}
+        //if (!vertexFaceMap.containsKey(e.p2._id)){
+        //    vertexFaceMap.put(e.p2._id, new ArrayList<>());
+        //}
+        //if (!vertexFaceMap.containsKey(newFacet.p1._id)){
+        //    vertexFaceMap.put(newFacet.p1._id, new ArrayList<>());
+        //}
+        //vertexFaceMap.get(e.p1._id).add(nF);
+        //vertexFaceMap.get(e.p2._id).add(nF);
+        //vertexFaceMap.get(newFacet.p1._id).add(nF);
         PatchUtil.addFaceToEdgeFacesMap(patch, nF);
         //Surface.numoftriangles++;
         numOfTriangles++;
@@ -1445,6 +1461,11 @@ public class AdvancingFrontMethod {
         nodeEdgeMap.get(e.next.p2.afmIdx).remove(e.next);
         nodeEdgeMap.get(e.next.p2.afmIdx).add(newFacet);
 
+        /*
+            it is safe to remove e.p2 from nodes list
+         */
+        nodes.remove(e.p2);
+
                     /*if (incorrectNumberOfIncEdges(e.p1)){
                         System.err.println("p1");
                         //time = System.currentTimeMillis();
@@ -1473,18 +1494,18 @@ public class AdvancingFrontMethod {
         /*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, newFacet.p2))) < 0.01){
             System.out.println(patch.id + " invalid triangle possible");
         }*/
-        if (!vertexFaceMap.containsKey(e.p1._id)) {
-            vertexFaceMap.put(e.p1._id, new ArrayList<>());
-        }
-        if (!vertexFaceMap.containsKey(e.p2._id)){
-            vertexFaceMap.put(e.p2._id, new ArrayList<>());
-        }
-        if (!vertexFaceMap.containsKey(newFacet.p2._id)){
-            vertexFaceMap.put(newFacet.p2._id, new ArrayList<>());
-        }
-        vertexFaceMap.get(e.p1._id).add(nF);
-        vertexFaceMap.get(e.p2._id).add(nF);
-        vertexFaceMap.get(newFacet.p2._id).add(nF);
+        //if (!vertexFaceMap.containsKey(e.p1._id)) {
+        //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
+        //}
+        //if (!vertexFaceMap.containsKey(e.p2._id)){
+        //    vertexFaceMap.put(e.p2._id, new ArrayList<>());
+        //}
+        //if (!vertexFaceMap.containsKey(newFacet.p2._id)){
+        //    vertexFaceMap.put(newFacet.p2._id, new ArrayList<>());
+        //}
+        //vertexFaceMap.get(e.p1._id).add(nF);
+        //vertexFaceMap.get(e.p2._id).add(nF);
+        //vertexFaceMap.get(newFacet.p2._id).add(nF);
         PatchUtil.addFaceToEdgeFacesMap(patch, nF);
         //Surface.numoftriangles++;
         numOfTriangles++;
@@ -1617,18 +1638,18 @@ public class AdvancingFrontMethod {
                 System.out.println(patch.id + " invalid triangle possible");
             }*/
             patch.faces.add(nF);
-            if (!vertexFaceMap.containsKey(e.p1._id)) {
-                vertexFaceMap.put(e.p1._id, new ArrayList<>());
-            }
-            if (!vertexFaceMap.containsKey(e.p2._id)) {
-                vertexFaceMap.put(e.p2._id, new ArrayList<>());
-            }
-            if (!vertexFaceMap.containsKey(rightFacet.p1._id)) {
-                vertexFaceMap.put(rightFacet.p1._id, new ArrayList<>());
-            }
-            vertexFaceMap.get(e.p1._id).add(nF);
-            vertexFaceMap.get(e.p2._id).add(nF);
-            vertexFaceMap.get(rightFacet.p1._id).add(nF);
+            //if (!vertexFaceMap.containsKey(e.p1._id)) {
+            //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
+            //}
+            //if (!vertexFaceMap.containsKey(e.p2._id)) {
+            //    vertexFaceMap.put(e.p2._id, new ArrayList<>());
+            //}
+            //if (!vertexFaceMap.containsKey(rightFacet.p1._id)) {
+            //    vertexFaceMap.put(rightFacet.p1._id, new ArrayList<>());
+            //}
+            //vertexFaceMap.get(e.p1._id).add(nF);
+            //vertexFaceMap.get(e.p2._id).add(nF);
+            //vertexFaceMap.get(rightFacet.p1._id).add(nF);
             PatchUtil.addFaceToEdgeFacesMap(patch, nF);
             //Surface.numoftriangles++;
 

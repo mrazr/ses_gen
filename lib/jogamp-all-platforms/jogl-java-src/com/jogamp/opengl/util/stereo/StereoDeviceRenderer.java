@@ -91,7 +91,7 @@ public interface StereoDeviceRenderer {
      * Distortion Bit: Timewarp distortion technique to predict
      *                 {@link ViewerPose} movement to reduce latency.
      * <p>
-     * FIXME: Explanation needs refinement!
+     * FIXME: Explanation needs instance!
      * </p>
      */
     public static final int DISTORTION_TIMEWARP  = 1 << 3;

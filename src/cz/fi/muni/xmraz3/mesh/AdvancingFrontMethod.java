@@ -9,10 +9,7 @@ import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Vector;
 import cz.fi.muni.xmraz3.utils.PatchUtil;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class AdvancingFrontMethod {
@@ -956,20 +953,45 @@ public class AdvancingFrontMethod {
             if (verbose && patch.faces.size() > 16){
                 System.out.println("Cand size: " + candidates.size());
             }
+
+            candidates.sort(new Comparator<Point>() {
+                @Override
+                public int compare(Point o1, Point o2) {
+                    double _o1 = pointEdgeDistance(o1, e);
+                    double _o2 = pointEdgeDistance(o2, e);
+                    double diff = _o1 - _o2;
+                    return (Math.abs(diff) < 0.001) ? 0 : ((diff < 0.0) ? -1 : 1);
+                }
+            });
+
+            Point pt = null;
             for (Point p : candidates){
                 if (computeAngle(aV1.changeVector(p, e.p1).makeUnit(), aV2.changeVector(e.p2, e.p1).makeUnit(), n1) > Math.toRadians(SesConfig.minAlpha)
                         || computeAngle(aV1.changeVector(e.p1, e.p2).makeUnit(), aV2.changeVector(p, e.p2).makeUnit(), n2) > Math.toRadians(SesConfig.minAlpha)){// || (Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, p))) < 0.0)) {
                     continue;
                 }
-                trueCands.add(p);
+                pt = p;
+                break;
+                //trueCands.add(p);
             }
             candidates.clear();
-            candidates.addAll(trueCands);
+            //for (Point p : candidates){
+            //    if (computeAngle(aV1.changeVector(p, e.p1).makeUnit(), aV2.changeVector(e.p2, e.p1).makeUnit(), n1) > Math.toRadians(SesConfig.minAlpha)
+            //            || computeAngle(aV1.changeVector(e.p1, e.p2).makeUnit(), aV2.changeVector(p, e.p2).makeUnit(), n2) > Math.toRadians(SesConfig.minAlpha)){// || (Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, p))) < 0.0)) {
+            //        continue;
+            //    }
+            //    trueCands.add(p);
+            //}
+
+            //if (pt == null) {
+            //    candidates.clear();
+            //}
+            //candidates.addAll(trueCands);
             if (verbose && patch.faces.size() > 16){
                 System.out.println("true Cand size: " + candidates.size());
             }
             //so far no suitable points to form a new triangle with the edge e, let's create a test point
-            if (candidates.isEmpty()){
+            if (pt == null){//candidates.isEmpty()){
                 double height2; //assign such height so that the newly formed edges will have +- length of Surface.maxEdgeLen
                 if (edgeLength - 0.05f - e1ToE2.sqrtMagnitude() * 0.5f < 0.f){
                     height2 = (e1ToE2.sqrtMagnitude() * 0.5f) * Math.tan(Math.toRadians(30));
@@ -1073,7 +1095,7 @@ public class AdvancingFrontMethod {
                 }
             }
             if (!candidates.isEmpty()){
-                Point pt = candidates.get(0);
+                pt = candidates.get(0);
                 double min = pointEdgeDistance(pt, e);
                 for (int i = 1; i < candidates.size(); ++i){
                     Point t = candidates.get(i);
@@ -1084,6 +1106,25 @@ public class AdvancingFrontMethod {
                         pt = t;
                     }
                 }
+            }
+            if (pt != null){//candidates.isEmpty()){
+
+                //Point pt = candidates.get(0);
+                //double min = pointEdgeDistance(pt, e);
+                //for (int i = 1; i < candidates.size(); ++i){
+                //    Point t = candidates.get(i);
+                //    if (t == e.p1 || t == e.p2)
+                //        continue;
+                //    if (pointEdgeDistance(t, e) < min && nodeEdgeMap.get(t.afmIdx).size() > 0){
+                //        min = pointEdgeDistance(t, e);
+                //        pt = t;
+                //    }
+                //}
+
+                /**
+                 * HERE
+                 */
+
                 /*if (!isValidTriangle(e.p1, e.p2, pt)){
                     System.out.println("constructing invalid triangle for: " + patch.id);
                 }*/

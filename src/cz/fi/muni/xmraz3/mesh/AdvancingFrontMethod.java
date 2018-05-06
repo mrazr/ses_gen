@@ -472,8 +472,6 @@ public class AdvancingFrontMethod {
         }
     }
 
-
-
     Vector n1 = new Vector(0, 0, 0);
     Vector n2 = new Vector(0, 0, 0);
     Vector e1ToE2 = new Vector(0, 0, 0);
@@ -760,25 +758,28 @@ public class AdvancingFrontMethod {
         boolean faceGenerated = false;
         while (facets.size() > 0){
             pastFacets.clear();
-            if (concavePatch && patch.id == 918){
-                int f = 4;
-            }
             faceGenerated = false;
             dontConsider.clear();
             if (verbose && patch.faces.size() > 20){
                 time = (long)0;
             }
-            if (System.currentTimeMillis() - time > timeout){
-                if (currentTry < maxNumberOfRestarts){
-                    time = System.currentTimeMillis();
-                    currentTry++;
-                } else {
-                    System.out.println("DETECTED LOOP, ending mesh generation");
-                    atomComplete = true;
-                    loopDetected = true;
-                    break;
-                }
+            if (empty >= facets.size()){
+                System.out.println("DETECED LOOP, ending mesh generation for patch id: " + patch.id);
+                atomComplete = true;
+                loopDetected = true;
+                break;
             }
+            //if (System.currentTimeMillis() - time > timeout){
+            //    if (currentTry < maxNumberOfRestarts){
+            //        time = System.currentTimeMillis();
+            //        currentTry++;
+            //    } else {
+            //        System.out.println("DETECTED LOOP, ending mesh generation");
+            //        atomComplete = true;
+            //        loopDetected = true;
+            //        break;
+            //    }
+            //}
             candidates.clear();
             if (e.next.next == e.prev){//only three edges in the current loop -> close it with one triangle
                 closeLoop();
@@ -1110,6 +1111,9 @@ public class AdvancingFrontMethod {
                     empty++;
                 }
             }
+            if (faceGenerated){
+                empty = 0;
+            }
         }
         if (facets.size() == 0){
             patchComplete = true;
@@ -1430,16 +1434,16 @@ public class AdvancingFrontMethod {
         //Surface.numoftriangles++;
         numOfTriangles++;
         //System.out.println("Bridge with e.prev");
-        n1.changeVector(newFacet.p1, patch.sphere.center).makeUnit();
-        n2.changeVector(newFacet.p2, patch.sphere.center).makeUnit();
-        double alpha1 = computeAngle(aV1.changeVector(newFacet.prev.p1, newFacet.p1).makeUnit(), aV2.changeVector(newFacet.p2, newFacet.p1).makeUnit(), n1);
-        double alpha2 = computeAngle(aV1.changeVector(newFacet.p1, newFacet.p2).makeUnit(), aV2.changeVector(newFacet.next.p2, newFacet.p2).makeUnit(), n2);
-        if (alpha1 - alpha2 < 0.0 && false){
-            e = newFacet.prev;
-        } else {
-            e = newFacet.next;
-        }
-        //e = newFacet.next;
+        //n1.changeVector(newFacet.p1, patch.sphere.center).makeUnit();
+        //n2.changeVector(newFacet.p2, patch.sphere.center).makeUnit();
+        //double alpha1 = computeAngle3(aV1.changeVector(newFacet.prev.p1, newFacet.p1).makeUnit(), aV2.changeVector(newFacet.p2, newFacet.p1).makeUnit(), n1);
+        //double alpha2 = computeAngle3(aV1.changeVector(newFacet.p1, newFacet.p2).makeUnit(), aV2.changeVector(newFacet.next.p2, newFacet.p2).makeUnit(), n2);
+        //if (alpha1 - alpha2 < 0.0 && false){
+        //    e = newFacet.prev;
+        //} else {
+        //    e = newFacet.next;
+        //}
+        e = newFacet.next;
         newFacet.loopID = activeLoop;
     }
 
@@ -1509,16 +1513,16 @@ public class AdvancingFrontMethod {
         PatchUtil.addFaceToEdgeFacesMap(patch, nF);
         //Surface.numoftriangles++;
         numOfTriangles++;
-        n1.changeVector(newFacet.p1, patch.sphere.center).makeUnit();
-        n2.changeVector(newFacet.p2, patch.sphere.center).makeUnit();
-        double alpha1 = computeAngle(aV1.changeVector(newFacet.prev.p1, newFacet.p1).makeUnit(), aV2.changeVector(newFacet.p2, newFacet.p1).makeUnit(), n1);
-        double alpha2 = computeAngle(aV1.changeVector(newFacet.p1, newFacet.p2).makeUnit(), aV2.changeVector(newFacet.next.p2, newFacet.p2).makeUnit(), n2);
-        if (alpha1 - alpha2 < 0.0 && false){
-            e = newFacet.prev;
-        } else {
-            e = newFacet.next;
-        }
-        //e = newFacet.next;
+        //n1.changeVector(newFacet.p1, patch.sphere.center).makeUnit();
+        //n2.changeVector(newFacet.p2, patch.sphere.center).makeUnit();
+        //double alpha1 = computeAngle3(aV1.changeVector(newFacet.prev.p1, newFacet.p1).makeUnit(), aV2.changeVector(newFacet.p2, newFacet.p1).makeUnit(), n1);
+        //double alpha2 = computeAngle3(aV1.changeVector(newFacet.p1, newFacet.p2).makeUnit(), aV2.changeVector(newFacet.next.p2, newFacet.p2).makeUnit(), n2);
+        //if (alpha1 - alpha2 < 0.0 && false){
+        //    e = newFacet.prev;
+        //} else {
+        //    e = newFacet.next;
+        //}
+        e = newFacet.next;
         newFacet.loopID = activeLoop;
     }
 

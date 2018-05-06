@@ -15,8 +15,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MeshGeneration {
+    private static int THREAD_COUNT = 0;
     public static MeshGeneration instance = new MeshGeneration();
-    private static final int THREAD_COUNT = 4;
     private static AtomicInteger threads_done = new AtomicInteger(0);
 
     private static AtomicInteger trianglesGenerated = new AtomicInteger(0);
@@ -33,13 +33,19 @@ public class MeshGeneration {
     }
 
     private MeshGeneration(){
-        v = new Vector[4];
-        v[0] = new Vector(0, 0, 0);
-        v[1] = new Vector(0, 0, 0);
-        v[2] = new Vector(0, 0, 0);
-        v[3] = new Vector(0, 0, 0);
-        _triangles = new int[4];
-        _triangles[0] = _triangles[1] = _triangles[2] = _triangles[3] = 0;
+        THREAD_COUNT = Runtime.getRuntime().availableProcessors();
+        //System.out.println("Initializing MeshGeneration with " + THREAD_COUNT + " threads");
+        v = new Vector[THREAD_COUNT];
+        //v[0] = new Vector(0, 0, 0);
+        //v[1] = new Vector(0, 0, 0);
+        //v[2] = new Vector(0, 0, 0);
+        //v[3] = new Vector(0, 0, 0);
+        _triangles = new int[THREAD_COUNT];
+        //_triangles[0] = _triangles[1] = _triangles[2] = _triangles[3] = 0;
+        for (int i = 0; i < THREAD_COUNT; ++i){
+            _triangles[i] = 0;
+            v[i] = new Vector(0, 0, 0);
+        }
     }
 
     private static void generateMesh(int start, int end, List<SphericalPatch> patches, int threadIdx) {
@@ -75,16 +81,19 @@ public class MeshGeneration {
             }
         }
         long endTime = System.currentTimeMillis();
-
+        System.out.println("Thread idx: " + threadIdx + " - " + ((patches.get(0).convexPatch) ? "Convex" : "Concave" ) + " patches meshed in " + (endTime - startTime) + " ms");
         threads_done.incrementAndGet();
         if (threads_done.get() == THREAD_COUNT){
             System.out.println(((patches.get(0).convexPatch) ? "Convex" : "Concave" ) + " patches meshed in " + (endTime - startTime) + " ms");
             free.set(true);
             if (!patches.get(0).convexPatch){
-                trianglesGenerated.addAndGet(_triangles[0]);
-                trianglesGenerated.addAndGet(_triangles[1]);
-                trianglesGenerated.addAndGet(_triangles[2]);
-                trianglesGenerated.addAndGet(_triangles[3]);
+                //trianglesGenerated.addAndGet(_triangles[0]);
+                //trianglesGenerated.addAndGet(_triangles[1]);
+                //trianglesGenerated.addAndGet(_triangles[2]);
+                //trianglesGenerated.addAndGet(_triangles[3]);
+                for (int i = 0; i < THREAD_COUNT; ++i){
+                    trianglesGenerated.addAndGet(_triangles[i]);
+                }
                 System.out.println("Total number of triangles generated: " + trianglesGenerated.get());
                 finished.set(true);
             }
@@ -94,7 +103,10 @@ public class MeshGeneration {
     public static void reset(){
         trianglesGenerated.set(0);
         finished.set(false);
-        _triangles[0] = _triangles[1] = _triangles[2] = _triangles[3] = 0;
+        //_triangles[0] = _triangles[1] = _triangles[2] = _triangles[3] = 0;
+        for (int i = 0; i < THREAD_COUNT; ++i){
+            _triangles[i] = 0;
+        }
         Runnable r1 = new Runnable() {
             @Override
             public void run() {
@@ -140,28 +152,28 @@ public class MeshGeneration {
         }
         System.out.println("Toroidal patches meshed in " + (System.currentTimeMillis() - startTime) + " milliseconds");
         MeshGeneration.threads_done.set(0);
-        int step = SesConfig.atomCount / 4;
-        for (int i = 0; i < 4; ++i){
+        int step = SesConfig.atomCount / THREAD_COUNT;
+        for (int i = 0; i < THREAD_COUNT; ++i){
             final int start = i;
             final int _step = step;
             Runnable r = new Runnable() {
                 @Override
                 public void run() {
-                    MeshGeneration.generateMesh(start * _step, (start == 3) ? SesConfig.atomCount : (start + 1) * _step, Surface.convexPatches, start);
+                    MeshGeneration.generateMesh(start * _step, (start == THREAD_COUNT - 1) ? SesConfig.atomCount : (start + 1) * _step, Surface.convexPatches, start);
                 }
             };
             (new Thread(r)).start();
         }
         while (!MeshGeneration.free.get()){}
         MeshGeneration.threads_done.set(0);
-        step = SesConfig.trianglesCount / 4;
-        for (int i = 0; i < 4; ++i){
+        step = SesConfig.trianglesCount / THREAD_COUNT;
+        for (int i = 0; i < THREAD_COUNT; ++i){
             final int start = i;
             final int _step = step;
             Runnable r = new Runnable() {
                 @Override
                 public void run() {
-                    MeshGeneration.generateMesh(start * _step, (start == 3) ? SesConfig.trianglesCount : (start + 1) * _step, Surface.triangles, start);
+                    MeshGeneration.generateMesh(start * _step, (start == THREAD_COUNT - 1) ? SesConfig.trianglesCount : (start + 1) * _step, Surface.triangles, start);
                 }
             };
             (new Thread(r)).start();

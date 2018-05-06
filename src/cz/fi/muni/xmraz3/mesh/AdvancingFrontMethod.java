@@ -262,7 +262,7 @@ public class AdvancingFrontMethod {
     public List<Long> looped = new ArrayList<>();
     public boolean loop = false;
     public int vertexHighlight = 0;
-    private static int timeout = 3000;
+    private static int timeout = 5000;
     public static int maxNumberOfRestarts = 0;
     private int currentTry = 0;
 
@@ -740,7 +740,7 @@ public class AdvancingFrontMethod {
         //return Vector.getNormalVector(Point.subtractPoints(b, a).makeUnit(), Point.subtractPoints(c, a).makeUnit()).makeUnit();
         return n.assignNormalVectorOf(aV1.changeVector(b, a).makeUnit(), aV2.changeVector(c, a).makeUnit()).makeUnit();
     }
-
+    private boolean faceGenerated = false;
     public boolean newMesh(){
         edgeLength = baseLength;
         distTolerance = baseDistTolerance;
@@ -755,7 +755,6 @@ public class AdvancingFrontMethod {
         }
         Long time = System.currentTimeMillis();
         int empty = 0;
-        boolean faceGenerated = false;
         while (facets.size() > 0){
             pastFacets.clear();
             faceGenerated = false;
@@ -1106,12 +1105,12 @@ public class AdvancingFrontMethod {
                     generateBridgeFace(pt);
                 }
             } else {
-                if (!faceGenerated){
-                    e = e.next;
-                    empty++;
-                }
+
             }
-            if (faceGenerated){
+            if (!faceGenerated){
+                e = e.next;
+                empty++;
+            } else {
                 empty = 0;
             }
         }
@@ -1445,6 +1444,7 @@ public class AdvancingFrontMethod {
         //}
         e = newFacet.next;
         newFacet.loopID = activeLoop;
+        faceGenerated = true;
     }
 
     private void generateFaceWithNextEdge(){
@@ -1524,6 +1524,7 @@ public class AdvancingFrontMethod {
         //}
         e = newFacet.next;
         newFacet.loopID = activeLoop;
+        faceGenerated = true;
     }
 
     private void generateBridgeFace(Point pt){
@@ -1662,6 +1663,7 @@ public class AdvancingFrontMethod {
             e = leftFacet.next;
             activeLoop = e.loopID;
             numOfTriangles++;
+            faceGenerated = true;
         } else {
         }
     }

@@ -188,6 +188,9 @@ public class MeshGeneration {
                 Main.rectangles.remove(this);
                 return;
             }*/
+            if (tp.id == 45657){
+                int a = 3;
+            }
             if (!tp.circular){
                 if (tp.concavePatchArcs.size() < 2 && (tp.tr1 == null || tp.tr2 == null)){
                     tp.valid = false;
@@ -318,14 +321,16 @@ public class MeshGeneration {
                     left.vrts.add(bottom.end2);
                     left.vrts.add(top.end1);
                     left.setEndPoints(bottom.end2, top.end1, true);
-                    ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
+                    ArcUtil.refineArc(left, SesConfig.edgeLimit, false, 0, false);
+                    //ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
                     newCenter = (Point.distance(left.center, tp.probe1) < 0.0001) ? tp.probe2 : tp.probe1;
                     right = new Arc(newCenter, SesConfig.probeRadius);
 
                     right.vrts.add(bottom.end1);
                     right.vrts.add(top.end2);
                     right.setEndPoints(bottom.end1, top.end2, true);
-                    ArcUtil.refineArc(right, SesConfig.edgeLimit, false,3, false);
+                    ArcUtil.refineArc(right, SesConfig.edgeLimit, false, 0, false);
+                    //ArcUtil.refineArc(right, SesConfig.edgeLimit, false,3, false);
                     if (right.vrts.size() != left.vrts.size()){
                         System.out.println("weird");
                     }

@@ -53,7 +53,7 @@ public class PatchUtil {
             //Arc_ bottom = (leftL.end2 == tp.convexPatchArcs.get(0).end2) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
             Arc bottom = (Point.distance(leftL.end2, tp.convexPatchArcs.get(0).end2) < 0.001) ? tp.convexPatchArcs.get(0) : tp.convexPatchArcs.get(1);
             Arc top = (tp.convexPatchArcs.get(0) == bottom) ? tp.convexPatchArcs.get(1) : tp.convexPatchArcs.get(0);
-            if (leftL.owner.id == 2974 || rightL.owner.id == 2974){
+            if (leftL.owner.id == 30419 || rightL.owner.id == 30419){
                 int g = 32;
             }
             if (leftL.owner.intersectingPatches.contains(rightL.owner.id)){
@@ -503,7 +503,7 @@ public class PatchUtil {
         Vector u1 = v1.changeVector(arc.end1, arc.center).makeUnit();
         Vector u2 = v2.changeVector(arc.end2, arc.center).makeUnit();
         Vector n1 = v3.changeVector(sp.sphere.center, arc.center).makeUnit();
-        if (sp.id == 1467){
+        if (sp.id == 30419){
             int fd=  43;
         }
         //Plane p1 = new Plane(arc.center, n1);
@@ -1281,7 +1281,9 @@ public class PatchUtil {
                     }
                     Point in2 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in1, false, circle.p, circle.v, true);
                     Point pStart = in1;
-
+                    if (in2 == null){
+                        int dasf = 3;
+                    }
                     Arc a1 = in1.arc;//ArcUtil.findContainingArc(in1, circle, sp, null);
                     Arc a2 = in2.arc;//ArcUtil.findContainingArc(in2, circle, sp, null);
                     if (a1 == null || a2 == null){
@@ -1671,6 +1673,9 @@ public class PatchUtil {
                 currCirc = p;
                 currRad = radius;
                 toRemove.clear();
+                if (sp.id == 30419 && sp2.id == 30435){
+                    int cd = 4;
+                }
                 if (intersectionPoints.size() > 1) {
                     if (!pointsLieOnPatch(sp2, intersectionPoints) && sp.patchNormal.dotProduct(sp2.patchNormal) > 0.8){
                         continue;
@@ -1909,6 +1914,9 @@ public class PatchUtil {
                 return;
             }
             SphericalPatch sp = arc.owner;
+            if (sp.id == 30419){
+                int daf = 3;
+            }
             //List<Point> intersectionPoints = new ArrayList<>();
             intersectionPoints.clear();
             //List<Arc> exclude = new ArrayList<>();
@@ -2586,10 +2594,10 @@ public class PatchUtil {
         return false;
     }
 
-    public static Point genP(Arc a, Point p){
+    public static Point genP(Arc a, Point p, int dir){
         Vector v = Point.subtractPoints(p, a.center).makeUnit();
         Quaternion q = new Quaternion();
-        q.setFromAngleNormalAxis((float)Math.toRadians(2), a.normal.getFloatData());
+        q.setFromAngleNormalAxis((float)(dir * Math.toRadians(2)), a.normal.getFloatData());
         float[] _f = new float[3];
         q.rotateVector(_f, 0, v.getFloatData(), 0);
         Vector u = new Vector(_f);
@@ -2598,14 +2606,18 @@ public class PatchUtil {
     }
 
     private static boolean isOptimal(Point p, Arc a, Plane circle){
-        Point _p = genP(a, p);
+        int dir = 1;
+        if (Point.distance(p, a.end2) < 0.001){
+            dir = -1;
+        }
+        Point _p = genP(a, p, dir);
         Vector ak = Point.subtractPoints(_p, circle.p).multiply(10.f);
         Point __p = Point.translatePoint(circle.p, ak);
-        return circle.checkPointLocation(__p) < 0.0;
+        return dir * circle.checkPointLocation(__p) < 0.0;
     }
 
     public static double nextSign(Point p, Arc a, Plane circle){
-        Point _p = genP(a, p);
+        Point _p = genP(a, p, 1);
         Vector ak = Point.subtractPoints(_p, circle.p).multiply(10.f);
         Point __p = Point.translatePoint(circle.p, ak);
         return circle.checkPointLocation(__p);

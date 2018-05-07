@@ -381,102 +381,102 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         gl.glBindVertexArray(0);
     }
 
-    private void pushConvexEdgesToGPU(){
-        int totalVerticesCount = 0;
-        int totalIndicesCount = 0;
-        int indexOffset = 0;
-        int vertexOffset = 0;
-        List<Point> vertices = new ArrayList<>();
-        List<Integer> indices = new ArrayList<>();
-        for (SphericalPatch a : convexPatchList){
-            a.lineOffset = indexOffset;
-            for (Boundary b : a.boundaries){
-                Boundary b_ = b;
-                //b_.patch = a;
-                /*for (Arc _a : b.arcs){
-                    b_.arcs.add(_a.refined);
-                }
-                ArcUtil.buildEdges(b_, true);*/
-                a.lineCount += b_.lines.size();
-                for (Point p : b_.vrts){
-                    vertices.add(p);
-                }
-                for (Edge e : b_.lines){
-                    indices.add(e.v1 + vertexOffset);
-                    indices.add(e.v2 + vertexOffset);
-                }
-                vertexOffset += b_.vrts.size();
-                //totalVerticesCount += b.vrts.size();
-            }
-            indexOffset += a.lineCount;
-        }
-        totalVerticesCount = vertices.size();
-        totalIndicesCount = indices.size();
-        convexPatchesEdgeCount = totalIndicesCount / 2;
-        FloatBuffer vBuff = GLBuffers.newDirectFloatBuffer(3 * totalVerticesCount);
-        IntBuffer iBuff = GLBuffers.newDirectIntBuffer(totalIndicesCount);
-
-        vertices.forEach(p -> vBuff.put(p.getFloatData()));
-        indices.forEach(i -> iBuff.put(i));
-
-        vBuff.rewind();
-        iBuff.rewind();
-
-        gl.glBindVertexArray(lineVao[CONVEX]);
-        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, lineVbo[CONVEX]);
-        gl.glBufferData(GL4.GL_ARRAY_BUFFER, vBuff.capacity() * Float.BYTES, vBuff, GL4.GL_STATIC_DRAW);
-        gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 3 * Float.BYTES, 0);
-        gl.glEnableVertexAttribArray(0);
-        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
-        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[CONVEX]);
-        gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, iBuff.capacity() * Integer.BYTES, iBuff, GL4.GL_STATIC_DRAW);
-        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
-        gl.glBindVertexArray(0);
-    }
-
-    private void pushConcaveEdgesToGPU(){
-        int totalVerticesCount = 0;
-        int totalIndicesCount = 0;
-        int indexOffset = 0;
-        int vertexOffset = 0;
-        List<Point> vertices = new ArrayList<>();
-        List<Integer> indices = new ArrayList<>();
-        for (SphericalPatch cp : concavePatchList){
-            cp.lineOffset = indexOffset;
-            for (Boundary b : cp.boundaries){
-                cp.lineCount += b.lines.size();
-                for (Point p : b.vrts){
-                    vertices.add(p);
-                }
-                for (Edge e : b.lines){
-                    indices.add(e.v1 + vertexOffset);
-                    indices.add(e.v2 + vertexOffset);
-                }
-                vertexOffset += b.vrts.size();
-            }
-            indexOffset += cp.lineCount;
-        }
-        concavePatchesEdgeCount = indices.size() / 2;
-        FloatBuffer vBuff = GLBuffers.newDirectFloatBuffer(3 * vertices.size());
-        IntBuffer iBuff = GLBuffers.newDirectIntBuffer(indices.size());
-
-        vertices.forEach(p -> vBuff.put(p.getFloatData()));
-        indices.forEach(i -> iBuff.put(i));
-
-        vBuff.rewind();
-        iBuff.rewind();
-
-        gl.glBindVertexArray(lineVao[CONCAVE]);
-        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, lineVbo[CONCAVE]);
-        gl.glBufferData(GL4.GL_ARRAY_BUFFER, vBuff.capacity() * Float.BYTES, vBuff, GL4.GL_STATIC_DRAW);
-        gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 3 * Float.BYTES, 0);
-        gl.glEnableVertexAttribArray(0);
-        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
-        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[CONCAVE]);
-        gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, iBuff.capacity() * Integer.BYTES, iBuff, GL4.GL_STATIC_DRAW);
-        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
-        gl.glBindVertexArray(0);
-    }
+//    private void pushConvexEdgesToGPU(){
+//        int totalVerticesCount = 0;
+//        int totalIndicesCount = 0;
+//        int indexOffset = 0;
+//        int vertexOffset = 0;
+//        List<Point> vertices = new ArrayList<>();
+//        List<Integer> indices = new ArrayList<>();
+//        for (SphericalPatch a : convexPatchList){
+//            a.lineOffset = indexOffset;
+//            for (Boundary b : a.boundaries){
+//                Boundary b_ = b;
+//                //b_.patch = a;
+//                /*for (Arc _a : b.arcs){
+//                    b_.arcs.add(_a.refined);
+//                }
+//                ArcUtil.buildEdges(b_, true);*/
+//                a.lineCount += b_.lines.size();
+//                for (Point p : b_.vrts){
+//                    vertices.add(p);
+//                }
+//                for (Edge e : b_.lines){
+//                    indices.add(e.v1 + vertexOffset);
+//                    indices.add(e.v2 + vertexOffset);
+//                }
+//                vertexOffset += b_.vrts.size();
+//                //totalVerticesCount += b.vrts.size();
+//            }
+//            indexOffset += a.lineCount;
+//        }
+//        totalVerticesCount = vertices.size();
+//        totalIndicesCount = indices.size();
+//        convexPatchesEdgeCount = totalIndicesCount / 2;
+//        FloatBuffer vBuff = GLBuffers.newDirectFloatBuffer(3 * totalVerticesCount);
+//        IntBuffer iBuff = GLBuffers.newDirectIntBuffer(totalIndicesCount);
+//
+//        vertices.forEach(p -> vBuff.put(p.getFloatData()));
+//        indices.forEach(i -> iBuff.put(i));
+//
+//        vBuff.rewind();
+//        iBuff.rewind();
+//
+//        gl.glBindVertexArray(lineVao[CONVEX]);
+//        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, lineVbo[CONVEX]);
+//        gl.glBufferData(GL4.GL_ARRAY_BUFFER, vBuff.capacity() * Float.BYTES, vBuff, GL4.GL_STATIC_DRAW);
+//        gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 3 * Float.BYTES, 0);
+//        gl.glEnableVertexAttribArray(0);
+//        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
+//        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[CONVEX]);
+//        gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, iBuff.capacity() * Integer.BYTES, iBuff, GL4.GL_STATIC_DRAW);
+//        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
+//        gl.glBindVertexArray(0);
+//    }
+//
+//    private void pushConcaveEdgesToGPU(){
+//        int totalVerticesCount = 0;
+//        int totalIndicesCount = 0;
+//        int indexOffset = 0;
+//        int vertexOffset = 0;
+//        List<Point> vertices = new ArrayList<>();
+//        List<Integer> indices = new ArrayList<>();
+//        for (SphericalPatch cp : concavePatchList){
+//            cp.lineOffset = indexOffset;
+//            for (Boundary b : cp.boundaries){
+//                cp.lineCount += b.lines.size();
+//                for (Point p : b.vrts){
+//                    vertices.add(p);
+//                }
+//                for (Edge e : b.lines){
+//                    indices.add(e.v1 + vertexOffset);
+//                    indices.add(e.v2 + vertexOffset);
+//                }
+//                vertexOffset += b.vrts.size();
+//            }
+//            indexOffset += cp.lineCount;
+//        }
+//        concavePatchesEdgeCount = indices.size() / 2;
+//        FloatBuffer vBuff = GLBuffers.newDirectFloatBuffer(3 * vertices.size());
+//        IntBuffer iBuff = GLBuffers.newDirectIntBuffer(indices.size());
+//
+//        vertices.forEach(p -> vBuff.put(p.getFloatData()));
+//        indices.forEach(i -> iBuff.put(i));
+//
+//        vBuff.rewind();
+//        iBuff.rewind();
+//
+//        gl.glBindVertexArray(lineVao[CONCAVE]);
+//        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, lineVbo[CONCAVE]);
+//        gl.glBufferData(GL4.GL_ARRAY_BUFFER, vBuff.capacity() * Float.BYTES, vBuff, GL4.GL_STATIC_DRAW);
+//        gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 3 * Float.BYTES, 0);
+//        gl.glEnableVertexAttribArray(0);
+//        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
+//        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[CONCAVE]);
+//        gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, iBuff.capacity() * Integer.BYTES, iBuff, GL4.GL_STATIC_DRAW);
+//        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
+//        gl.glBindVertexArray(0);
+//    }
 
     public void sendConvexPatchList(List<SphericalPatch> at){
         convexPatchList = at;

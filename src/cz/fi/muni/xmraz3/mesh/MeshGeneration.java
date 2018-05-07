@@ -58,18 +58,15 @@ public class MeshGeneration {
             if (!a.valid){
                 continue;
             }
-            if (!a.convexPatch && a.id == 85){
-                int j = 4;
-            }
             if (!a.meshed) {
                 if (a.boundaries.size() > 0) {
                     if (a.convexPatch) {
                         afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit, Surface.maxEdgeLen);
                     } else {
-                        afm._initializeConcaveAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit, Surface.maxEdgeLen);
+                        afm._initializeConcaveAFM2(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit, Surface.maxEdgeLen);
                     }
                     do {
-                        afm.newMesh();
+                        afm._newMesh();
                     } while (!afm.atomComplete);
                     a.dbFaces.addAll(a.faces);
                     if (afm.loop){
@@ -80,6 +77,7 @@ public class MeshGeneration {
                 }
             }
         }
+        System.out.println("AFM on threadIdx: " + threadIdx + " used facetPool of " + afm.facetPool.size() + " edges");
         long endTime = System.currentTimeMillis();
         System.out.println("Thread idx: " + threadIdx + " - " + ((patches.get(0).convexPatch) ? "Convex" : "Concave" ) + " patches meshed in " + (endTime - startTime) + " ms");
         threads_done.incrementAndGet();
@@ -435,7 +433,7 @@ public class MeshGeneration {
                     }
                 }
                 for (int j = 0; j < left.vrts.size() - 1; ++j) {
-                    Point newPoint = null;
+                    //Point newPoint = null;
                     /*if (i < bottom.vrts.size() - 1) {
                         if (j < left.vrts.size() - 2) {
                             Vector v = Point.subtractPoints(top.vrts.get(i), bottom.vrts.get(bottom.vrts.size() - i - 1)).multiply((float)(j + 1) / (float)(left.vrts.size() - 1));

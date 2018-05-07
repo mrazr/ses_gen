@@ -6,6 +6,7 @@ package cz.fi.muni.xmraz3.math;
 public class Vector {
     private double x;
     private double y;
+    private double z;
 
     public double getX() {
         return x;
@@ -31,7 +32,7 @@ public class Vector {
         this.z = z;
     }
 
-    private double z;
+
 
     public double[] getData(){ return new double[]{x, y, z};}
 
@@ -93,8 +94,7 @@ public class Vector {
         return this;
     }
 
-    public static Vector addVectors(Vector v1, Vector v2)
-    {
+    public static Vector addVectors(Vector v1, Vector v2) {
         Vector viktor = v1;
         Vector vektor = v2;
         Vector pektor = new Vector(viktor.getX() + vektor.getX(), viktor.getY() + vektor.getY(), viktor.getZ() + vektor.getZ());
@@ -152,13 +152,17 @@ public class Vector {
         this.y += v.y;
         this.z += v.z;
     }
-
+    private static double[] data = new double[3];
+    private static double[] ndata = new double[3];
     public Vector getPerpendicularVector(){
         int zero = -1;
         int first = -1;
         int second = -1;
         boolean twoZeroes = false;
-        double[] data = this.getData();
+        //double[] data = this.getData();
+        data[0] = this.x;
+        data[1] = this.y;
+        data[2] = this.z;
         for (int i = 0; i < 3; i++){
             if (Math.abs(data[i]) < 0.0001){
                 if (zero < 0) {
@@ -188,7 +192,7 @@ public class Vector {
             first = zero;
         }
         double tmp = -data[first];
-        double[] ndata = new double[3];
+        //double[] ndata = new double[3];
         ndata[0] = data[0];
         ndata[1] = data[1];
         ndata[2] = data[2];

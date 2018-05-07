@@ -184,52 +184,52 @@ public class ArcUtil {
                 }
             }
         }
-        b.lines.clear();
-        for (int i = 0; i < b.vrts.size(); ++i){
-            Edge e = new Edge(i, (i == b.vrts.size() - 1) ? 0 : i + 1);
-            e.p1 = b.vrts.get(i);
-            e.p2 = b.vrts.get((i == b.vrts.size() - 1) ? 0 : i + 1);
-            b.lines.add(e);
-        }
-        for (int i = 0; i < b.lines.size(); ++i){
-            Edge first = b.lines.get(i);
-            Edge second = b.lines.get((i == b.lines.size() - 1) ? 0 : i + 1);
-            first.next = second;
-            second.prev = first;
-        }
+//        b.lines.clear();
+//        for (int i = 0; i < b.vrts.size(); ++i){
+//            Edge e = new Edge(i, (i == b.vrts.size() - 1) ? 0 : i + 1);
+//            e.p1 = b.vrts.get(i);
+//            e.p2 = b.vrts.get((i == b.vrts.size() - 1) ? 0 : i + 1);
+//            b.lines.add(e);
+//        }
+//        for (int i = 0; i < b.lines.size(); ++i){
+//            Edge first = b.lines.get(i);
+//            Edge second = b.lines.get((i == b.lines.size() - 1) ? 0 : i + 1);
+//            first.next = second;
+//            second.prev = first;
+//        }
     }
 
-    public static void buildEdges(Boundary b, boolean clear, double edgeLength){
-        if (clear) {
-            b.vrts.clear();
-            linkArcs(b.arcs);
-            for (Arc a : b.arcs) {
-                a.bOwner = b;
-                a.owner = b.patch;
-                a.valid = true;
-                int step = a.vrts.size() - 1;
-                while (getArcLength(a, a.vrts.get(0), a.vrts.get(step)) > 1.6 * edgeLength || step > 1){
-                    step /= 2;
-                }
-                for (int i = 0; i < a.vrts.size() - 1; i += step) {
-                    b.vrts.add(a.vrts.get(i));
-                }
-            }
-        }
-        b.lines.clear();
-        for (int i = 0; i < b.vrts.size(); ++i){
-            Edge e = new Edge(i, (i == b.vrts.size() - 1) ? 0 : i + 1);
-            e.p1 = b.vrts.get(i);
-            e.p2 = b.vrts.get((i == b.vrts.size() - 1) ? 0 : i + 1);
-            b.lines.add(e);
-        }
-        for (int i = 0; i < b.lines.size(); ++i){
-            Edge first = b.lines.get(i);
-            Edge second = b.lines.get((i == b.lines.size() - 1) ? 0 : i + 1);
-            first.next = second;
-            second.prev = first;
-        }
-    }
+//    public static void buildEdges(Boundary b, boolean clear, double edgeLength){
+//        if (clear) {
+//            b.vrts.clear();
+//            linkArcs(b.arcs);
+//            for (Arc a : b.arcs) {
+//                a.bOwner = b;
+//                a.owner = b.patch;
+//                a.valid = true;
+//                int step = a.vrts.size() - 1;
+//                while (getArcLength(a, a.vrts.get(0), a.vrts.get(step)) > 1.6 * edgeLength || step > 1){
+//                    step /= 2;
+//                }
+//                for (int i = 0; i < a.vrts.size() - 1; i += step) {
+//                    b.vrts.add(a.vrts.get(i));
+//                }
+//            }
+//        }
+//        b.lines.clear();
+//        for (int i = 0; i < b.vrts.size(); ++i){
+//            Edge e = new Edge(i, (i == b.vrts.size() - 1) ? 0 : i + 1);
+//            e.p1 = b.vrts.get(i);
+//            e.p2 = b.vrts.get((i == b.vrts.size() - 1) ? 0 : i + 1);
+//            b.lines.add(e);
+//        }
+//        for (int i = 0; i < b.lines.size(); ++i){
+//            Edge first = b.lines.get(i);
+//            Edge second = b.lines.get((i == b.lines.size() - 1) ? 0 : i + 1);
+//            first.next = second;
+//            second.prev = first;
+//        }
+//    }
 
     public static double getAngleR(Arc a){
         double phi = Math.acos(a.toEnd1.dotProduct(a.toEnd2));

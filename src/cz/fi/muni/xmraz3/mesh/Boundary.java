@@ -10,12 +10,12 @@ public class Boundary {
     public List<Arc> arcs;
     public List<Boundary> nestedBoundaries;
     public List<Point> vrts;
-    public List<Edge> lines;
+    //public List<Edge> lines;
     public List<Boundary> mergeSplit;
     public Boundary(){
         arcs = new ArrayList<>();
         vrts = new ArrayList<>();
-        lines = new ArrayList<>();
+        //lines = new ArrayList<>();
         nestedBoundaries = new ArrayList<>();
         mergeSplit = new ArrayList<>();
     }

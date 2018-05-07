@@ -2609,16 +2609,23 @@ public class PatchUtil {
         }
         return false;
     }
-
+    private static Point _nextPoint = new Point(0, 0, 0);
+    private static Vector _genVector = new Vector(0, 0, 0);
+    private static Quaternion _genQuaternion = new Quaternion();
+    private static float[] _floatVector = new float[3];
     public static Point genP(Arc a, Point p, int dir){
-        Vector v = Point.subtractPoints(p, a.center).makeUnit();
-        Quaternion q = new Quaternion();
-        q.setFromAngleNormalAxis((float)(dir * Math.toRadians(2)), a.normal.getFloatData());
-        float[] _f = new float[3];
-        q.rotateVector(_f, 0, v.getFloatData(), 0);
-        Vector u = new Vector(_f);
-        u.makeUnit().multiply(a.radius);
-        return Point.translatePoint(a.center, u);
+        //Vector v = Point.subtractPoints(p, a.center).makeUnit();
+        _genVector.changeVector(p, a.center).makeUnit();
+        //Quaternion q = new Quaternion();
+        _genQuaternion.setFromAngleNormalAxis((float)(dir * Math.toRadians(2)), a.normal.getFloatData());
+        //float[] _f = new float[3];
+        _genQuaternion.rotateVector(_floatVector, 0, _genVector.getFloatData(), 0);
+        //Vector u = new Vector(_floatVector);
+        //u.makeUnit().multiply(a.radius);
+        _genVector.changeVector(_floatVector[0], _floatVector[1], _floatVector[2]);
+        _genVector.makeUnit().multiply(a.radius);
+        //return Point.translatePoint(a.center, u);
+        return _nextPoint.assignTranslation(a.center, _genVector);
     }
 
     private static boolean isOptimal(Point p, Arc a, Plane circle){
@@ -2627,16 +2634,20 @@ public class PatchUtil {
             dir = -1;
         }
         Point _p = genP(a, p, dir);
-        Vector ak = Point.subtractPoints(_p, circle.p).multiply(10.f);
-        Point __p = Point.translatePoint(circle.p, ak);
-        return dir * circle.checkPointLocation(__p) < 0.0;
+        //Vector ak = Point.subtractPoints(_p, circle.p).multiply(10.f);
+        _genVector.changeVector(_nextPoint, circle.p).multiply(10.f);
+        //Point __p = Point.translatePoint(circle.p, ak);
+        _nextPoint.assignTranslation(circle.p, _genVector);
+        return dir * circle.checkPointLocation(_nextPoint) < 0.0;
     }
 
     public static double nextSign(Point p, Arc a, Plane circle){
         Point _p = genP(a, p, 1);
-        Vector ak = Point.subtractPoints(_p, circle.p).multiply(10.f);
-        Point __p = Point.translatePoint(circle.p, ak);
-        return circle.checkPointLocation(__p);
+        //Vector ak = Point.subtractPoints(_p, circle.p).multiply(10.f);
+        //Point __p = Point.translatePoint(circle.p, ak);
+        _genVector.changeVector(_p, circle.p).multiply(10.f);
+        _nextPoint.assignTranslation(circle.p, _genVector);
+        return circle.checkPointLocation(_nextPoint);
     }
 
 

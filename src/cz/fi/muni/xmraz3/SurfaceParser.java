@@ -139,6 +139,8 @@ public class SurfaceParser {
             }
         } catch (IOException e){
             e.printStackTrace();
+        } catch (Exception e){
+            e.printStackTrace();
         }
     }
 
@@ -223,6 +225,12 @@ public class SurfaceParser {
         if (Point.distance(probe1.center, probe2.center) < 0.0001 && Point.distance(probe1.center, probeMid.center) > 0.01){
             Arc[] atom1Arcs = ArcUtil.makeNewArc(atom1, atom2, Sphere.getContactPoint(atom1.sphere, probe1), Sphere.getContactPoint(atom1.sphere, probe2), Sphere.getContactPoint(atom1.sphere, probeMid), probeMid.center, true);
             Arc[] atom2Arcs = ArcUtil.makeNewArc(atom2, atom1, Sphere.getContactPoint(atom2.sphere, probe1), Sphere.getContactPoint(atom2.sphere, probe2), Sphere.getContactPoint(atom2.sphere, probeMid), probeMid.center, true);
+            if (2 * Math.PI * atom1Arcs[0].radius < 0.2) {
+                atom1.arcs.remove(atom1Arcs[0]);
+                atom1.arcs.remove(atom1Arcs[1]);
+                atom2.arcs.remove(atom2Arcs[0]);
+                atom2.arcs.remove(atom2Arcs[1]);
+            }
             for (Arc a : atom1Arcs){
                 for (Arc j : atom2Arcs){
                     if (Point.distance(a.midProbe, j.midProbe) < 0.001){
@@ -239,10 +247,10 @@ public class SurfaceParser {
                         ArcUtil.refineArc(greaterRadius, 0, true,1, false);
                         greaterRadius.baseSubdivision = -1;
                         ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, false,0, false);
-                        ArcUtil.buildEdges(greaterRadius);
+                        //ArcUtil.buildEdges(greaterRadius);
                         int numOfDivs = ArcUtil.getSubdivisionLevel(greaterRadius);
                         ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, true, numOfDivs, false);
-                        ArcUtil.buildEdges(smallerRadius);
+                        //ArcUtil.buildEdges(smallerRadius);
                     }
                 }
             }
@@ -259,10 +267,10 @@ public class SurfaceParser {
         Arc smallerRadius = (arc1.owner.sphere.radius <= arc2.owner.sphere.radius) ? arc1 : arc2;
         Arc greaterRadius = (smallerRadius == arc1) ? arc2 : arc1;
         ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, false,0, false);
-        ArcUtil.buildEdges(greaterRadius);
+        //ArcUtil.buildEdges(greaterRadius);
         int numOfDivs = ArcUtil.getSubdivisionLevel(greaterRadius);
         ArcUtil.refineArc(smallerRadius, Surface.maxEdgeLen, true, numOfDivs, false);
-        ArcUtil.buildEdges(smallerRadius);
+        //ArcUtil.buildEdges(smallerRadius);
         if (smallerRadius.vrts.size() != greaterRadius.vrts.size()){
             if (SesConfig.verbose) {
                 System.err.println("inconsistency detected in: smallerRadius.vrts != greaterRadius.vrts");
@@ -346,14 +354,14 @@ public class SurfaceParser {
 
             cpl1.setEndPoints(cpl1.vrts.get(0), cpl1.vrts.get(2), true);
 
-            cpl1.endEdge1 = new Edge(0, 1);
-            cpl1.endEdge1.p1 = cpl1.end1;
-            cpl1.endEdge1.p2 = cpl1.mid;
-            cpl1.endEdge2 = new Edge(1, 2);
-            cpl1.endEdge2.p1 = cpl1.mid;
-            cpl1.endEdge2.p2 = cpl1.end2;
-            cpl1.endEdge1.next = cpl1.endEdge2;
-            cpl1.endEdge2.prev = cpl1.endEdge1;
+            //cpl1.endEdge1 = new Edge(0, 1);
+            //cpl1.endEdge1.p1 = cpl1.end1;
+            //cpl1.endEdge1.p2 = cpl1.mid;
+            //cpl1.endEdge2 = new Edge(1, 2);
+            //cpl1.endEdge2.p1 = cpl1.mid;
+            //cpl1.endEdge2.p2 = cpl1.end2;
+            //cpl1.endEdge1.next = cpl1.endEdge2;
+            //cpl1.endEdge2.prev = cpl1.endEdge1;
 
             mid = Point.getMidPoint(a1touch, a3touch);
             probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
@@ -395,14 +403,14 @@ public class SurfaceParser {
 
             cpl2.setEndPoints(cpl2.vrts.get(0), cpl2.vrts.get(2), true);
 
-            cpl2.endEdge1 = new Edge(0, 1);
-            cpl2.endEdge1.p1 = cpl2.end1;
-            cpl2.endEdge1.p2 = cpl2.mid;
-            cpl2.endEdge2 = new Edge(1, 2);
-            cpl2.endEdge2.p1 = cpl2.mid;
-            cpl2.endEdge2.p2 = cpl2.end2;
-            cpl2.endEdge1.next = cpl2.endEdge2;
-            cpl2.endEdge2.prev = cpl2.endEdge1;
+            //cpl2.endEdge1 = new Edge(0, 1);
+            //cpl2.endEdge1.p1 = cpl2.end1;
+            //cpl2.endEdge1.p2 = cpl2.mid;
+            //cpl2.endEdge2 = new Edge(1, 2);
+            //cpl2.endEdge2.p1 = cpl2.mid;
+            //cpl2.endEdge2.p2 = cpl2.end2;
+            //cpl2.endEdge1.next = cpl2.endEdge2;
+            //cpl2.endEdge2.prev = cpl2.endEdge1;
 
             mid = Point.getMidPoint(a2touch, a3touch);
             probeMid.changeVector(mid, probe.center).makeUnit().multiply(probe.radius);
@@ -441,14 +449,14 @@ public class SurfaceParser {
 
             cpl3.setEndPoints(cpl3.vrts.get(0), cpl3.vrts.get(2), true);
 
-            cpl3.endEdge1 = new Edge(0, 1);
-            cpl3.endEdge1.p1 = cpl3.end1;
-            cpl3.endEdge1.p2 = cpl3.mid;
-            cpl3.endEdge2 = new Edge(1, 2);
-            cpl3.endEdge2.p1 = cpl3.mid;
-            cpl3.endEdge2.p2 = cpl3.end2;
-            cpl3.endEdge1.next = cpl3.endEdge2;
-            cpl3.endEdge2.prev = cpl3.endEdge1;
+            //cpl3.endEdge1 = new Edge(0, 1);
+            //cpl3.endEdge1.p1 = cpl3.end1;
+            //cpl3.endEdge1.p2 = cpl3.mid;
+            //cpl3.endEdge2 = new Edge(1, 2);
+            //cpl3.endEdge2.p1 = cpl3.mid;
+            //cpl3.endEdge2.p2 = cpl3.end2;
+            //cpl3.endEdge1.next = cpl3.endEdge2;
+            //cpl3.endEdge2.prev = cpl3.endEdge1;
 
             List<Arc> q = new ArrayList<>();
             q.add(cpl2);
@@ -466,8 +474,8 @@ public class SurfaceParser {
                 if (Point.distance(pivot, l.end1) < 0.001) {
                     pivotLoop.next = l;
                     l.prev = pivotLoop;
-                    pivotLoop.endEdge2.next = l.endEdge1;
-                    l.endEdge1.prev = pivotLoop.endEdge2;
+                    //pivotLoop.endEdge2.next = l.endEdge1;
+                    //l.endEdge1.prev = pivotLoop.endEdge2;
                     pivot = l.end2;
                     pivotLoop = l;
                     q.remove(l);
@@ -490,8 +498,8 @@ public class SurfaceParser {
             }
             cpl1.prev = pivotLoop;
             pivotLoop.next = cpl1;
-            pivotLoop.endEdge2.next = cpl1.endEdge1;
-            cpl1.endEdge1.prev = pivotLoop.endEdge2;
+            //pivotLoop.endEdge2.next = cpl1.endEdge1;
+            //cpl1.endEdge1.prev = pivotLoop.endEdge2;
             Boundary b = new Boundary();
             b.arcs.add(cpl1);
             b.arcs.add(cpl1.next);

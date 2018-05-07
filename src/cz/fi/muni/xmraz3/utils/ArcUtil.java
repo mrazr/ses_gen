@@ -170,69 +170,6 @@ public class ArcUtil {
         }
     }
 
-    public static void buildEdges(Arc a){
-        try {
-            a.lines.clear();
-            //a.lines.add(0, endEdge1);
-            /*if (vrts.size() == 2){
-                if (endEdge1 == null){
-                    endEdge1 = new Edge(0, 1);
-                    endEdge1.p1 = vrts.get(0);
-                    endEdge1.p2 = vrts.get(1);
-                    endEdge1.next = endEdge1;
-                    endEdge1.prev = endEdge1;
-                    endEdge2 = endEdge1;
-                    endEdge1.owner = this;
-                }
-                a.lines.add(endEdge1);
-                return;
-            }*/
-            a.lines.add(a.endEdge1);
-            for (int i = 1; i < a.vrts.size() - ((a.circularArc) ? 1 : 2); ++i) {
-                Edge e = new Edge(i, i + 1);
-                //e.owner = a;
-                a.lines.add(e);
-                e.p1 = a.vrts.get(i);
-                e.p2 = a.vrts.get(i + 1);
-                if (i > 0) {
-                    Edge eprev = a.lines.get(i - 1);
-                    eprev.next = e;
-                    e.prev = eprev;
-                }
-            }
-            a.lines.add(a.endEdge2);
-            a.endEdge1.p2 = a.vrts.get(1);
-            a.endEdge2.p1 = a.vrts.get(a.vrts.size() - ((a.circularArc) ? 1 : 2));
-            a.endEdge2.prev = a.lines.get(a.lines.size() - 2);
-            a.endEdge2.prev.next = a.endEdge2;
-            //a.lines.add(a.endEdge2);
-            /*a.endEdge1 = a.lines.get(0);
-            endEdge2 = a.lines.get(a.lines.size() - 1);
-            endEdge1.next = a.lines.get(1);
-            endEdge1.p1 = a.vrts.get(0);
-            endEdge1.p2 = a.vrts.get(1);
-            endEdge1.v1 = 0;
-            endEdge1.v2 = 1;
-            a.lines.get(1).prev = endEdge1;
-
-            endEdge2.p1 = a.vrts.get(a.vrts.size() - 2);
-            endEdge2.p2 = a.vrts.get(a.vrts.size() - 1);
-            endEdge2.v1 = a.vrts.size() - 2;
-            endEdge2.v2 = vrts.size() - 1;
-            a.lines.get(a.lines.size() - 2).next = endEdge2;
-            if (this instanceof ConcavePatchArc){
-                ConcavePatchArc c = (ConcavePatchArc)this;
-                endEdge2.next = c.next.endEdge1;
-                endEdge2.next.prev = endEdge2;
-                endEdge1.prev = c.prev.endEdge2;
-                endEdge1.prev.next = endEdge1;
-            }*/
-
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-    }
-
     public static void buildEdges(Boundary b, boolean clear){
         if (clear) {
             b.vrts.clear();
@@ -376,16 +313,16 @@ public class ArcUtil {
         a.end1 = end1;
         a.end2 = end2;
         a.setEndPoints(a.end1, a.end2, false);
-        a.endEdge1 = new Edge(0, 1);
-        a.endEdge1.p1 = end1;
-        a.endEdge1.p2 = mid;
-        a.endEdge2 = new Edge(1, 2);
-        a.endEdge2.p1 = mid;
-        a.endEdge2.p2 = end2;
+        //a.endEdge1 = new Edge(0, 1);
+        //a.endEdge1.p1 = end1;
+        //a.endEdge1.p2 = mid;
+        //a.endEdge2 = new Edge(1, 2);
+        //a.endEdge2.p1 = mid;
+        //a.endEdge2.p2 = end2;
         a.mid = mid;
 
-        a.endEdge1.next = a.endEdge2;
-        a.endEdge2.prev = a.endEdge1;
+        //a.endEdge1.next = a.endEdge2;
+        //a.endEdge2.prev = a.endEdge1;
 
         //a.toEnd1 = Point.subtractPoints(end1, sp.sphere.center).makeUnit();
         //a.toEnd2 = Point.subtractPoints(end2, sp.sphere.center).makeUnit();
@@ -403,7 +340,7 @@ public class ArcUtil {
     public static void linkArcs(SphericalPatch sp) {
         try {
             //List<Arc> queue = new ArrayList<>(sp.arcs);
-            if (sp.id == 516){
+            if (sp.id == 3505){
                 int x = 3;
             }
             queue.clear();
@@ -465,12 +402,12 @@ public class ArcUtil {
                         //pivot = lop.toEnd2;
                         pivot = lop.end2;
                         lop.end1 = l.end2;
-                        lop.lines.get(0).p1 = l.end2;
+                        //lop.lines.get(0).p1 = l.end2;
                         lop.vrts.remove(0);
                         lop.vrts.add(0, l.end2);
 
-                        l.endEdge2.next = lop.endEdge1;
-                        lop.endEdge1.prev = l.endEdge2;
+                        //l.endEdge2.next = lop.endEdge1;
+                        //lop.endEdge1.prev = l.endEdge2;
                         l = lop;
                         iterator = 0;
                     } else {
@@ -488,11 +425,11 @@ public class ArcUtil {
                 }*/
                 if (setValid && newB.size() > 1) {
                     newB.get(0).end1 = l.end2;
-                    newB.get(0).lines.get(0).p1 = l.end2;
+                    //newB.get(0).lines.get(0).p1 = l.end2;
                     newB.get(0).vrts.remove(0);
                     newB.get(0).vrts.add(0, l.end2);
-                    newB.get(0).endEdge1.prev = l.endEdge2;
-                    l.endEdge2.next = newB.get(0).endEdge1;
+                    //newB.get(0).endEdge1.prev = l.endEdge2;
+                    //l.endEdge2.next = newB.get(0).endEdge1;
                     Boundary b = new Boundary();
                     b.patch = sp;
                     b.arcs = newB;
@@ -1074,54 +1011,58 @@ public class ArcUtil {
 
     public static void refineArcsOnConvexPatches(){
         for (SphericalPatch sp : Surface.convexPatches){
-            if (sp.boundaries.size() == 0) {
-                ArcUtil.linkArcs(sp);
-            }
-            if (sp.id == 872 || sp.id == 885){
-                int ca = 42;
-            }
-            for (Boundary b : sp.boundaries) {
-                if (b.arcs.size() < 2){
-                    int c = 4;
+            try {
+                if (sp.boundaries.size() == 0) {
+                    ArcUtil.linkArcs(sp);
                 }
-                for (Arc a : b.arcs){
-                    for (Point v : a.vrts){
-                        v.arcPoint = true;
-                    }
-                    if (a.refined != null){
-                        continue;
-                    }
-                    Arc op = a.opposite;
-                    if (sp.id == 872 && op.owner.id == 885){
-                        int fgd = 3;
-                    }
-                    if (op.owner.boundaries.size() == 0){
-                        ArcUtil.linkArcs(op.owner);
-                    }
-                    a.refined = ArcUtil.dbgCloneArc(a);
-                    a.refined.owner = sp;
-                    op.refined = ArcUtil.dbgCloneArc(op);
-                    op.refined.owner = op.owner;
-                    ArcUtil.refineOppositeArcs(a.refined, op.refined, SesConfig.edgeLimit, true, true);
-                    //ArcUtil.generateEdgeSplits(a.refined, sp);
-                    //ArcUtil.generateEdgeSplits(op.refined, op.owner);
-                    a.vrts.clear();
-                    a.vrts.addAll(a.refined.vrts);
-                    op.vrts.clear();
-                    op.vrts.addAll(op.refined.vrts);
-                    for (Point v : a.vrts){
-                        v.arcPoint = true;
-                        v.arc = a;
-                    }
-                    for (Point v : op.vrts){
-                        v.arcPoint = true;
-                        v.arc = op;
-                    }
+                if (sp.id == 1566 || sp.id == 885) {
+                    int ca = 42;
                 }
-                ArcUtil.buildEdges(b, true);
+                for (Boundary b : sp.boundaries) {
+                    if (b.arcs.size() < 2) {
+                        int c = 4;
+                    }
+                    for (Arc a : b.arcs) {
+                        for (Point v : a.vrts) {
+                            v.arcPoint = true;
+                        }
+                        if (a.refined != null) {
+                            continue;
+                        }
+                        Arc op = a.opposite;
+                        if (sp.id == 872 && op.owner.id == 885) {
+                            int fgd = 3;
+                        }
+                        if (op.owner.boundaries.size() == 0) {
+                            ArcUtil.linkArcs(op.owner);
+                        }
+                        a.refined = ArcUtil.dbgCloneArc(a);
+                        a.refined.owner = sp;
+                        op.refined = ArcUtil.dbgCloneArc(op);
+                        op.refined.owner = op.owner;
+                        ArcUtil.refineOppositeArcs(a.refined, op.refined, SesConfig.edgeLimit, true, true);
+                        //ArcUtil.generateEdgeSplits(a.refined, sp);
+                        //ArcUtil.generateEdgeSplits(op.refined, op.owner);
+                        a.vrts.clear();
+                        a.vrts.addAll(a.refined.vrts);
+                        op.vrts.clear();
+                        op.vrts.addAll(op.refined.vrts);
+                        for (Point v : a.vrts) {
+                            v.arcPoint = true;
+                            v.arc = a;
+                        }
+                        for (Point v : op.vrts) {
+                            v.arcPoint = true;
+                            v.arc = op;
+                        }
+                    }
+                    ArcUtil.buildEdges(b, true);
+                }
+                //refine arcs - when refining an arc, its opposite arc will be refined as well as to have the same number of vertices on both of them
+                Surface.atomsProcessed.set(sp.id + 1);
+            } catch (Exception e){
+                e.printStackTrace();
             }
-            //refine arcs - when refining an arc, its opposite arc will be refined as well as to have the same number of vertices on both of them
-            Surface.atomsProcessed.set(sp.id + 1);
         }
     }
 

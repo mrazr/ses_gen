@@ -172,12 +172,12 @@ public class PatchUtil {
             //leftStart.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
             //ArcUtil.refineArc(leftStart, Surface.maxEdgeLen, true,1, false);
             ArcUtil.refineArc(leftStart, Surface.maxEdgeLen, false, 0, false);
-            leftStart.endEdge1 = new Edge(0, 1);
-            leftStart.endEdge1.p1 = leftStart.end1;
-            leftStart.endEdge1.p2 = leftStart.vrts.get(1);
-            leftStart.endEdge2 = new Edge(leftStart.vrts.size() - 2, leftStart.vrts.size() - 1);
-            leftStart.endEdge2.p1 = leftStart.vrts.get(leftStart.vrts.size() - 2);
-            leftStart.endEdge2.p2 = leftStart.end2;
+            //leftStart.endEdge1 = new Edge(0, 1);
+            //leftStart.endEdge1.p1 = leftStart.end1;
+            //leftStart.endEdge1.p2 = leftStart.vrts.get(1);
+            //leftStart.endEdge2 = new Edge(leftStart.vrts.size() - 2, leftStart.vrts.size() - 1);
+            //leftStart.endEdge2.p1 = leftStart.vrts.get(leftStart.vrts.size() - 2);
+            //leftStart.endEdge2.p2 = leftStart.end2;
             //leftStart.buildEdges();
 
 
@@ -195,12 +195,12 @@ public class PatchUtil {
             //leftEnd.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
             //ArcUtil.refineArc(leftEnd, Surface.maxEdgeLen, true, 1, false);
             ArcUtil.refineArc(leftEnd, Surface.maxEdgeLen, false, 0, false);
-            leftEnd.endEdge1 = new Edge(0, 1);
-            leftEnd.endEdge1.p1 = leftEnd.end1;
-            leftEnd.endEdge1.p2 = leftEnd.vrts.get(1);
-            leftEnd.endEdge2 = new Edge(leftEnd.vrts.size() - 2, leftEnd.vrts.size() - 1);
-            leftEnd.endEdge2.p1 = leftEnd.vrts.get(leftEnd.vrts.size() - 2);
-            leftEnd.endEdge2.p2 = leftEnd.end2;
+            //leftEnd.endEdge1 = new Edge(0, 1);
+            //leftEnd.endEdge1.p1 = leftEnd.end1;
+            //leftEnd.endEdge1.p2 = leftEnd.vrts.get(1);
+            //leftEnd.endEdge2 = new Edge(leftEnd.vrts.size() - 2, leftEnd.vrts.size() - 1);
+            //leftEnd.endEdge2.p1 = leftEnd.vrts.get(leftEnd.vrts.size() - 2);
+            //leftEnd.endEdge2.p2 = leftEnd.end2;
             //leftEnd.buildEdges();
 
 
@@ -218,12 +218,12 @@ public class PatchUtil {
             //rightStart.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
             //ArcUtil.refineArc(rightStart, Surface.maxEdgeLen, true,1, false);
             ArcUtil.refineArc(rightStart, Surface.maxEdgeLen, false,0, false);
-            rightStart.endEdge1 = new Edge(0, 1);
-            rightStart.endEdge1.p1 = rightStart.end1;
-            rightStart.endEdge1.p2 = rightStart.vrts.get(1);
-            rightStart.endEdge2 = new Edge(rightStart.vrts.size() - 2, rightStart.vrts.size() - 1);
-            rightStart.endEdge2.p1 = rightStart.vrts.get(rightStart.vrts.size() - 2);
-            rightStart.endEdge2.p2 = rightStart.end2;
+            //rightStart.endEdge1 = new Edge(0, 1);
+            //rightStart.endEdge1.p1 = rightStart.end1;
+            //rightStart.endEdge1.p2 = rightStart.vrts.get(1);
+            //rightStart.endEdge2 = new Edge(rightStart.vrts.size() - 2, rightStart.vrts.size() - 1);
+            //rightStart.endEdge2.p1 = rightStart.vrts.get(rightStart.vrts.size() - 2);
+            //rightStart.endEdge2.p2 = rightStart.end2;
             //rightStart.buildEdges();
 
 
@@ -241,12 +241,12 @@ public class PatchUtil {
             //rightEnd.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
             //ArcUtil.refineArc(rightEnd, Surface.maxEdgeLen, true,1, false);
             ArcUtil.refineArc(rightEnd, Surface.maxEdgeLen, false,0, false);
-            rightEnd.endEdge1 = new Edge(0, 1);
-            rightEnd.endEdge1.p1 = rightEnd.end1;
-            rightEnd.endEdge1.p2 = rightEnd.vrts.get(1);
-            rightEnd.endEdge2 = new Edge(rightEnd.vrts.size() - 2, rightEnd.vrts.size() - 1);
-            rightEnd.endEdge2.p1 = rightEnd.vrts.get(rightEnd.vrts.size() - 2);
-            rightEnd.endEdge2.p2 = rightEnd.end2;
+            //rightEnd.endEdge1 = new Edge(0, 1);
+            //rightEnd.endEdge1.p1 = rightEnd.end1;
+            //rightEnd.endEdge1.p2 = rightEnd.vrts.get(1);
+            //rightEnd.endEdge2 = new Edge(rightEnd.vrts.size() - 2, rightEnd.vrts.size() - 1);
+            //rightEnd.endEdge2.p1 = rightEnd.vrts.get(rightEnd.vrts.size() - 2);
+            //rightEnd.endEdge2.p2 = rightEnd.end2;
             //rightEnd.buildEdges();
 
 
@@ -311,12 +311,12 @@ public class PatchUtil {
             leftMid.next = leftEnd;
             leftEnd.prev = leftMid;
             leftMid.vrts.addAll(middlevrts);
-            leftMid.endEdge1 = new Edge(0, 1);
-            leftMid.endEdge1.p1 = leftMid.end1;
-            leftMid.endEdge1.p2 = leftMid.vrts.get(1);
-            leftMid.endEdge2 = new Edge(leftMid.vrts.size() - 2, leftMid.vrts.size() - 1);
-            leftMid.endEdge2.p1 = leftMid.vrts.get(leftMid.vrts.size() - 2);
-            leftMid.endEdge2.p2 = leftMid.end2;
+            //leftMid.endEdge1 = new Edge(0, 1);
+            //leftMid.endEdge1.p1 = leftMid.end1;
+            //leftMid.endEdge1.p2 = leftMid.vrts.get(1);
+            //leftMid.endEdge2 = new Edge(leftMid.vrts.size() - 2, leftMid.vrts.size() - 1);
+            //leftMid.endEdge2.p1 = leftMid.vrts.get(leftMid.vrts.size() - 2);
+            //leftMid.endEdge2.p2 = leftMid.end2;
             leftMid.mid = middlevrts.get(1);
             //leftMid.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
             ArcUtil.refineArc(leftMid, Surface.maxEdgeLen, false,0, false);
@@ -343,12 +343,12 @@ public class PatchUtil {
             rightEnd.prev = rightMid;
             rightMid.prev = rightStart;
             rightStart.next = rightMid;
-            rightMid.endEdge1 = new Edge(0, 1);
-            rightMid.endEdge1.p1 = rightMid.end1;
-            rightMid.endEdge1.p2 = rightMid.vrts.get(1);
-            rightMid.endEdge2 = new Edge(rightMid.vrts.size() - 2, rightMid.vrts.size() - 1);
-            rightMid.endEdge2.p1 = rightMid.vrts.get(rightMid.vrts.size() - 2);
-            rightMid.endEdge2.p2 = rightMid.end2;
+            //rightMid.endEdge1 = new Edge(0, 1);
+            //rightMid.endEdge1.p1 = rightMid.end1;
+            //rightMid.endEdge1.p2 = rightMid.vrts.get(1);
+            //rightMid.endEdge2 = new Edge(rightMid.vrts.size() - 2, rightMid.vrts.size() - 1);
+            //rightMid.endEdge2.p1 = rightMid.vrts.get(rightMid.vrts.size() - 2);
+            //rightMid.endEdge2.p2 = rightMid.end2;
             rightMid.opposite = leftMid;
             leftMid.opposite = rightMid;
 
@@ -371,29 +371,29 @@ public class PatchUtil {
             rightStart.buildEdges();
             rightMid.buildEdges();
             rightEnd.buildEdges();*/
-            ArcUtil.buildEdges(leftStart);
-            ArcUtil.buildEdges(leftMid);
-            ArcUtil.buildEdges(leftEnd);
-            ArcUtil.buildEdges(rightStart);
-            ArcUtil.buildEdges(rightMid);
-            ArcUtil.buildEdges(rightEnd);
+            //ArcUtil.buildEdges(leftStart);
+            //ArcUtil.buildEdges(leftMid);
+            //ArcUtil.buildEdges(leftEnd);
+            //ArcUtil.buildEdges(rightStart);
+            //ArcUtil.buildEdges(rightMid);
+            //ArcUtil.buildEdges(rightEnd);
 
-            leftStart.endEdge1.prev = leftL.endEdge1.prev;
-            leftStart.endEdge1.prev.next = leftStart.endEdge1;
-            leftEnd.endEdge2.next = leftL.endEdge2.next;
-            leftEnd.endEdge2.next.prev = leftEnd.endEdge2;
-            rightStart.endEdge1.prev = rightL.endEdge1.prev;
-            rightStart.endEdge1.prev.next = rightStart.endEdge1;
-            rightEnd.endEdge2.next = rightL.endEdge2.next;
-            rightEnd.endEdge2.next.prev = rightEnd.endEdge2;
-            leftMid.endEdge1.prev = leftStart.endEdge2;
-            leftStart.endEdge2.next = leftMid.endEdge1;
-            leftMid.endEdge2.next = leftEnd.endEdge1;
-            leftEnd.endEdge1.prev = leftMid.endEdge2;
-            rightMid.endEdge1.prev = rightStart.endEdge2;
-            rightStart.endEdge2.next = rightMid.endEdge1;
-            rightMid.endEdge2.next = rightEnd.endEdge1;
-            rightEnd.endEdge1.prev = rightMid.endEdge2;
+            //leftStart.endEdge1.prev = leftL.endEdge1.prev;
+            //leftStart.endEdge1.prev.next = leftStart.endEdge1;
+            //leftEnd.endEdge2.next = leftL.endEdge2.next;
+            //leftEnd.endEdge2.next.prev = leftEnd.endEdge2;
+            //rightStart.endEdge1.prev = rightL.endEdge1.prev;
+            //rightStart.endEdge1.prev.next = rightStart.endEdge1;
+            //rightEnd.endEdge2.next = rightL.endEdge2.next;
+            //rightEnd.endEdge2.next.prev = rightEnd.endEdge2;
+            //leftMid.endEdge1.prev = leftStart.endEdge2;
+            //leftStart.endEdge2.next = leftMid.endEdge1;
+            //leftMid.endEdge2.next = leftEnd.endEdge1;
+            //leftEnd.endEdge1.prev = leftMid.endEdge2;
+            //rightMid.endEdge1.prev = rightStart.endEdge2;
+            //rightStart.endEdge2.next = rightMid.endEdge1;
+            //rightMid.endEdge2.next = rightEnd.endEdge1;
+            //rightEnd.endEdge1.prev = rightMid.endEdge2;
 
             SphericalPatch left = leftL.owner;
             SphericalPatch right = rightL.owner;
@@ -1676,6 +1676,12 @@ public class PatchUtil {
                 if (sp.id == 30419 && sp2.id == 30435){
                     int cd = 4;
                 }
+                if (sp.id == 475 && sp2.id == 489) {
+                    int cd = 4;
+                }
+                if (sp.id == 5543){
+                    int dfff = 34;
+                }
                 if (intersectionPoints.size() > 1) {
                     if (!pointsLieOnPatch(sp2, intersectionPoints) && sp.patchNormal.dotProduct(sp2.patchNormal) > 0.8){
                         continue;
@@ -1811,6 +1817,11 @@ public class PatchUtil {
                             if (intersectionPoints.stream().noneMatch(v -> Point.distance(in1, v) < 0.01)){
                                 Point _p = new Point(in1);
                                 _p.arc = a;
+                                if (Point.distance(a.end1, _p) < 0.001 && nextSign(_p, a, p1) < 0.0){
+                                    _p.arc = a.prev;
+                                } else if (Point.distance(a.end2, _p) < 0.001 && nextSign(_p, a, p1) > 0.0){
+                                    _p.arc = a.next;
+                                }
                                 intersectionPoints.add(_p);
                                 if (a.cuspTriangle != null){
                                     if (!a.vrts.stream().allMatch(point -> p1.checkPointLocation(point) > 0.0 || p1.distanceFromPlane(point) < 0.002)){
@@ -1823,6 +1834,11 @@ public class PatchUtil {
                             if (intersectionPoints.stream().noneMatch(v -> Point.distance(in2, v) < 0.01)){
                                 Point _p = new Point(in2);
                                 _p.arc = a;
+                                if (Point.distance(a.end1, _p) < 0.001 && nextSign(_p, a, p1) < 0.0){
+                                    _p.arc = a.prev;
+                                } else if (Point.distance(a.end2, _p) < 0.001 && nextSign(_p, a, p1) > 0.0){
+                                    _p.arc = a.next;
+                                }
                                 intersectionPoints.add(_p);
                                 if (a.cuspTriangle != null){
                                     if (!a.vrts.stream().allMatch(point -> p1.checkPointLocation(point) > 0.0 || p1.distanceFromPlane(point) < 0.002)){

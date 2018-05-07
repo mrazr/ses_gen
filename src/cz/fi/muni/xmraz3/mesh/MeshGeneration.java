@@ -188,7 +188,7 @@ public class MeshGeneration {
                 Main.rectangles.remove(this);
                 return;
             }*/
-            if (tp.id == 45657){
+            if (tp.id == 8165){
                 int a = 3;
             }
             if (!tp.circular){
@@ -345,6 +345,7 @@ public class MeshGeneration {
                 atom1ToAtom2.multiply(toProbe.dotProduct(atom1ToAtom2));
                 double probeToRotationAx = -42;
                 probeToRotationAx = PatchUtil.getProbeAxisDistance(tp.probe1, top.owner.sphere.center, bottom.owner.sphere.center);
+
                 if (probeToRotationAx - SesConfig.probeRadius < 0.0){
 
                 } else {
@@ -352,6 +353,12 @@ public class MeshGeneration {
                     left = (Point.distance(bottom.end2, tp.concavePatchArcs.get(0).end2) < 0.0001) ? tp.concavePatchArcs.get(0).refined : tp.concavePatchArcs.get(1).refined;
                     ArcUtil.reverseArc(left, true);
                     right = (left == tp.concavePatchArcs.get(0).refined) ? tp.concavePatchArcs.get(1).refined : tp.concavePatchArcs.get(0).refined;
+                    if (left.vrts.size() != right.vrts.size()){
+                        Arc fewer = (left.vrts.size() > right.vrts.size()) ? right : left;
+                        Arc more = (left == fewer) ? right : left;
+                        int diff = ArcUtil.getSubdivisionLevel(more) - ArcUtil.getSubdivisionLevel(fewer);
+                        ArcUtil.refineArc(fewer, SesConfig.edgeLimit, true, diff, false);
+                    }
                     meshToroidalPatch(tp, bottom, top, left, right, false);
                     ArcUtil.reverseArc(left, true);
                 }

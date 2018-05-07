@@ -30,9 +30,9 @@ public class Arc {
     public Vector toEnd1;
     public Vector toEnd2;
 
-    public Edge endEdge1;
-    public Edge endEdge2;
-    public List<Edge> lines; //maybe dont need this
+    //public Edge endEdge1;
+    //public Edge endEdge2;
+    //public List<Edge> lines; //maybe dont need this
 
     public SphericalPatch owner;
 
@@ -61,7 +61,7 @@ public class Arc {
         id = nextID++;
         normal = new Vector(0, 0, 0);
         vrts = new ArrayList<>();
-        lines = new ArrayList<>();
+        //lines = new ArrayList<>();
     }
 
     public boolean isInside(Point p){

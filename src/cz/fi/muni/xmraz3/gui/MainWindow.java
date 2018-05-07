@@ -313,9 +313,11 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 //sendConvexPatches2GPU();
                 //sendToriPatches2GPU();
                 //sendConcavePathes2GPU();
-                pushConcaveEdgesToGPU();
-                pushConvexEdgesToGPU();
+               //pushConcaveEdgesToGPU();
+               //pushConvexEdgesToGPU();
                 //render = true;
+                pushBoundariesToGPU(true);
+                pushBoundariesToGPU(false);
                 //animator.start();
                 stopRendering.set(false);
                 stoppedRendering.set(false);
@@ -324,6 +326,59 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             }
         };
         window.invoke(false, task);
+    }
+
+    private void pushBoundariesToGPU(boolean convex){
+        int totalVerticesCount = 0;
+        int totalIndicesCount = 0;
+        int indexOffset = 0;
+        int vertexOffset = 0;
+        List<Point> vertices = new ArrayList<>();
+        List<Integer> indices = new ArrayList<>();
+        List<SphericalPatch> patchList = (convex) ? Surface.convexPatches : Surface.triangles;
+        for (SphericalPatch sp : patchList){
+            sp.lineOffset = indexOffset;
+            for (Boundary b : sp.boundaries){
+                sp.lineCount += b.vrts.size();
+                vertices.addAll(b.vrts);
+                for (int i = 0; i < b.vrts.size(); ++i){
+                    indices.add(i + vertexOffset);
+                    if (i < b.vrts.size() - 1) {
+                        indices.add(i + 1 + vertexOffset);
+                    } else {
+                        indices.add(vertexOffset);
+                    }
+                }
+                vertexOffset += b.vrts.size();
+            }
+            indexOffset += sp.lineCount;
+        }
+        totalVerticesCount = vertices.size();
+        totalIndicesCount = indices.size();
+        if (convex){
+            convexPatchesEdgeCount = indices.size() / 2;
+        } else {
+            concavePatchesEdgeCount = indices.size() / 2;
+        }
+        FloatBuffer vBuff = GLBuffers.newDirectFloatBuffer(3 * totalVerticesCount);
+        IntBuffer iBuff = GLBuffers.newDirectIntBuffer(totalIndicesCount);
+
+        vertices.forEach(p -> vBuff.put(p.getFloatData()));
+        indices.forEach(i -> iBuff.put(i));
+
+        vBuff.rewind();
+        iBuff.rewind();
+
+        gl.glBindVertexArray(lineVao[(convex) ? CONVEX : CONCAVE]);
+        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, lineVbo[(convex) ? CONVEX : CONCAVE]);
+        gl.glBufferData(GL4.GL_ARRAY_BUFFER, vBuff.capacity() * Float.BYTES, vBuff, GL4.GL_STATIC_DRAW);
+        gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 3 * Float.BYTES, 0);
+        gl.glEnableVertexAttribArray(0);
+        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
+        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[(convex) ? CONVEX : CONCAVE]);
+        gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, iBuff.capacity() * Integer.BYTES, iBuff, GL4.GL_STATIC_DRAW);
+        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
+        gl.glBindVertexArray(0);
     }
 
     private void pushConvexEdgesToGPU(){

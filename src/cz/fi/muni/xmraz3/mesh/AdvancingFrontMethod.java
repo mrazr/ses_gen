@@ -1,14 +1,12 @@
 package cz.fi.muni.xmraz3.mesh;
 
 
-import com.jogamp.common.util.ArrayHashSet;
 import com.jogamp.opengl.math.Quaternion;
 import cz.fi.muni.xmraz3.SesConfig;
 import cz.fi.muni.xmraz3.Surface;
 import cz.fi.muni.xmraz3.math.Plane;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Vector;
-import cz.fi.muni.xmraz3.utils.PatchUtil;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -276,7 +274,10 @@ public class AdvancingFrontMethod {
         newPoints = new ArrayList<>();
         loops = new LinkedList<>();
         for (int i = 0; i < 150; ++i){
-            facetPool.add(i, new Edge(0, 0));
+            edgePool.add(i, new Edge(0, 0));
+        }
+        for (int i = 0; i < 150; ++i){
+            facePool.add(i, new Face(0, 0, 0));
         }
     }
 
@@ -609,9 +610,11 @@ public class AdvancingFrontMethod {
 //        //atom.vertices.addAll(nodes);
 //    }
 
-    public List<Edge> facetPool = new ArrayList<>(150);
-    private int nextFacetID = 0;
+    public List<Edge> edgePool = new ArrayList<>(150);
+    private int nextEdgeID = 0;
     private int nextAFMID = 0;
+    private List<Face> facePool = new ArrayList<>(150);
+    public int nextFaceID = 0;
     //private int nextNEMID = 0;
 
     private void initializeAFMDataStructures(){
@@ -625,8 +628,9 @@ public class AdvancingFrontMethod {
         nodes.clear();
         loops.clear();
         newPoints.clear();
-        nextFacetID = 0;
+        nextEdgeID = 0;
         nextAFMID = 0;
+        //nextFaceID = 0;
         nodeEdgeMap.clear();
         Boundary b = null;
         for (Boundary c : patch.boundaries){
@@ -666,10 +670,10 @@ public class AdvancingFrontMethod {
             for (int i = 0; i < c.vrts.size(); ++i){
                 Point p1 = c.vrts.get(i);
                 Point p2 = (i < c.vrts.size() - 1) ? c.vrts.get(i + 1) : c.vrts.get(0);
-                if (nextFacetID >= facetPool.size()){
-                    facetPool.add(new Edge(0, 0));
+                if (nextEdgeID >= edgePool.size()){
+                    edgePool.add(new Edge(0, 0));
                 }
-                Edge e = facetPool.get(nextFacetID++);
+                Edge e = edgePool.get(nextEdgeID++);
                 e.p1 = p1;
                 e.p2 = p2;
                 e.v1 = p1.afmIdx;
@@ -734,8 +738,9 @@ public class AdvancingFrontMethod {
         nodes.clear();
         nodeEdgeMap.clear();
         pastFacets.clear();
-        nextFacetID = 0;
+        nextEdgeID = 0;
         nextAFMID = 0;
+        //nextFaceID = 0;
         loops.clear();
         newPoints.clear();
         currentTry = 0;
@@ -775,10 +780,10 @@ public class AdvancingFrontMethod {
             for (int i = 0; i < bb.vrts.size(); ++i){
                 Point p1 = bb.vrts.get(i);
                 Point p2 = (i < bb.vrts.size() - 1) ? bb.vrts.get(i + 1) : bb.vrts.get(0);
-                if (nextFacetID >= facetPool.size()){
-                    facetPool.add(new Edge(0, 0));
+                if (nextEdgeID >= edgePool.size()){
+                    edgePool.add(new Edge(0, 0));
                 }
-                Edge e = facetPool.get(nextFacetID++);
+                Edge e = edgePool.get(nextEdgeID++);
                 e.p1 = p1;
                 e.p2 = p2;
                 e.v1 = p1.afmIdx;
@@ -857,9 +862,9 @@ public class AdvancingFrontMethod {
             pastFacets.clear();
             faceGenerated = false;
             dontConsider.clear();
-            if (verbose && patch.faces.size() > 20){
-                time = (long)0;
-            }
+            //if (verbose && patch.faces.size() > 20){
+            //    time = (long)0;
+            //}
             if (empty >= facets.size()){
                 System.out.println("DETECED LOOP, ending mesh generation for patch id: " + patch.id);
                 atomComplete = true;
@@ -972,9 +977,9 @@ public class AdvancingFrontMethod {
                     }
                     if (!intersects){
                         candidates.add(eR.p2);
-                        if (verbose && patch.faces.size() > 16){
-                            System.out.println("Added next edge to candidates");
-                        }
+                        //if (verbose && patch.faces.size() > 16){
+                        //    System.out.println("Added next edge to candidates");
+                        //}
                     }
                 }
             }
@@ -1013,46 +1018,46 @@ public class AdvancingFrontMethod {
                     }
                     if (!intersects){
                         candidates.add(eL.p1);
-                        if (verbose && patch.faces.size() > 16){
-                            System.out.println("Added prev edge to candidates");
-                        }
+                        //if (verbose && patch.faces.size() > 16){
+                        //    System.out.println("Added prev edge to candidates");
+                        //}
                     }
                 }
             }
 
-            if (verbose && patch.faces.size() == 22){
-                System.out.println("Angle next: " + Math.toDegrees(alpha1));
-                System.out.println("Angle prev: " + Math.toDegrees(alpha2));
-                System.out.println("Limit angle: " + Math.toDegrees(this.minAlpha));
-
-            }
+            //if (verbose && patch.faces.size() == 22){
+            //    System.out.println("Angle next: " + Math.toDegrees(alpha1));
+            //    System.out.println("Angle prev: " + Math.toDegrees(alpha2));
+            //    System.out.println("Limit angle: " + Math.toDegrees(this.minAlpha));
+//
+            //}
             List<Point> trueCands = new ArrayList<>();
             trueCands.clear();
             //THIS IS WHERE criterionPointEdgeDistance() was
             if (candidates.isEmpty() || true) {
                 criterionPointEdgeDistance();
             }
-            if (verbose && patch.faces.size() == 22){
-                System.out.println(candidates.size());
-                for (Point p : candidates){
-                    if (p == e.prev.p1){
-                        System.out.println("PREV");
-                    }else if (p == e.next.p2){
-                        System.out.println("NEXT");
-                    } else {
-                        System.out.println("OTHER");
-                    }
-                }
-            }
+            //if (verbose && patch.faces.size() == 22){
+            //    System.out.println(candidates.size());
+            //    for (Point p : candidates){
+            //        if (p == e.prev.p1){
+            //            System.out.println("PREV");
+            //        }else if (p == e.next.p2){
+            //            System.out.println("NEXT");
+            //        } else {
+            //            System.out.println("OTHER");
+            //        }
+            //    }
+            //}
             while (candidates.contains(e.p1)) {
                 candidates.remove(e.p1);
             }
             while (candidates.contains(e.p2)){
                 candidates.remove(e.p2);
             }
-            if (verbose && patch.faces.size() > 16){
-                System.out.println("Cand size: " + candidates.size());
-            }
+            //if (verbose && patch.faces.size() > 16){
+            //    System.out.println("Cand size: " + candidates.size());
+            //}
             for (Point p : candidates){
                 if (computeAngle(aV1.changeVector(p, e.p1).makeUnit(), aV2.changeVector(e.p2, e.p1).makeUnit(), n1) > Math.toRadians(SesConfig.minAlpha)
                         || computeAngle(aV1.changeVector(e.p1, e.p2).makeUnit(), aV2.changeVector(p, e.p2).makeUnit(), n2) > Math.toRadians(SesConfig.minAlpha)){// || (Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, p))) < 0.0)) {
@@ -1062,9 +1067,9 @@ public class AdvancingFrontMethod {
             }
             candidates.clear();
             candidates.addAll(trueCands);
-            if (verbose && patch.faces.size() > 16){
-                System.out.println("true Cand size: " + candidates.size());
-            }
+            //if (verbose && patch.faces.size() > 16){
+            //    System.out.println("true Cand size: " + candidates.size());
+            //}
             //so far no suitable points to form a new triangle with the edge e, let's create a test point
             if (candidates.isEmpty()){
                 double height2; //assign such height so that the newly formed edges will have +- length of Surface.maxEdgeLen
@@ -1121,9 +1126,9 @@ public class AdvancingFrontMethod {
                             }
                             if (!intersects){
                                 candidates.add(e.next.p2);
-                                if (verbose && patch.faces.size() > 16){
-                                    System.out.println("Added next edge to candidates later");
-                                }
+                                //if (verbose && patch.faces.size() > 16){
+                                //    System.out.println("Added next edge to candidates later");
+                                //}
                             }
                         }
                         //if (!(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, e.prev.p1))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.prev.p1)){
@@ -1148,9 +1153,9 @@ public class AdvancingFrontMethod {
                             }
                             if (!intersects){
                                 candidates.add(e.prev.p1);
-                                if (verbose && patch.faces.size() > 16){
-                                    System.out.println("Added prev edge to candidates later");
-                                }
+                                //if (verbose && patch.faces.size() > 16){
+                                //    System.out.println("Added prev edge to candidates later");
+                                //}
                             }
                         }
                     } else {
@@ -1214,6 +1219,7 @@ public class AdvancingFrontMethod {
         }
         if (facets.size() == 0){
             patchComplete = true;
+            //transferFacesToPatch();
             if (concavePatch){
                 if (processedBoundaries.size() == patch.boundaries.size()){
                     atomComplete = true;
@@ -1228,23 +1234,29 @@ public class AdvancingFrontMethod {
         if (loopDetected){
             patchComplete = true;
             atomComplete = true;
-            if (concavePatch){
-                atomComplete = true; //the hell? this is true already -_-
-            }
+            //transferFacesToPatch();
             looped.add((long) patch.id);
             loop = true;
         }
-        long diff = System.currentTimeMillis() - time;
-        //System.out.println("Mesh generation took " + diff + " milliseconds");
-        //System.out.println("Generated " + newFaces.size() + "triangles");
-        //newVrts.addAll(newPoints);
         newPoints.clear();
-
-        //System.out.println("loop id: " + activeLoop);
-        if (empty > 0){
-            //System.out.println(patch.id + " patch had " + empty + " empty iterations");
-        }
         return atomComplete;
+    }
+
+    public void transferFacesToPatch(){
+        //patch.faces.clear();
+        patch.faces = new int[3 * nextFaceID];
+        int j = 0;
+        for (int i = 0; i < nextFaceID; ++i){
+            Face f = facePool.get(i);
+            //patch.faces.add(f.a);
+            //patch.faces.add(f.b);
+            //patch.faces.add(f.c);
+            patch.faces[j] = f.a;
+            patch.faces[j + 1] = f.b;
+            patch.faces[j + 2] = f.c;
+            j += 3;
+        }
+        nextFaceID = 0;
     }
 
     public void _initializeConvexAFM(SphericalPatch a, double mAlpha, double dTolerance, double height, double edgeLength, double baseLength){
@@ -1273,6 +1285,7 @@ public class AdvancingFrontMethod {
         this.maxEdge = edgeLength;
         //vertexFaceMap = MeshGeneration.convexVertexFaceMap.get(patch.id);
         pastFacets.clear();
+        //nextFaceID = 0;
     }
 
 //    public void _initializeConcaveAFM(SphericalPatch cp, double mAlpha, double dTolerance, double height, double edgeLength, double baseLength){
@@ -1401,9 +1414,9 @@ public class AdvancingFrontMethod {
             pastFacets.clear();
             faceGenerated = false;
             dontConsider.clear();
-            if (verbose && patch.faces.size() > 20){
-                time = (long)0;
-            }
+            //if (verbose && patch.faces.size() > 20){
+            //    time = (long)0;
+            //}
             if (empty >= facets.size()){
                 System.out.println("DETECED LOOP, ending mesh generation for patch id: " + patch.id);
                 atomComplete = true;
@@ -1516,9 +1529,9 @@ public class AdvancingFrontMethod {
                     }
                     if (!intersects){
                         candidates.add(eR.p2);
-                        if (verbose && patch.faces.size() > 16){
-                            System.out.println("Added next edge to candidates");
-                        }
+                        //if (verbose && patch.faces.size() > 16){
+                        //    System.out.println("Added next edge to candidates");
+                        //}
                     }
                 }
             }
@@ -1557,46 +1570,46 @@ public class AdvancingFrontMethod {
                     }
                     if (!intersects){
                         candidates.add(eL.p1);
-                        if (verbose && patch.faces.size() > 16){
-                            System.out.println("Added prev edge to candidates");
-                        }
+                        //if (verbose && patch.faces.size() > 16){
+                        //    System.out.println("Added prev edge to candidates");
+                        //}
                     }
                 }
             }
 
-            if (verbose && patch.faces.size() == 22){
-                System.out.println("Angle next: " + Math.toDegrees(alpha1));
-                System.out.println("Angle prev: " + Math.toDegrees(alpha2));
-                System.out.println("Limit angle: " + Math.toDegrees(this.minAlpha));
-
-            }
+            //if (verbose && patch.faces.size() == 22){
+            //    System.out.println("Angle next: " + Math.toDegrees(alpha1));
+            //    System.out.println("Angle prev: " + Math.toDegrees(alpha2));
+            //    System.out.println("Limit angle: " + Math.toDegrees(this.minAlpha));
+//
+            //}
             List<Point> trueCands = new ArrayList<>();
             trueCands.clear();
             //THIS IS WHERE criterionPointEdgeDistance() was
             if (candidates.isEmpty() || true) {
                 criterionPointEdgeDistance();
             }
-            if (verbose && patch.faces.size() == 22){
-                System.out.println(candidates.size());
-                for (Point p : candidates){
-                    if (p == e.prev.p1){
-                        System.out.println("PREV");
-                    }else if (p == e.next.p2){
-                        System.out.println("NEXT");
-                    } else {
-                        System.out.println("OTHER");
-                    }
-                }
-            }
+            //if (verbose && patch.faces.size() == 22){
+            //    System.out.println(candidates.size());
+            //    for (Point p : candidates){
+            //        if (p == e.prev.p1){
+            //            System.out.println("PREV");
+            //        }else if (p == e.next.p2){
+            //            System.out.println("NEXT");
+            //        } else {
+            //            System.out.println("OTHER");
+            //        }
+            //    }
+            //}
             while (candidates.contains(e.p1)) {
                 candidates.remove(e.p1);
             }
             while (candidates.contains(e.p2)){
                 candidates.remove(e.p2);
             }
-            if (verbose && patch.faces.size() > 16){
-                System.out.println("Cand size: " + candidates.size());
-            }
+            //if (verbose && patch.faces.size() > 16){
+            //    System.out.println("Cand size: " + candidates.size());
+            //}
             for (Point p : candidates){
                 if (computeAngle(aV1.changeVector(p, e.p1).makeUnit(), aV2.changeVector(e.p2, e.p1).makeUnit(), n1) > Math.toRadians(SesConfig.minAlpha)
                         || computeAngle(aV1.changeVector(e.p1, e.p2).makeUnit(), aV2.changeVector(p, e.p2).makeUnit(), n2) > Math.toRadians(SesConfig.minAlpha)){// || (Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, p))) < 0.0)) {
@@ -1606,9 +1619,9 @@ public class AdvancingFrontMethod {
             }
             candidates.clear();
             candidates.addAll(trueCands);
-            if (verbose && patch.faces.size() > 16){
-                System.out.println("true Cand size: " + candidates.size());
-            }
+            //if (verbose && patch.faces.size() > 16){
+            //    System.out.println("true Cand size: " + candidates.size());
+            //}
             //so far no suitable points to form a new triangle with the edge e, let's create a test point
             if (candidates.isEmpty()){
                 double height2; //assign such height so that the newly formed edges will have +- length of Surface.maxEdgeLen
@@ -1665,9 +1678,9 @@ public class AdvancingFrontMethod {
                             }
                             if (!intersects){
                                 candidates.add(e.next.p2);
-                                if (verbose && patch.faces.size() > 16){
-                                    System.out.println("Added next edge to candidates later");
-                                }
+                                //if (verbose && patch.faces.size() > 16){
+                                //    System.out.println("Added next edge to candidates later");
+                                //}
                             }
                         }
                         //if (!(Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, e.prev.p1))) < 0.01) && hasCorrectOrientation(e.p1, e.p2, e.prev.p1)){
@@ -1692,9 +1705,9 @@ public class AdvancingFrontMethod {
                             }
                             if (!intersects){
                                 candidates.add(e.prev.p1);
-                                if (verbose && patch.faces.size() > 16){
-                                    System.out.println("Added prev edge to candidates later");
-                                }
+                                //if (verbose && patch.faces.size() > 16){
+                                //    System.out.println("Added prev edge to candidates later");
+                                //}
                             }
                         }
                     } else {
@@ -1766,37 +1779,35 @@ public class AdvancingFrontMethod {
             if (!concavePatch && processedBoundaries.size() == patch.boundaries.size()){
                 atomComplete = true;
             }
-            //vrtsOffset += nodes.size();
-            //System.out.println("EMPTY");
         }
         if (loopDetected){
             patchComplete = true;
             atomComplete = true;
-            if (concavePatch){
-                atomComplete = true; //the hell? this is true already -_-
-            }
             looped.add((long) patch.id);
             loop = true;
         }
-        long diff = System.currentTimeMillis() - time;
-        //System.out.println("Mesh generation took " + diff + " milliseconds");
-        //System.out.println("Generated " + newFaces.size() + "triangles");
-        //newVrts.addAll(newPoints);
         newPoints.clear();
 
-        //System.out.println("loop id: " + activeLoop);
-        if (empty > 0){
-            //System.out.println(patch.id + " patch had " + empty + " empty iterations");
-        }
         return atomComplete;
     }
 
     private void closeLoop(){
-        if (verbose){
-            System.out.println(patch.faces.size() + "-th face closing loop");
+        //if (verbose){
+        //    System.out.println(patch.faces.size() + "-th face closing loop");
+        //}
+        //Face nF = new Face(e.p1._id, e.p2._id, e.next.p2._id);
+        //patch.faces.add(nF);
+        //patch.faces.add(e.p1._id);
+        //patch.faces.add(e.p2._id);
+        //patch.faces.add(e.next.p2._id);
+
+        if (nextFaceID >= facePool.size()){
+            facePool.add(new Face(0, 0, 0));
         }
-        Face nF = new Face(e.p1._id, e.p2._id, e.next.p2._id);
-        patch.faces.add(nF);
+        Face nF = facePool.get(nextFaceID++);
+        nF.a = e.p1._id;
+        nF.b = e.p2._id;
+        nF.c = e.next.p2._id;
         //PatchUtil.addFaceToEdgeFacesMap(patch, nF);
         //if (!vertexFaceMap.containsKey(e.p1._id)) {
         //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
@@ -1945,9 +1956,9 @@ public class AdvancingFrontMethod {
     private boolean verbose = false;
 
     private void _generateFaceWithNewPoint(){
-        if (verbose) {
-            System.out.println(patch.faces.size() + ". face by new face");
-        }
+        //if (verbose) {
+        //    System.out.println(patch.faces.size() + ". face by new face");
+        //}
         Point pTest = new Point(testPoint);
         pTest.afmIdx = nodeEdgeMap.size();
         nodeEdgeMap.add(new ArrayList<>());
@@ -1956,14 +1967,14 @@ public class AdvancingFrontMethod {
         patch.vertices.add(pTest);
         //Edge leftFacet = new Edge(e.p1.afmIdx, pTest.afmIdx);
         //Edge rightFacet = new Edge(pTest.afmIdx, e.p2.afmIdx);
-        if (nextFacetID >= facetPool.size()){
-            facetPool.add(new Edge(0, 0));
+        if (nextEdgeID >= edgePool.size()){
+            edgePool.add(new Edge(0, 0));
         }
-        Edge leftFacet = facetPool.get(nextFacetID++);
-        if (nextFacetID >= facetPool.size()){
-            facetPool.add(new Edge(0, 0));
+        Edge leftFacet = edgePool.get(nextEdgeID++);
+        if (nextEdgeID >= edgePool.size()){
+            edgePool.add(new Edge(0, 0));
         }
-        Edge rightFacet = facetPool.get(nextFacetID++);
+        Edge rightFacet = edgePool.get(nextEdgeID++);
         leftFacet.v1 = e.p1.afmIdx;
         leftFacet.v2 = pTest.afmIdx;
         rightFacet.v1 = pTest.afmIdx;
@@ -1984,13 +1995,19 @@ public class AdvancingFrontMethod {
         //pastFacets.add(e);
         newPoints.add(pTest);
 
-        Face nF = new Face(e.p1._id, e.p2._id, pTest._id);
-        patch.faces.add(nF);
-        //if (!vertexFaceMap.containsKey(e.p1._id)) {
-        //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
-        //}
-        //if (!vertexFaceMap.containsKey(e.p2._id)){
-        //    vertexFaceMap.put(e.p2._id, new ArrayList<>());
+        //Face nF = new Face(e.p1._id, e.p2._id, pTest._id);
+        //patch.faces.add(nF);
+        //patch.faces.add(e.p1._id);
+        //patch.faces.add(e.p2._id);
+        //patch.faces.add(pTest._id);
+
+        if (nextFaceID >= facePool.size()){
+            facePool.add(new Face(0, 0, 0));
+        }                                    //if (!vertexFaceMap.containsKey(e.p1._id)) {
+        Face nF = facePool.get(nextFaceID++);//    vertexFaceMap.put(e.p1._id, new ArrayList<>());
+        nF.a = e.p1._id;                     //}
+        nF.b = e.p2._id;                     //if (!vertexFaceMap.containsKey(e.p2._id)){
+        nF.c = pTest._id;                //    vertexFaceMap.put(e.p2._id, new ArrayList<>());
         //}
         //vertexFaceMap.put(pTest._id, new ArrayList<>());
         //vertexFaceMap.get(e.p1._id).add(nF);
@@ -2024,14 +2041,14 @@ public class AdvancingFrontMethod {
     }
 
     private void _generateFaceWithPreviousEdge(){
-        if (verbose) {
-            System.out.println(patch.faces.size() + ". face constructed with prev edge");
-        }
-        if (nextFacetID >= facetPool.size()){
-            facetPool.add(new Edge(0, 0));
+        //if (verbose) {
+        //    System.out.println(patch.faces.size() + ". face constructed with prev edge");
+        //}
+        if (nextEdgeID >= edgePool.size()){
+            edgePool.add(new Edge(0, 0));
         }
         //Edge newFacet = new Edge(e.prev.p1.afmIdx, e.p2.afmIdx);
-        Edge newFacet = facetPool.get(nextFacetID++);
+        Edge newFacet = edgePool.get(nextEdgeID++);
         newFacet.v1 = e.prev.p1.afmIdx;
         newFacet.v2 = e.p2.afmIdx;
         newFacet.p1 = e.prev.p1;
@@ -2076,8 +2093,19 @@ public class AdvancingFrontMethod {
         /*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, newFacet.p1))) < 0.01){
             System.out.println(patch.id + " invalid triangle possible");
         }*/
-        Face nF = new Face(e.p1._id, e.p2._id, newFacet.p1._id);
-        patch.faces.add(nF);
+        //Face nF = new Face(e.p1._id, e.p2._id, newFacet.p1._id);
+        //patch.faces.add(nF);
+        //patch.faces.add(e.p1._id);
+        //patch.faces.add(e.p2._id);
+        //patch.faces.add(newFacet.p1._id);
+
+        if (nextFaceID >= facePool.size()){
+            facePool.add(new Face(0, 0, 0));
+        }
+        Face nF = facePool.get(nextFaceID++);
+        nF.a = e.p1._id;
+        nF.b = e.p2._id;
+        nF.c = newFacet.p1._id;
         //if (!vertexFaceMap.containsKey(e.p1._id)) {
         //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
         //}
@@ -2109,14 +2137,14 @@ public class AdvancingFrontMethod {
     }
 
     private void _generateFaceWithNextEdge(){
-        if (verbose) {
-            System.out.println(patch.faces.size() + ". face constructed with next edge");
-        }
-        if (nextFacetID >= facetPool.size()){
-            facetPool.add(new Edge(0, 0));
+        //if (verbose) {
+        //    System.out.println(patch.faces.size() + ". face constructed with next edge");
+        //}
+        if (nextEdgeID >= edgePool.size()){
+            edgePool.add(new Edge(0, 0));
         }
         //Edge newFacet = new Edge(e.p1.afmIdx, e.next.p2.afmIdx);
-        Edge newFacet = facetPool.get(nextFacetID++);
+        Edge newFacet = edgePool.get(nextEdgeID++);
         newFacet.v1 = e.p1.afmIdx;
         newFacet.v2 = e.next.p2.afmIdx;
         newFacet.p1 = e.p1;
@@ -2160,8 +2188,18 @@ public class AdvancingFrontMethod {
         //System.out.println("Bridge with e.next");
         //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p2.afmIdx + vrtsOffset));
         //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p2.afmIdx + vrtsOffset));
-        Face nF = new Face(e.p1._id, e.p2._id, newFacet.p2._id);
-        patch.faces.add(nF);
+        //Face nF = new Face(e.p1._id, e.p2._id, newFacet.p2._id);
+        //patch.faces.add(nF);
+        //patch.faces.add(e.p1._id);
+        //patch.faces.add(e.p2._id);
+        //patch.faces.add(newFacet.p2._id);
+        if (nextFaceID >= facePool.size()){
+            facePool.add(new Face(0, 0, 0));
+        }
+        Face nF = facePool.get(nextFaceID++);
+        nF.a = e.p1._id;
+        nF.b = e.p2._id;
+        nF.c = newFacet.p2._id;
         /*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, newFacet.p2))) < 0.01){
             System.out.println(patch.id + " invalid triangle possible");
         }*/
@@ -2195,9 +2233,9 @@ public class AdvancingFrontMethod {
     }
 
     private void _generateBridgeFace(Point pt){
-        if (verbose) {
-            System.out.println(patch.faces.size() + ". face constructed with bridge edge");
-        }
+        ///if (verbose) {
+        ///    System.out.println(patch.faces.size() + ". face constructed with bridge edge");
+        ///}
         List<Edge> pointEdges = nodeEdgeMap.get(pt.afmIdx);
         if (pointEdges.size() != 2){
             List<Edge> relevantEdges = pointEdges.stream().filter(f -> f.loopID == activeLoop).collect(Collectors.toList());
@@ -2207,11 +2245,11 @@ public class AdvancingFrontMethod {
             Edge eNext = (pointEdges.get(0).p1 == pt) ? pointEdges.get(0) : pointEdges.get(1);
             Edge ePrev = (pointEdges.get(0).p2 == pt) ? pointEdges.get(0) : pointEdges.get(1);
 
-            if (nextFacetID >= facetPool.size()){
-                facetPool.add(new Edge(0, 0));
+            if (nextEdgeID >= edgePool.size()){
+                edgePool.add(new Edge(0, 0));
             }
             //Edge leftFacet = new Edge(e.p1.afmIdx, eNext.p1.afmIdx);
-            Edge leftFacet = facetPool.get(nextFacetID++);
+            Edge leftFacet = edgePool.get(nextEdgeID++);
             leftFacet.v1 = e.p1.afmIdx;
             leftFacet.v2 = eNext.p1.afmIdx;
             leftFacet.p1 = e.p1;
@@ -2224,10 +2262,10 @@ public class AdvancingFrontMethod {
             //eNext.loopID = activeLoop;
 
             //Edge rightFacet = new Edge(ePrev.p2.afmIdx, e.p2.afmIdx);
-            if (nextFacetID >= facetPool.size()){
-                facetPool.add(new Edge(0, 0));
+            if (nextEdgeID >= edgePool.size()){
+                edgePool.add(new Edge(0, 0));
             }
-            Edge rightFacet = facetPool.get(nextFacetID++);
+            Edge rightFacet = edgePool.get(nextEdgeID++);
             rightFacet.v1 = ePrev.p2.afmIdx;
             rightFacet.v2 = e.p2.afmIdx;
             rightFacet.p1 = ePrev.p2;
@@ -2317,11 +2355,21 @@ public class AdvancingFrontMethod {
             //e.frontFaceID = rightFacet.frontFaceID = leftFacet.frontFaceID = patch.faceCount;
             //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
             //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
-            Face nF = new Face(e.p1._id, e.p2._id, rightFacet.p1._id);
-            /*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, rightFacet.p1))) < 0.01) {
-                System.out.println(patch.id + " invalid triangle possible");
-            }*/
-            patch.faces.add(nF);
+            //Face nF = new Face(e.p1._id, e.p2._id, rightFacet.p1._id);
+            ///*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, rightFacet.p1))) < 0.01) {
+            //    System.out.println(patch.id + " invalid triangle possible");
+            //}*/
+            //patch.faces.add(nF);
+            //patch.faces.add(e.p1._id);
+            //patch.faces.add(e.p2._id);
+            //patch.faces.add(rightFacet.p1._id);
+            if (nextFaceID >= facePool.size()){
+                facePool.add(new Face(0, 0, 0));
+            }
+            Face nF = facePool.get(nextFaceID++);
+            nF.a = e.p1._id;
+            nF.b = e.p2._id;
+            nF.c = rightFacet.p1._id;
             //if (!vertexFaceMap.containsKey(e.p1._id)) {
             //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
             //}
@@ -2348,9 +2396,9 @@ public class AdvancingFrontMethod {
     }
 
     private void generateFaceWithNewPoint(){
-        if (verbose) {
-            System.out.println(patch.faces.size() + ". face by new face");
-        }
+        //if (verbose) {
+        //    System.out.println(patch.faces.size() + ". face by new face");
+        //}
         Point pTest = new Point(testPoint);
         pTest.afmIdx = nodeEdgeMap.size();
         nodeEdgeMap.add(new ArrayList<>());
@@ -2375,8 +2423,11 @@ public class AdvancingFrontMethod {
         pastFacets.add(e);
         newPoints.add(pTest);
 
-        Face nF = new Face(e.p1._id, e.p2._id, pTest._id);
-        patch.faces.add(nF);
+        //Face nF = new Face(e.p1._id, e.p2._id, pTest._id);
+        //patch.faces.add(nF);
+        //patch.faces.add(e.p1._id);
+        //patch.faces.add(e.p2._id);
+        //patch.faces.add(pTest._id);
         //if (!vertexFaceMap.containsKey(e.p1._id)) {
         //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
         //}
@@ -2387,7 +2438,7 @@ public class AdvancingFrontMethod {
         //vertexFaceMap.get(e.p1._id).add(nF);
         //vertexFaceMap.get(e.p2._id).add(nF);
         //vertexFaceMap.get(pTest._id).add(nF);
-        PatchUtil.addFaceToEdgeFacesMap(patch, nF);
+        //PatchUtil.addFaceToEdgeFacesMap(patch, nF);
         //Surface.numoftriangles++;
         numOfTriangles++;
         nodeEdgeMap.get(e.p1.afmIdx).remove(e);
@@ -2415,9 +2466,9 @@ public class AdvancingFrontMethod {
     }
 
     private void generateFaceWithPreviousEdge(){
-        if (verbose) {
-            System.out.println(patch.faces.size() + ". face constructed with prev edge");
-        }
+        //if (verbose) {
+        //    System.out.println(patch.faces.size() + ". face constructed with prev edge");
+        //}
         Edge newFacet = new Edge(e.prev.p1.afmIdx, e.p2.afmIdx);
         newFacet.p1 = e.prev.p1;
         newFacet.p2 = e.p2;
@@ -2461,8 +2512,11 @@ public class AdvancingFrontMethod {
         /*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, newFacet.p1))) < 0.01){
             System.out.println(patch.id + " invalid triangle possible");
         }*/
-        Face nF = new Face(e.p1._id, e.p2._id, newFacet.p1._id);
-        patch.faces.add(nF);
+        //Face nF = new Face(e.p1._id, e.p2._id, newFacet.p1._id);
+        //patch.faces.add(nF);
+        //patch.faces.add(e.p1._id);
+        //patch.faces.add(e.p2._id);
+        //patch.faces.add(newFacet.p1._id);
         //if (!vertexFaceMap.containsKey(e.p1._id)) {
         //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
         //}
@@ -2475,7 +2529,7 @@ public class AdvancingFrontMethod {
         //vertexFaceMap.get(e.p1._id).add(nF);
         //vertexFaceMap.get(e.p2._id).add(nF);
         //vertexFaceMap.get(newFacet.p1._id).add(nF);
-        PatchUtil.addFaceToEdgeFacesMap(patch, nF);
+        //PatchUtil.addFaceToEdgeFacesMap(patch, nF);
         //Surface.numoftriangles++;
         numOfTriangles++;
         //System.out.println("Bridge with e.prev");
@@ -2494,9 +2548,9 @@ public class AdvancingFrontMethod {
     }
 
     private void generateFaceWithNextEdge(){
-        if (verbose) {
-            System.out.println(patch.faces.size() + ". face constructed with next edge");
-        }
+        //if (verbose) {
+        //    System.out.println(patch.faces.size() + ". face constructed with next edge");
+        //}
         Edge newFacet = new Edge(e.p1.afmIdx, e.next.p2.afmIdx);
         newFacet.p1 = e.p1;
         newFacet.p2 = e.next.p2;
@@ -2539,8 +2593,11 @@ public class AdvancingFrontMethod {
         //System.out.println("Bridge with e.next");
         //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p2.afmIdx + vrtsOffset));
         //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, newFacet.p2.afmIdx + vrtsOffset));
-        Face nF = new Face(e.p1._id, e.p2._id, newFacet.p2._id);
-        patch.faces.add(nF);
+        //Face nF = new Face(e.p1._id, e.p2._id, newFacet.p2._id);
+        //patch.faces.add(nF);
+        //patch.faces.add(e.p1._id);
+        //patch.faces.add(e.p2._id);
+        //patch.faces.add(newFacet.p2._id);
         /*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, newFacet.p2))) < 0.01){
             System.out.println(patch.id + " invalid triangle possible");
         }*/
@@ -2556,7 +2613,7 @@ public class AdvancingFrontMethod {
         //vertexFaceMap.get(e.p1._id).add(nF);
         //vertexFaceMap.get(e.p2._id).add(nF);
         //vertexFaceMap.get(newFacet.p2._id).add(nF);
-        PatchUtil.addFaceToEdgeFacesMap(patch, nF);
+        //PatchUtil.addFaceToEdgeFacesMap(patch, nF);
         //Surface.numoftriangles++;
         numOfTriangles++;
         //n1.changeVector(newFacet.p1, patch.sphere.center).makeUnit();
@@ -2574,9 +2631,9 @@ public class AdvancingFrontMethod {
     }
 
     private void generateBridgeFace(Point pt){
-        if (verbose) {
-            System.out.println(patch.faces.size() + ". face constructed with bridge edge");
-        }
+        //if (verbose) {
+        //    System.out.println(patch.faces.size() + ". face constructed with bridge edge");
+        //}
         List<Edge> pointEdges = nodeEdgeMap.get(pt.afmIdx);
         if (pointEdges.size() != 2){
             List<Edge> relevantEdges = pointEdges.stream().filter(f -> f.loopID == activeLoop).collect(Collectors.toList());
@@ -2684,11 +2741,14 @@ public class AdvancingFrontMethod {
             //e.frontFaceID = rightFacet.frontFaceID = leftFacet.frontFaceID = patch.faceCount;
             //newFaces.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
             //meshFaceList.add(new Face(e.p1.afmIdx + vrtsOffset, e.p2.afmIdx + vrtsOffset, rightFacet.p1.afmIdx + vrtsOffset));
-            Face nF = new Face(e.p1._id, e.p2._id, rightFacet.p1._id);
-            /*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, rightFacet.p1))) < 0.01) {
-                System.out.println(patch.id + " invalid triangle possible");
-            }*/
-            patch.faces.add(nF);
+            //Face nF = new Face(e.p1._id, e.p2._id, rightFacet.p1._id);
+            ///*if (Math.abs(midNormal.dotProduct(PatchUtil.computeTriangleNormal(e.p1, e.p2, rightFacet.p1))) < 0.01) {
+            //    System.out.println(patch.id + " invalid triangle possible");
+            //}*/
+            //patch.faces.add(nF);
+            //patch.faces.add(e.p1._id);
+            //patch.faces.add(e.p2._id);
+            //patch.faces.add(rightFacet.p1._id);
             //if (!vertexFaceMap.containsKey(e.p1._id)) {
             //    vertexFaceMap.put(e.p1._id, new ArrayList<>());
             //}
@@ -2701,7 +2761,7 @@ public class AdvancingFrontMethod {
             //vertexFaceMap.get(e.p1._id).add(nF);
             //vertexFaceMap.get(e.p2._id).add(nF);
             //vertexFaceMap.get(rightFacet.p1._id).add(nF);
-            PatchUtil.addFaceToEdgeFacesMap(patch, nF);
+            //PatchUtil.addFaceToEdgeFacesMap(patch, nF);
             //Surface.numoftriangles++;
 
             //System.out.println("Bridge with something else");

@@ -2,7 +2,6 @@ package cz.fi.muni.xmraz3.mesh;
 
 import cz.fi.muni.xmraz3.SesConfig;
 import cz.fi.muni.xmraz3.Surface;
-import cz.fi.muni.xmraz3.gui.MainWindow;
 import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Sphere;
 import cz.fi.muni.xmraz3.math.Vector;
@@ -10,7 +9,6 @@ import cz.fi.muni.xmraz3.utils.ArcUtil;
 import cz.fi.muni.xmraz3.utils.PatchUtil;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -27,7 +25,7 @@ public class MeshGeneration {
     public static boolean isFree(){
         return free.get();
     }
-
+    private static List<Face> facePool;
     public boolean isRunning(){
         return !free.get();
     }
@@ -46,6 +44,10 @@ public class MeshGeneration {
             _triangles[i] = 0;
             v[i] = new Vector(0, 0, 0);
         }
+        facePool = new ArrayList<>(100);
+        for (int i = 0; i < 100; ++i){
+            facePool.add(i, new Face(0, 0, 0));
+        }
     }
 
     private static void generateMesh(int start, int end, List<SphericalPatch> patches, int threadIdx) {
@@ -54,7 +56,7 @@ public class MeshGeneration {
         long startTime = System.currentTimeMillis();
         for (int i = start; i < end; ++i) {
             SphericalPatch a = patches.get(i);
-            a.arcPointCount = a.vertices.size();
+            //a.arcPointCount = a.vertices.size();
             if (!a.valid){
                 continue;
             }
@@ -68,16 +70,17 @@ public class MeshGeneration {
                     do {
                         afm._newMesh();
                     } while (!afm.atomComplete);
-                    a.dbFaces.addAll(a.faces);
+                    //a.dbFaces.addAll(a.faces);
                     if (afm.loop){
                         System.out.println((a.convexPatch) ? "convex " + i + "looped" : "concave" + i + " looped");
                     }
                     a.meshed = true;
-                    _triangles[threadIdx] += a.faces.size();
+                    afm.transferFacesToPatch();
+                    _triangles[threadIdx] += a.faces.length / 3;
                 }
             }
         }
-        System.out.println("AFM on threadIdx: " + threadIdx + " used facetPool of " + afm.facetPool.size() + " edges");
+        System.out.println("AFM on threadIdx: " + threadIdx + " used edgePool of " + afm.edgePool.size() + " edges");
         long endTime = System.currentTimeMillis();
         System.out.println("Thread idx: " + threadIdx + " - " + ((patches.get(0).convexPatch) ? "Convex" : "Concave" ) + " patches meshed in " + (endTime - startTime) + " ms");
         threads_done.incrementAndGet();
@@ -142,11 +145,13 @@ public class MeshGeneration {
         for (ToroidalPatch tp : Surface.rectangles){
             tp.vertices.clear();
             tp.normals.clear();
-            tp.faces.clear();
+            //tp.faces.clear();
             //tp.faceCount = 0;
-            tp.vrts.clear();
+            //tp.vrts.clear();
             meshToroidalPatch(tp);
-            _triangles[0] += tp.faces.size();
+            if (tp.faces != null) {
+                _triangles[0] += tp.faces.length / 3;
+            }
         }
         System.out.println("Toroidal patches meshed in " + (System.currentTimeMillis() - startTime) + " milliseconds");
         MeshGeneration.threads_done.set(0);
@@ -236,6 +241,8 @@ public class MeshGeneration {
                 topL.vrts.clear();
                 topL.vrts.addAll(top);
                 meshToroidalPatch(tp, tp.tr2.base.refined, topL, left, tp.tr2.right, true);
+                transferFacesToPatch(tp);
+                Surface.toriFacesCount += tp.faces.length / 3;
                 return;
             }
             Arc bottom = tp.convexPatchArcs.get(0).refined;
@@ -311,6 +318,8 @@ public class MeshGeneration {
                     numOfDivs = (int)(Math.log10(left.vrts.size() - 1) / Math.log10(2));
                     ArcUtil.refineArc(right, SesConfig.edgeLimit, true, numOfDivs, false);
                     meshToroidalPatch(tp, top, bottomForTopRect, left, right, false);
+                    transferFacesToPatch(tp);
+                    Surface.toriFacesCount += tp.faces.length / 3;
                     //System.out.println("finished meshing circ patch");
                 } else {
 
@@ -333,6 +342,8 @@ public class MeshGeneration {
                         System.out.println("weird");
                     }
                     meshToroidalPatch(tp, bottom, top, left, right, false);
+                    transferFacesToPatch(tp);
+                    Surface.toriFacesCount += tp.faces.length / 3;
                     //tp.circleMeshed = true;
                 }
             } else {
@@ -358,6 +369,8 @@ public class MeshGeneration {
                         ArcUtil.refineArc(fewer, SesConfig.edgeLimit, true, diff, false);
                     }
                     meshToroidalPatch(tp, bottom, top, left, right, false);
+                    transferFacesToPatch(tp);
+                    Surface.toriFacesCount += tp.faces.length;
                     ArcUtil.reverseArc(left, true);
                 }
             }
@@ -374,6 +387,8 @@ public class MeshGeneration {
     private static Vector v1 = new Vector(0, 0, 0);
     private static Point currProbe = new Point(0, 0, 0);
     private static Point prevProbe = new Point(0, 0, 0);
+
+    private static int nextFaceID = 0;
     private static void meshToroidalPatch(ToroidalPatch tp, Arc bottom, Arc top, Arc left, Arc right, boolean special){
         try {
             if (tp.id == 8871){
@@ -452,63 +467,97 @@ public class MeshGeneration {
                             offset++;
                         }
                     }*/
-                    tp.vrts.add(leftVArc.get(j)); // = 0
+                    //tp.vrts.add(leftVArc.get(j)); // = 0
                     Vector n = Point.subtractPoints(prevProbe, leftVArc.get(j)).makeUnit();
                     //n.changeVector(prevProbe, leftVArc.get(j)).makeUnit();
-                    tp.vrts.add(new Point(n.getFloatData()));
+                    //tp.vrts.add(new Point(n.getFloatData()));
 
                     tp.vertices.add(leftVArc.get(j)); // = 0
                     tp.normals.add(n);
 
                     //vrts.add(new Point(color));
-                    tp.vrts.add(rightVArc.get(j)); // = 1
+                    //tp.vrts.add(rightVArc.get(j)); // = 1
                     //vrts.add(new Point(color));
                     n = Point.subtractPoints(currProbe, rightVArc.get(j)).makeUnit();
-                    tp.vrts.add(new Point(n.getFloatData()));
+                    //tp.vrts.add(new Point(n.getFloatData()));
 
                     tp.vertices.add(rightVArc.get(j));
                     tp.normals.add(n);
 
-                    tp.vrts.add(leftVArc.get(j + 1)); // = 2
+                    //tp.vrts.add(leftVArc.get(j + 1)); // = 2
                     //vrts.add(new Point(color));
                     if (prevProbe == null || leftVArc.get(j + 1) == null){
                         System.out.println(" ");
                     }
                     n = Point.subtractPoints(prevProbe, leftVArc.get(j + 1)).makeUnit();
-                    tp.vrts.add(new Point(n.getFloatData()));
+                    //tp.vrts.add(new Point(n.getFloatData()));
 
                     tp.vertices.add(leftVArc.get(j + 1));
                     tp.normals.add(n);
 
-                    tp.vrts.add(leftVArc.get(j + 1)); // = 2
+                    //tp.vrts.add(leftVArc.get(j + 1)); // = 2
                     //vrts.add(new Point(color));
                     n = Point.subtractPoints(prevProbe, leftVArc.get(j + 1)).makeUnit();
-                    tp.vrts.add(new Point(n.getFloatData()));
-                    tp.vrts.add(rightVArc.get(j)); // = 1
+                    //tp.vrts.add(new Point(n.getFloatData()));
+                    //tp.vrts.add(rightVArc.get(j)); // = 1
                     //vrts.add(new Point(color));
                     n = Point.subtractPoints(currProbe, rightVArc.get(j)).makeUnit();
-                    tp.vrts.add(new Point(n.getFloatData()));
-                    tp.vrts.add(rightVArc.get(j + 1)); // = 3
+                    //tp.vrts.add(new Point(n.getFloatData()));
+                    //tp.vrts.add(rightVArc.get(j + 1)); // = 3
                     //vrts.add(new Point(color));
                     n = Point.subtractPoints(currProbe, rightVArc.get(j + 1)).makeUnit();
-                    tp.vrts.add(new Point(n.getFloatData()));
+                    //tp.vrts.add(new Point(n.getFloatData()));
 
                     tp.vertices.add(rightVArc.get(j + 1));
                     tp.normals.add(n);
-                    tp.faces.add(new Face(offset, offset + 1, offset + 2));
-                    tp.faces.add(new Face(offset + 2, offset + 1, offset + 3));
-                    Surface.numoftriangles += 2;
 
+                    if (nextFaceID >= facePool.size()){
+                        facePool.add(new Face(0, 0, 0));
+                        facePool.add(new Face(0, 0, 0));
+                    }
+                    Face f1 = facePool.get(nextFaceID++);
+                    Face f2 = facePool.get(nextFaceID++);
+                    f1.a = offset;
+                    f1.b = offset + 1;
+                    f1.c = offset + 2;
+
+                    f2.a = offset + 2;
+                    f2.b = offset + 1;
+                    f2.c = offset + 3;
+                    //tp.faces.add(offset);
+                    //tp.faces.add(offset + 1);
+                    //tp.faces.add(offset + 2);
+//
+                    //tp.faces.add(offset + 2);
+                    //tp.faces.add(offset + 1);
+                    //tp.faces.add(offset + 3);
+                    //tp.faces.add(new Face(offset, offset + 1, offset + 2));
+                    //tp.faces.add(new Face(offset + 2, offset + 1, offset + 3));
+                    Surface.numoftriangles += 2;
                 }
                 leftVArc.clear();
                 leftVArc.addAll(rightVArc);
                 prevProbe.setAsMidpoint(currProbe, currProbe);
             }
+
         } catch (Exception e){
             e.printStackTrace();
             tp.valid = false;
             System.err.println("tp id: " + tp.id);
         }
+    }
+
+    private static void transferFacesToPatch(ToroidalPatch tp){
+        tp.faces = new int[3 * nextFaceID];
+        int j = 0;
+        for (int i = 0; i < nextFaceID; ++i){
+            Face f = facePool.get(i);
+            tp.faces[j] = f.a;
+            tp.faces[j + 1] = f.b;
+            tp.faces[j + 2] = f.c;
+            j += 3;
+        }
+        nextFaceID = 0;
     }
 
 }

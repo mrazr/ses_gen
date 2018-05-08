@@ -135,7 +135,7 @@ public class ArcUtil {
                 it++;
             }
             for (Point v : a.vrts){
-                v.arcPoint = true;
+                //v.arcPoint = true;
                 v.arc = a;
             }
             if (a.baseSubdivision < 0){
@@ -826,42 +826,42 @@ public class ArcUtil {
     //    generateEdgeSplits(start + count / 2, count / 2, a, splits);
     //}
 
-    public static Arc getCommonArc(Point p1, Point p2){
-        if (!p1.arcPoint || !p2.arcPoint){
-            return null;
-        }
-        if ((p1 == p1.arc.end1 || p1 == p1.arc.end2) && (p2 == p2.arc.end1 || p2 == p2.arc.end2)){
-            Boundary b = p1.arc.bOwner;
-            try {
-                for (Arc a : b.arcs) {
-                    if ((p1 == a.end1 && p2 == a.end2) || (p1 == a.end2 && p2 == a.end1)) {
-                        //System.out.println("found the arc of " + a.vrts.size() + " vrts");
-                        return a;
-                    }
-                }
-            } catch (Exception e){
-                e.printStackTrace();
-            }
-            return null;
-        }
-        if (p1 == p1.arc.end1 || p1 == p1.arc.end2){
-            if (p1 == p2.arc.end1 || p1 == p2.arc.end2) {
-                return p2.arc;
-            }
-            return null;
-        }
-        if (p2 == p2.arc.end1 || p2 == p2.arc.end2){
-            if (p2 == p1.arc.end1 || p2 == p1.arc.end2) {
-                return p1.arc;
-            }
-            return null;
-        }
-        if (p1.arc == p2.arc){
-            return p1.arc;
-        } else {
-            return null;
-        }
-    }
+//    public static Arc getCommonArc(Point p1, Point p2){
+//        if (!p1.arcPoint || !p2.arcPoint){
+//            return null;
+//        }
+//        if ((p1 == p1.arc.end1 || p1 == p1.arc.end2) && (p2 == p2.arc.end1 || p2 == p2.arc.end2)){
+//            Boundary b = p1.arc.bOwner;
+//            try {
+//                for (Arc a : b.arcs) {
+//                    if ((p1 == a.end1 && p2 == a.end2) || (p1 == a.end2 && p2 == a.end1)) {
+//                        //System.out.println("found the arc of " + a.vrts.size() + " vrts");
+//                        return a;
+//                    }
+//                }
+//            } catch (Exception e){
+//                e.printStackTrace();
+//            }
+//            return null;
+//        }
+//        if (p1 == p1.arc.end1 || p1 == p1.arc.end2){
+//            if (p1 == p2.arc.end1 || p1 == p2.arc.end2) {
+//                return p2.arc;
+//            }
+//            return null;
+//        }
+//        if (p2 == p2.arc.end1 || p2 == p2.arc.end2){
+//            if (p2 == p1.arc.end1 || p2 == p1.arc.end2) {
+//                return p1.arc;
+//            }
+//            return null;
+//        }
+//        if (p1.arc == p2.arc){
+//            return p1.arc;
+//        } else {
+//            return null;
+//        }
+//    }
 
     public static void refineArcsOnConcavePatches(){
         for (SphericalPatch sp : Surface.triangles) {
@@ -964,7 +964,7 @@ public class ArcUtil {
     public static void resetArcs(SphericalPatch sp){
         sp.vertices.clear();
         sp.nextVertexID = 0;
-        sp.arcPointCount = 0;
+        //sp.arcPointCount = 0;
         for (Boundary b : sp.boundaries){
             for (Arc a : b.arcs){
                 if (a.bOwner == null){
@@ -1023,9 +1023,9 @@ public class ArcUtil {
                         int c = 4;
                     }
                     for (Arc a : b.arcs) {
-                        for (Point v : a.vrts) {
-                            v.arcPoint = true;
-                        }
+                        //for (Point v : a.vrts) {
+                        //    v.arcPoint = true;
+                        //}
                         if (a.refined != null) {
                             continue;
                         }
@@ -1048,11 +1048,11 @@ public class ArcUtil {
                         op.vrts.clear();
                         op.vrts.addAll(op.refined.vrts);
                         for (Point v : a.vrts) {
-                            v.arcPoint = true;
+                            //v.arcPoint = true;
                             v.arc = a;
                         }
                         for (Point v : op.vrts) {
-                            v.arcPoint = true;
+                            //v.arcPoint = true;
                             v.arc = op;
                         }
                     }

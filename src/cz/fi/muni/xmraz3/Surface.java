@@ -32,4 +32,5 @@ public class Surface {
     public static Point centerOfgravity = new Point(0., 0., 0.);
     public static double scaleFactor = 1.;
     public static int trimmedTriangles = 0;
+    public static int toriFacesCount = 0;
 }

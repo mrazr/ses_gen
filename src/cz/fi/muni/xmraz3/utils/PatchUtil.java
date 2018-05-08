@@ -1395,221 +1395,10 @@ public class PatchUtil {
         }
     }
 
-    private static void generateNewBoundaries(SphericalPatch sp, List<Point> intersectionPs, Plane circle, double radius){
-        try {
-            List<Point> intersectionPoints = new ArrayList<>(intersectionPs);
-            List<Point> usedPoints = new ArrayList<>();
-            if (intersectionPoints.size() > 1) {
-                List<Boundary> newBS = new ArrayList<>();
-                List<Boundary> toRemove = new ArrayList<>();
-                int i = 0;
-                while (i < intersectionPoints.size()) {
-                    Point in1 = findOptimalPoint(intersectionPoints, usedPoints, sp, circle);
-                    //intersectionPoints.remove(in1);
-                    usedPoints.add(in1);
-                    i++;
-                    Point in2 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in1, false, circle.p, circle.v, true);
-                    //intersectionPoints.remove(in2);
-                    usedPoints.add(in2);
-                    i++;
-
-                    Arc a1 = ArcUtil.findContainingArc(in1, circle, sp, null);
-                    Arc a2 = ArcUtil.findContainingArc(in2, circle, sp, null);
-                    if (a1.next == a2.prev && Point.distance(in1, a1.end2) < 0.001 && Point.distance(in2, a2.end1) < 0.001){
-                        System.err.println(sp.id + " a1n == a2p " + intersectionPoints.size());
-                        if (a1.next.vrts.stream().allMatch(p -> (Point.distance(p, in1) < 0.001 || Point.distance(p, in2) < 0.001 || circle.checkPointLocation(p) > 0.0))){
-                            return;
-                        }
-                    }
-                    toRemove.add(a1.bOwner);
-                    toRemove.add(a2.bOwner);
-
-                    if (a1.bOwner != a2.bOwner){
-                        System.out.println("same but different but same");
-                        return;
-                    }
-
-                    Boundary b = new Boundary();
-
-                    Arc newA1 = new Arc(a1.center, a1.radius);
-                    newA1.vrts.add(a1.end1);
-                    newA1.vrts.add(in1);
-                    newA1.setEndPoints(a1.end1, in1, false);
-                    newA1.setNormal(a1.normal);
-                    ArcUtil.refineArc(newA1, Surface.maxEdgeLen, false, 0, false);
-                    newA1.prev = a1.prev;
-                    newA1.prev.next = newA1;
-
-                    Arc bridge = new Arc(circle.p, radius);
-                    bridge.setEndPoints(in1, in2, false);
-                    bridge.setNormal(circle.v);
-                    bridge.vrts.add(in1);
-                    if (Vector.getNormalVector(bridge.toEnd1, bridge.toEnd2).makeUnit().dotProduct(bridge.normal) < 0.0){
-                        Point mid = Point.translatePoint(in1, Point.subtractPoints(in2, in1).multiply(0.5f));
-                        Vector v = Point.subtractPoints(circle.p, mid).makeUnit().multiply(radius);
-                        mid = Point.translatePoint(circle.p, v);
-                        bridge.vrts.add(mid);
-                    }
-                    bridge.vrts.add(in2);
-                    ArcUtil.refineArc(bridge, Surface.maxEdgeLen, false, 0, false);
-
-                    Point in3 = ArcUtil.findClosestPointOnCircle(intersectionPoints, in2, false, circle.p, circle.v, true);
-                    Arc a3  = (in3 == null) ? null : ArcUtil.findContainingArc(in3, circle, sp, null);
-                    Arc arc3 = null;
-
-                    if (a3 == a2){
-                        if (Vector.getNormalVector(a3.toEnd1, a3.toEnd2).makeUnit().dotProduct(a3.normal) < 0.0){
-                            Point mid = Point.translatePoint(a3.end1, Point.subtractPoints(a3.end2, a3.end1).multiply(0.5f));
-                            Vector v = Point.subtractPoints(a3.center, mid).makeUnit().multiply(a3.radius);
-                            mid = Point.translatePoint(a3.center, v);
-                            Vector toIn2 = Point.subtractPoints(in2, a2.center).makeUnit();
-                            Vector toIn3 = Point.subtractPoints(in3, a2.center).makeUnit();
-                            if (Vector.getNormalVector(a2.toEnd1, toIn2).makeUnit().dotProduct(a2.normal) > 0.0 && Vector.getNormalVector(a2.toEnd1, toIn3).makeUnit().dotProduct(a2.normal) > 0.0){
-                                double alpha1 = Math.acos(a2.toEnd1.dotProduct(toIn2));
-                                double alpha2 = Math.acos(a2.toEnd1.dotProduct(toIn3));
-                                if (alpha1 - alpha2 < 0.0){
-                                    arc3 = new Arc(a2.center, a2.radius);
-                                    arc3.setEndPoints(in2, in3, false);
-                                    arc3.setNormal(a2.normal);
-                                    arc3.vrts.add(in2);
-                                    if (Vector.getNormalVector(arc3.toEnd1, arc3.toEnd2).makeUnit().dotProduct(arc3.normal) < 0.0){
-                                        Point mid2 = Point.translatePoint(arc3.end1, Point.subtractPoints(arc3.end2, arc3.end1).multiply(0.5f));
-                                        Vector v2 = Point.subtractPoints(arc3.center, mid2).makeUnit().multiply(arc3.radius);
-                                        mid2 = Point.translatePoint(arc3.center, v2);
-                                        arc3.vrts.add(mid2);
-                                    }
-                                    arc3.vrts.add(in3);
-                                    ArcUtil.refineArc(arc3, Surface.maxEdgeLen, false, 0, false);
-                                    //b.arcs.add(arc3);
-                                    //arc3.prev = bridge;
-                                    //bridge.next = arc3;
-                                }
-                            } else if (Vector.getNormalVector(a2.toEnd1, toIn2).makeUnit().dotProduct(a2.normal) > 0.0 && Vector.getNormalVector(a2.toEnd1, toIn3).makeUnit().dotProduct(a2.normal) < 0.0){
-                                arc3 = new Arc(a2.center, a2.radius);
-                                arc3.setEndPoints(in2, in3, false);
-                                arc3.setNormal(a2.normal);
-                                arc3.vrts.add(in2);
-                                if (Vector.getNormalVector(arc3.toEnd1, arc3.toEnd2).makeUnit().dotProduct(arc3.normal) < 0.0){
-                                    Point mid2 = Point.translatePoint(arc3.end1, Point.subtractPoints(arc3.end2, arc3.end1).multiply(0.5f));
-                                    Vector v2 = Point.subtractPoints(arc3.center, mid2).makeUnit().multiply(arc3.radius);
-                                    mid2 = Point.translatePoint(arc3.center, v2);
-                                    arc3.vrts.add(mid2);
-                                }
-                                arc3.vrts.add(in3);
-                                ArcUtil.refineArc(arc3, Surface.maxEdgeLen, false, 0, false);
-                                //b.arcs.add(arc3);
-                                //arc3.prev = bridge;
-                                //bridge.next = arc3;
-                            }
-                        } else {
-                            double alpha1 = Math.acos(a2.toEnd1.dotProduct(Point.subtractPoints(in2, a2.center).makeUnit()));
-                            double alpha2 = Math.acos(a2.toEnd1.dotProduct(Point.subtractPoints(in3, a2.center).makeUnit()));
-                            if (alpha1 - alpha2 < 0.0){
-                                arc3 = new Arc(a2.center, a2.radius);
-                                arc3.setEndPoints(in2, in3, false);
-                                arc3.setNormal(a2.normal);
-                                arc3.vrts.add(in2);
-                                if (Vector.getNormalVector(arc3.toEnd1, arc3.toEnd2).makeUnit().dotProduct(arc3.normal) < 0.0){
-                                    Point mid2 = Point.translatePoint(arc3.end1, Point.subtractPoints(arc3.end2, arc3.end1).multiply(0.5f));
-                                    Vector v2 = Point.subtractPoints(arc3.center, mid2).makeUnit().multiply(arc3.radius);
-                                    mid2 = Point.translatePoint(arc3.center, v2);
-                                    arc3.vrts.add(mid2);
-                                }
-                                arc3.vrts.add(in3);
-                                ArcUtil.refineArc(arc3, Surface.maxEdgeLen, false, 0, false);
-                                //b.arcs.add(arc3);
-                                //arc3.prev = bridge;
-                                //bridge.next = arc3;
-                            }
-                        }
-                    }
-                    bridge.prev = newA1;
-                    newA1.next = bridge;
-                    if (arc3 == null) {
-                        b.arcs.add(newA1);
-                        b.arcs.add(bridge);
-
-                        if (Point.distance(in2, a2.end2) > 0.001) {
-                            Arc newA2 = new Arc(a2.center, a2.radius);
-                            newA2.vrts.add(in2);
-                            newA2.vrts.add(a2.end2);
-                            newA2.setEndPoints(in2, a2.end2, false);
-                            newA2.setNormal(a2.normal);
-                            ArcUtil.refineArc(newA2, Surface.maxEdgeLen, false, 0, false);
-                            b.arcs.add(newA2);
-                        }
-
-                        /*newA2.prev = bridge;
-                        bridge.next = newA2;
-                        newA2.next = a2.next;
-                        newA2.next.prev = newA2;*/
-
-
-                        //b.arcs.add(newA2);
-                    } else {
-                        usedPoints.add(in3);
-                        i++;
-                        Point in4 = ArcUtil.findClosestPointOnCircle(intersectionPoints, arc3.end2, false, circle.p, circle.v, true);
-                        usedPoints.add(in4);
-                        i++;
-                        Arc a4 = ArcUtil.findContainingArc(in4, circle, sp, null);
-
-                        Arc arc4 = new Arc(circle.p, radius);
-                        arc4.setEndPoints(in3, in4, false);
-                        arc4.setNormal(circle.v);
-                        arc4.vrts.add(in3);
-                        arc4.vrts.add(in4);
-                        ArcUtil.refineArc(arc4, Surface.maxEdgeLen, false, 0, false);
-
-                        Arc arc5 = new Arc(a4.center, a4.radius);
-                        arc5.setEndPoints(in4, a4.end2, false);
-                        arc5.setNormal(a4.normal);
-                        arc5.vrts.add(in4);
-                        arc5.vrts.add(a4.end2);
-                        ArcUtil.refineArc(arc5, Surface.maxEdgeLen, false, 0, false);
-
-                        b.arcs.add(newA1);
-                        b.arcs.add(bridge);
-                        b.arcs.add(arc3);
-                        b.arcs.add(arc4);
-                        b.arcs.add(arc5);
-
-                        bridge.next = arc3;
-                        arc3.prev = bridge;
-                        arc3.next = arc4;
-                        arc4.prev = arc3;
-                        arc4.next = arc5;
-                        arc5.prev = arc4;
-                        arc5.next = a4.next;
-                        arc5.next.prev = arc5;
-                        arc3 = arc5;
-                        //a2 = arc5.next;
-                    }
-                    int shortage = shortArcs(b);
-                    Arc start = newA1;
-                    Arc a = (arc3 == null) ? a2.next : arc3.next;
-                    while (a != start) {
-                        b.arcs.add(a);
-                        a = a.next;
-                    }
-                    b.patch = sp;
-                    ArcUtil.buildEdges(b, true);
-                    ArcUtil.linkArcs(b.arcs);
-                    newBS.add(b);
-                }
-                sp.boundaries.removeAll(toRemove);
-                sp.boundaries.addAll(newBS);
-                toRemove.clear();
-            }
-        } catch (Exception e){
-            System.out.println("with sp.id = " + sp.id);
-            e.printStackTrace();
-            int a = 1+1;
-
-        }
-    }
-
     private static Map<Integer, List<Plane>> planes = new TreeMap<>();
+    private static List<Plane> planePool = new ArrayList<>(50);
+    private static boolean planePoolInitialized = false;
+    private static int nextPlaneID = 0;
     private static Map<Integer, Map<Integer, List<Point>>> moip = new TreeMap<>();
     //private static Map<Integer, Map<Integer, PatchBridge>> bridgeArcs = new TreeMap<>();
     //private static Map<Integer, List<ArcDivide>> divides = new TreeMap<>();
@@ -1624,8 +1413,12 @@ public class PatchUtil {
         SurfaceParser.exportCircle(currCirc, currRad, currInt.get(0), "/home/radoslav/objs/cir_" + curr.id + "_" + currIter + ".obj");
         SurfaceParser.exportPoints(currInt, currCirc.v, "/home/radoslav/objs/poi_" + curr.id + "_" + currIter + ".obj");
     }
-    static boolean farst = false;
     private static void trimConcavePatch(SphericalPatch sp){
+        //if (!planePoolInitialized){
+        //    for (int i = 0; i < 50; ++i){
+        //        planePool.add(i, new Plane(new Point(0, 0, 0), new Vector(0, 0, 0)));
+        //    }
+        //}
         try {
             List<Neighbor<double[], SphericalPatch>> neighbors = new ArrayList<>();
             Surface.probeTree.range(sp.sphere.center.getData(), 2 * SesConfig.probeRadius, neighbors); //causes slf4j warning
@@ -1649,6 +1442,7 @@ public class PatchUtil {
             }
             currIter = 0;
             curr = sp;
+            nextPlaneID = 0;
             for (Neighbor<double[], SphericalPatch> n : neighbors) {
                 if (n.value == sp) {
                     continue;
@@ -1664,6 +1458,11 @@ public class PatchUtil {
                 if (Point.distance(sp.sphere.center, sp2.sphere.center) < 0.008){
                     continue;
                 }
+                //if (nextPlaneID >= planePool.size()){
+                //    planePool.add(new Plane(new Point(0, 0, 0), new Vector(0, 0, 0)));
+                //}
+                //Plane p = planePool.get(nextPlaneID++);
+                //p.redefine(center, nV);
                 Plane p = new Plane(center, nV);
                 intersectionPoints.clear();
                 exclude.clear();
@@ -1686,6 +1485,16 @@ public class PatchUtil {
                     if (!pointsLieOnPatch(sp2, intersectionPoints) && sp.patchNormal.dotProduct(sp2.patchNormal) > 0.8){
                         continue;
                     }
+                    boolean identicalIntersector = false;
+                    //for (int _i = 0; i < nextPlaneID; ++i){
+                    //    if (planePool.get(_i).isIdenticalWith(p)){
+                    //        identicalIntersector = true;
+                    //        break;
+                    //    }
+                    //}
+                    //if (!identicalIntersector){
+                    //
+                    //}
                     if (planes.get(sp.id).stream().noneMatch(plane -> plane.isIdenticalWith(p))) {
                         planes.get(sp.id).add(p);
                         sp.intersectingPatches.add(sp2.id);
@@ -1875,52 +1684,7 @@ public class PatchUtil {
         return null;
     }
 
-    private static Point _findOptimalPoint(List<Point> points, List<Point> usedPoints, SphericalPatch sp, Plane plane){
-        try {
-            for (Point p : points) {
-                if (usedPoints.contains(p)){
-                    continue;
-                }
-                Arc a = ArcUtil.findContainingArc(p, plane, sp, null);
-                Optional<Point> opsecondPointOnArc = points.stream().filter(point -> point != p && a.isInside(point)).findFirst(); //if there is more than one point on the arc a(more specifically 2 is the upper bound)
-                if (opsecondPointOnArc.isPresent()) {
-                    Point secondPoint = opsecondPointOnArc.get();
-                    //Vector fV = Point.subtractPoints(p, a.center).makeUnit();
-                    //Vector sV = Point.subtractPoints(secondPoint, a.center).makeUnit();
-                    v1.changeVector(p, a.center).makeUnit();
-                    v2.changeVector(secondPoint, a.center).makeUnit();
-                    double alpha1 = Math.acos(v1.dotProduct(a.toEnd1));//fV.dotProduct(a.toEnd1));
-                    alpha1 = (n.assignNormalVectorOf(a.toEnd1, v1).makeUnit().dotProduct(a.normal) < 0.0) ? 2 * Math.PI - alpha1 : alpha1;//Vector.getNormalVector(a.toEnd1, fV).makeUnit().dotProduct(a.normal) < 0.0) ? 2 * Math.PI - alpha1 : alpha1;
-                    double alpha2 = Math.acos(v2.dotProduct(a.toEnd1));//Point.subtractPoints(secondPoint, a.center).makeUnit().dotProduct(a.toEnd1));
-                    alpha2 = (n.assignNormalVectorOf(a.toEnd1, v2).makeUnit().dotProduct(a.normal) < 0.0) ? 2 * Math.PI - alpha2 : alpha2;//Vector.getNormalVector(a.toEnd1, sV).makeUnit().dotProduct(a.normal) < 0.0) ? 2 * Math.PI - alpha2 : alpha2;
-                    //return (alpha1 - alpha2 < 0.0) ? p : secondPoint;
-                    if (alpha1 - alpha2 < 0.0 && !usedPoints.contains(p)){
-                        return p;
-                    }
-                    if (alpha1 - alpha2 > 0.0 && !usedPoints.contains(secondPoint)){
-                        return  secondPoint;
-                    }
-                } else {
-                    if (plane.checkPointLocation(a.end1) > 0.0 && plane.checkPointLocation(a.end2) > 0.0){
-                        if (Point.distance(p, a.end1) - Point.distance(p, a.end2) < 0.0){
-                            return p;
-                        } else {
-                            continue;
-                        }
-                    }
-                    if (Point.distance(p, a.end1) < 0.001 && plane.checkPointLocation(a.end2) > 0.0){
-                        continue;
-                    }
-                    if (plane.checkPointLocation(a.end1) > 0.0 && !usedPoints.contains(p)) {
-                        return p;
-                    }
-                }
-            }
-        } catch (Exception e){
-            e.printStackTrace();
-        }
-        return null;
-    }
+
     private static List<Point> intersectionPoints = new ArrayList<>();
     private static List<Arc> exclude = new ArrayList<>();
     private static List<Point> invalid = new ArrayList<>();
@@ -2451,73 +2215,73 @@ public class PatchUtil {
         return true;
     }
 
-    public static void addFaceToEdgeFacesMap(SphericalPatch sp, Face f){
-        int sID = (f.a > f.b) ? f.b : f.a;
-        int bID = (sID == f.a) ? f.b : f.a;
+//    public static void addFaceToEdgeFacesMap(SphericalPatch sp, Face f){
+//        int sID = (f.a > f.b) ? f.b : f.a;
+//        int bID = (sID == f.a) ? f.b : f.a;
+//
+//        Map<Integer, Map<Integer, List<Face>>> map1 = sp.edgeFacesMap;
+//        if (!map1.containsKey(sID)){
+//            map1.put(sID, new TreeMap<>());
+//        }
+//        Map<Integer, List<Face>> map2 = map1.get(sID);
+//        if (!map2.containsKey(bID)){
+//            map2.put(bID, new ArrayList<>(2));
+//        }
+//        map2.get(bID).add(f);
+//
+//        sID = (f.c > f.b) ? f.b : f.c;
+//        bID = (sID == f.c) ? f.b : f.c;
+//
+//        if (!map1.containsKey(sID)){
+//            map1.put(sID, new TreeMap<>());
+//        }
+//        map2 = map1.get(sID);
+//        if (!map2.containsKey(bID)){
+//            map2.put(bID, new ArrayList<>(2));
+//        }
+//        map2.get(bID).add(f);
+//
+//        sID = (f.c > f.a) ? f.a : f.c;
+//        bID = (sID == f.c) ? f.a : f.c;
+//
+//        if (!map1.containsKey(sID)){
+//            map1.put(sID, new TreeMap<>());
+//        }
+//        map2 = map1.get(sID);
+//        if (!map2.containsKey(bID)){
+//            map2.put(bID, new ArrayList<>(2));
+//        }
+//        map2.get(bID).add(f);
+//    }
 
-        Map<Integer, Map<Integer, List<Face>>> map1 = sp.edgeFacesMap;
-        if (!map1.containsKey(sID)){
-            map1.put(sID, new TreeMap<>());
-        }
-        Map<Integer, List<Face>> map2 = map1.get(sID);
-        if (!map2.containsKey(bID)){
-            map2.put(bID, new ArrayList<>(2));
-        }
-        map2.get(bID).add(f);
+//    public static void removeFaceFromEdgeFacesMap(SphericalPatch sp, Face f){
+//        Map<Integer, Map<Integer, List<Face>>> map1 = sp.edgeFacesMap;
+//        int sID = (f.a > f.b) ? f.b : f.a;
+//        int bID = (f.a > f.b) ? f.a : f.b;
+//
+//        map1.get(sID).get(bID).remove(f);
+//
+//        sID = (f.b > f.c) ? f.c : f.b;
+//        bID = (f.b > f.c) ? f.b : f.c;
+//
+//        map1.get(sID).get(bID).remove(f);
+//
+//        sID = (f.a > f.c) ? f.c : f.a;
+//        bID = (f.a > f.c) ? f.a : f.c;
+//
+//        map1.get(sID).get(bID).remove(f);
+//    }
 
-        sID = (f.c > f.b) ? f.b : f.c;
-        bID = (sID == f.c) ? f.b : f.c;
+//    public static List<Face> retrieveFacesFromEdgeFacesMap(SphericalPatch sp, int a, int b){
+//        int small = Math.min(a, b);
+//        int big = Math.max(a, b);
+//        return sp.edgeFacesMap.get(small).get(big);
+//    }
 
-        if (!map1.containsKey(sID)){
-            map1.put(sID, new TreeMap<>());
-        }
-        map2 = map1.get(sID);
-        if (!map2.containsKey(bID)){
-            map2.put(bID, new ArrayList<>(2));
-        }
-        map2.get(bID).add(f);
-
-        sID = (f.c > f.a) ? f.a : f.c;
-        bID = (sID == f.c) ? f.a : f.c;
-
-        if (!map1.containsKey(sID)){
-            map1.put(sID, new TreeMap<>());
-        }
-        map2 = map1.get(sID);
-        if (!map2.containsKey(bID)){
-            map2.put(bID, new ArrayList<>(2));
-        }
-        map2.get(bID).add(f);
-    }
-
-    public static void removeFaceFromEdgeFacesMap(SphericalPatch sp, Face f){
-        Map<Integer, Map<Integer, List<Face>>> map1 = sp.edgeFacesMap;
-        int sID = (f.a > f.b) ? f.b : f.a;
-        int bID = (f.a > f.b) ? f.a : f.b;
-
-        map1.get(sID).get(bID).remove(f);
-
-        sID = (f.b > f.c) ? f.c : f.b;
-        bID = (f.b > f.c) ? f.b : f.c;
-
-        map1.get(sID).get(bID).remove(f);
-
-        sID = (f.a > f.c) ? f.c : f.a;
-        bID = (f.a > f.c) ? f.a : f.c;
-
-        map1.get(sID).get(bID).remove(f);
-    }
-
-    public static List<Face> retrieveFacesFromEdgeFacesMap(SphericalPatch sp, int a, int b){
-        int small = Math.min(a, b);
-        int big = Math.max(a, b);
-        return sp.edgeFacesMap.get(small).get(big);
-    }
-
-    public static Face retrieveFirstFaceFromEdgeFacesMap(SphericalPatch sp, int a, int b){
-        List<Face> _f = retrieveFacesFromEdgeFacesMap(sp, a, b);
-        return (_f.size() > 0) ? _f.get(0) : null;
-    }
+//    public static Face retrieveFirstFaceFromEdgeFacesMap(SphericalPatch sp, int a, int b){
+//        List<Face> _f = retrieveFacesFromEdgeFacesMap(sp, a, b);
+//        return (_f.size() > 0) ? _f.get(0) : null;
+//    }
 
     public static Vector computeTriangleNormal(Point a, Point b, Point c){
         //return in.assignNormalVectorOf(v1.changeVector(b, a).makeUnit(), v2.changeVector(c, a).makeUnit()).makeUnit();

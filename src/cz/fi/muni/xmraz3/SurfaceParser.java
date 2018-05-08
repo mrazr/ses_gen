@@ -633,7 +633,7 @@ public class SurfaceParser {
         for (SphericalPatch sp : Surface.convexPatches){
             ArcUtil.resetArcs(sp);
             sp.meshed = false;
-            sp.faces.clear();
+            //sp.faces.clear();
             //sp.faceCount = 0;
             //sp.vertices.clear();
         }
@@ -641,7 +641,7 @@ public class SurfaceParser {
         for (SphericalPatch sp : Surface.triangles){
             ArcUtil.resetArcs(sp);
             sp.meshed = false;
-            sp.faces.clear();
+            //sp.faces.clear();
             //sp.faceCount = 0;
         }
         ArcUtil.refineArcsOnConcavePatches();
@@ -694,8 +694,10 @@ public class SurfaceParser {
             }
             if ((mask & 1) > 0) {
                 for (SphericalPatch a : Surface.convexPatches) {
+
                     List<Point> vrts = a.vertices;
-                    List<Face> faces = a.faces;
+                    //List<Integer> faces = a.faces;
+                    int[] faces = a.faces;
                 /*for (int i = 0; i < vrts.size(); ++i){
 
                 }*/
@@ -714,11 +716,13 @@ public class SurfaceParser {
                         ownVerticesCount++;
                         p.ownIdx = ownIdx++;
                     }
-
-                    for (Face f : faces) {
-                        Point p = vrts.get(f.a);
-                        Point q = vrts.get(f.b);
-                        Point r = vrts.get(f.c);
+                    if (!a.meshed){
+                        continue;
+                    }
+                    for (int i = 0; i < faces.length; i += 3) {
+                        Point p = vrts.get(faces[i]);
+                        Point q = vrts.get(faces[i + 1]);
+                        Point r = vrts.get(faces[i + 2]);
                         String line = "f ";
                         if (p.idx > 0) {
                             line += Integer.toString(p.idx) + "//" + Integer.toString(p.idx);
@@ -749,7 +753,8 @@ public class SurfaceParser {
             if ((mask & 2) > 0) {
                 for (SphericalPatch cp : Surface.triangles) {
                     List<Point> vrts = cp.vertices;
-                    List<Face> faces = cp.faces;
+                    //List<Integer> faces = cp.faces;
+                    int[] faces = cp.faces;
                     int ownVerticesCount = 0;
                     for (Point p : vrts) {
                         if (p.idx > 0) {
@@ -763,10 +768,13 @@ public class SurfaceParser {
                         ownVerticesCount++;
                         p.ownIdx = ownIdx++;
                     }
-                    for (Face f : faces) {
-                        Point p = vrts.get(f.a);
-                        Point q = vrts.get(f.b);
-                        Point r = vrts.get(f.c);
+                    if (!cp.meshed){
+                        continue;
+                    }
+                    for (int i = 0; i < faces.length; i += 3){ //Face f : faces){
+                        Point p = vrts.get(faces[i]);
+                        Point q = vrts.get(faces[i + 1]);
+                        Point r = vrts.get(faces[i + 2]);
                         String line = "f ";
                         if (r.idx > 0) {
                             line += Integer.toString(r.idx) + "//" + Integer.toString(r.idx);
@@ -798,7 +806,9 @@ public class SurfaceParser {
                 for (ToroidalPatch tp : Surface.rectangles) {
                     List<Point> vrts = tp.vertices;
                     List<Vector> normals = tp.normals;
-                    List<Face> faces = tp.faces;
+                    //List<Face> faces = tp.faces;
+                    //List<Integer> faces = tp.faces;
+                    int[] faces = tp.faces;
                     int ownVerticesCount = 0;
                     for (int i = 0; i < vrts.size(); ++i) {
                         Point p = vrts.get(i);
@@ -812,10 +822,10 @@ public class SurfaceParser {
                         ownVerticesCount++;
                         p.ownIdx = ownIdx++;
                     }
-                    for (Face f : faces) {
-                        Point p = vrts.get(f.a);
-                        Point q = vrts.get(f.b);
-                        Point r = vrts.get(f.c);
+                    for (int i = 0; i < faces.length; i += 3){//Face f : faces) {
+                        Point p = vrts.get(faces[i]);
+                        Point q = vrts.get(faces[i + 1]);
+                        Point r = vrts.get(faces[i + 2]);
                         String line = "f ";
                         if (p.idx > 0) {
                             line += Integer.toString(p.idx) + "//" + Integer.toString(p.idx);
@@ -852,115 +862,116 @@ public class SurfaceParser {
         return true;
     }
 
-    public static boolean exportSTL(String file){
-        try (DataOutputStream ds = new DataOutputStream(new FileOutputStream(file))){
-            /*for (int i = 0; i < 20; ++i){
-                ds.writeInt(i);
-            }*/
-            for (int i = 0; i < 80; ++i){
-                ds.writeByte(0);
-            }
-            ds.writeInt(Surface.numoftriangles);
-            List<Point> vrts;
-            List<Vector> normals;
-            List<Face> faces;
-            for (SphericalPatch a : Surface.convexPatches){
-                vrts = a.vertices;
-                faces = a.faces;
-                for (Face f : faces) {
-                    ds.writeFloat(0.f);
-                    ds.writeFloat(0.f);
-                    ds.writeFloat(0.f);
-
-                    Point p = vrts.get(f.c);
-                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
-                    p = vrts.get(f.b);
-                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
-                    p = vrts.get(f.a);
-                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
-                    ds.writeShort(0);
-                }
-            }
-            for (SphericalPatch cp : Surface.triangles){
-                vrts = cp.vertices;
-                faces = cp.faces;
-                for (Face f : faces) {
-                    ds.writeFloat(0.f);
-                    ds.writeFloat(0.f);
-                    ds.writeFloat(0.f);
-
-                    Point p = vrts.get(f.a);
-                    ds.writeFloat((float)p.x + (float)0.f);
-                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
-                    p = vrts.get(f.b);
-                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
-                    p = vrts.get(f.c);
-                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
-                    ds.writeShort(0);
-                }
-            }
-            for (ToroidalPatch rp : Surface.rectangles){
-                vrts = rp.vertices;
-                faces = rp.faces;
-                for (Face f : faces) {
-                    ds.writeFloat(0.f);
-                    ds.writeFloat(0.f);
-                    ds.writeFloat(0.f);
-
-                    Point p = vrts.get(f.c);
-                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
-                    p = vrts.get(f.b);
-                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
-                    p = vrts.get(f.a);
-                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
-                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
-                    ds.writeShort(0);
-                }
-            }
-            ds.flush();
-            ds.close();
-        } catch (IOException e){
-            e.printStackTrace();
-            return false;
-        }
-        return true;
-    }
+//    public static boolean exportSTL(String file){
+//        try (DataOutputStream ds = new DataOutputStream(new FileOutputStream(file))){
+//            /*for (int i = 0; i < 20; ++i){
+//                ds.writeInt(i);
+//            }*/
+//            for (int i = 0; i < 80; ++i){
+//                ds.writeByte(0);
+//            }
+//            ds.writeInt(Surface.numoftriangles);
+//            List<Point> vrts;
+//            List<Vector> normals;
+//            List<Face> faces;
+//            for (SphericalPatch a : Surface.convexPatches){
+//                vrts = a.vertices;
+//                faces = a.faces;
+//                for (Face f : faces) {
+//                    ds.writeFloat(0.f);
+//                    ds.writeFloat(0.f);
+//                    ds.writeFloat(0.f);
+//
+//                    Point p = vrts.get(f.c);
+//                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
+//                    p = vrts.get(f.b);
+//                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
+//                    p = vrts.get(f.a);
+//                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
+//                    ds.writeShort(0);
+//                }
+//            }
+//            for (SphericalPatch cp : Surface.triangles){
+//                vrts = cp.vertices;
+//                faces = cp.faces;
+//                for (Face f : faces) {
+//                    ds.writeFloat(0.f);
+//                    ds.writeFloat(0.f);
+//                    ds.writeFloat(0.f);
+//
+//                    Point p = vrts.get(f.a);
+//                    ds.writeFloat((float)p.x + (float)0.f);
+//                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
+//                    p = vrts.get(f.b);
+//                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
+//                    p = vrts.get(f.c);
+//                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
+//                    ds.writeShort(0);
+//                }
+//            }
+//            for (ToroidalPatch rp : Surface.rectangles){
+//                vrts = rp.vertices;
+//                List<Integer> _faces = rp.faces;
+//                for (int i = 0; i < _faces.size(); i += 3){//Face f : faces) {
+//                    ds.writeFloat(0.f);
+//                    ds.writeFloat(0.f);
+//                    ds.writeFloat(0.f);
+//
+//                    Point p = vrts.get(_faces.get(i + 2));
+//                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
+//                    p = vrts.get(_faces.get(i + 1));
+//                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
+//                    p = vrts.get(_faces.get(i));
+//                    ds.writeFloat((float)p.x + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.y + (float) Surface.stlXOffset);
+//                    ds.writeFloat((float)p.z + (float) Surface.stlXOffset);
+//                    ds.writeShort(0);
+//                }
+//            }
+//            ds.flush();
+//            ds.close();
+//        } catch (IOException e){
+//            e.printStackTrace();
+//            return false;
+//        }
+//        return true;
+//    }
 
     public static boolean exportSTLText(String file){
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))){
             List<Point> vrts;
-            List<Face> faces;
+            //List<Integer> faces;
+            int[] faces;
             bw.write("solid ");
             bw.newLine();
             for (SphericalPatch a : Surface.convexPatches){
                 vrts = a.vertices;
                 faces = a.faces;
-                for (Face f : faces){
+                for (int i = 0; i < a.faces.length; i += 3){ //Face f : faces){
                     bw.write("facet normal 0.0 0.0 0.0");
                     bw.newLine();
                     bw.write("outer loop");
                     bw.newLine();
-                    bw.write("vertex " + vrts.get(f.a).toString());
+                    bw.write("vertex " + vrts.get(faces[i]).toString());
                     bw.newLine();
-                    bw.write("vertex " + vrts.get(f.b).toString());
+                    bw.write("vertex " + vrts.get(faces[i + 1]).toString());
                     bw.newLine();
-                    bw.write("vertex " + vrts.get(f.c).toString());
+                    bw.write("vertex " + vrts.get(faces[i + 2]).toString());
                     bw.newLine();
                     bw.write("endloop");
                     bw.newLine();
@@ -971,16 +982,16 @@ public class SurfaceParser {
             for (SphericalPatch cp : Surface.triangles){
                 vrts = cp.vertices;
                 faces = cp.faces;
-                for (Face f : faces){
+                for (int i = 0; i < cp.faces.length; i += 3){ //Face f : faces){
                     bw.write("facet normal 0.0 0.0 0.0");
                     bw.newLine();
                     bw.write("outer loop");
                     bw.newLine();
-                    bw.write("vertex " + vrts.get(f.c).toString());
+                    bw.write("vertex " + vrts.get(faces[i + 2]).toString());
                     bw.newLine();
-                    bw.write("vertex " + vrts.get(f.b).toString());
+                    bw.write("vertex " + vrts.get(faces[i + 1]).toString());
                     bw.newLine();
-                    bw.write("vertex " + vrts.get(f.a).toString());
+                    bw.write("vertex " + vrts.get(faces[i]).toString());
                     bw.newLine();
                     bw.write("endloop");
                     bw.newLine();
@@ -990,17 +1001,18 @@ public class SurfaceParser {
             }
             for (ToroidalPatch rp : Surface.rectangles){
                 vrts = rp.vertices;
-                faces = rp.faces;
-                for (Face f : faces){
+                //faces = rp.faces;
+                int[] _faces = rp.faces;
+                for (int i = 0; i < _faces.length; i += 3){//Face f : faces){
                     bw.write("facet normal 0.0 0.0 0.0");
                     bw.newLine();
                     bw.write("outer loop");
                     bw.newLine();
-                    bw.write("vertex " + vrts.get(f.a).toString());
+                    bw.write("vertex " + vrts.get(_faces[i]).toString());
                     bw.newLine();
-                    bw.write("vertex " + vrts.get(f.b).toString());
+                    bw.write("vertex " + vrts.get(_faces[i + 1]).toString());
                     bw.newLine();
-                    bw.write("vertex " + vrts.get(f.c).toString());
+                    bw.write("vertex " + vrts.get(_faces[i + 2]).toString());
                     bw.newLine();
                     bw.write("endloop");
                     bw.newLine();
@@ -1142,10 +1154,10 @@ public class SurfaceParser {
                 bw.write(line);
                 bw.newLine();
             }
-            for (Face f : sp.faces){
-                int i1 = f.a + 1;
-                int i2 = f.b + 1;
-                int i3 = f.c + 1;
+            for (int i = 0; i < sp.faces.length; i += 3){//Face f : sp.faces){
+                int i1 = sp.faces[i] + 1;
+                int i2 = sp.faces[i + 1] + 1;
+                int i3 = sp.faces[i + 2 ]+ 1;
                 line = "f " + i1 + "//" + i1 + " " + i2 + "//" + i2 + " " + i3 + "//" + i3;
                 bw.write(line);
                 bw.newLine();
@@ -1156,50 +1168,50 @@ public class SurfaceParser {
         }
     }
 
-    public static void exportToroidalPatch(ToroidalPatch tp){
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter("tori_" + tp.id + "-" + LocalDateTime.now().toString() + ".obj"))){
-            for (Point v : tp.vertices){
-                bw.write("v " + v.toString());
-                bw.newLine();
-            }
-            for (Vector n : tp.normals){
-                bw.write("vn " + n.toString());
-                bw.newLine();
-            }
-            for (Face f : tp.faces){
-                bw.write("f " + (f.a + 1) + "//" + (f.a + 1) + " " + (f.b + 1) + "//" + (f.b + 1) + " " + (f.c + 1) + "//" + (f.c + 1));
-                bw.newLine();
-            }
-            bw.flush();
-        } catch (IOException e){
-            e.printStackTrace();
-        }
-    }
+//    public static void exportToroidalPatch(ToroidalPatch tp){
+//        try (BufferedWriter bw = new BufferedWriter(new FileWriter("tori_" + tp.id + "-" + LocalDateTime.now().toString() + ".obj"))){
+//            for (Point v : tp.vertices){
+//                bw.write("v " + v.toString());
+//                bw.newLine();
+//            }
+//            for (Vector n : tp.normals){
+//                bw.write("vn " + n.toString());
+//                bw.newLine();
+//            }
+//            for (int i = 0; i < tp.faces.size(); i += 3){//Face f : tp.faces){
+//                bw.write("f " + (tp.faces.get(i) + 1) + "//" + (tp.faces.get(i) + 1) + " " + (tp.faces.get(i + 1) + 1) + "//" + (tp.faces.get(i + 1) + 1) + " " + (tp.faces.get(i + 2) + 1) + "//" + (tp.faces.get(i + 2) + 1));
+//                bw.newLine();
+//            }
+//            bw.flush();
+//        } catch (IOException e){
+//            e.printStackTrace();
+//        }
+//    }
 
-    public static void exportOldFaces(SphericalPatch sp){
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/home/radoslav/objs/patch" + sp.id + (Math.random() * 10) + ".obj"))) {
-            String line = "";
-            for (Point v : sp.vertices){
-                line = "v " + v.toString();
-                bw.write(line);
-                bw.newLine();
-                line = "vn " + Point.subtractPoints(v, sp.sphere.center).makeUnit().toString();
-                bw.write(line);
-                bw.newLine();
-            }
-            for (Face f : sp.dbFaces){
-                int i1 = f.a + 1;
-                int i2 = f.b + 1;
-                int i3 = f.c + 1;
-                line = "f " + i1 + "//" + i1 + " " + i2 + "//" + i2 + " " + i3 + "//" + i3;
-                bw.write(line);
-                bw.newLine();
-            }
-            bw.flush();
-        } catch (IOException e){
-            e.printStackTrace();
-        }
-    }
+//    public static void exportOldFaces(SphericalPatch sp){
+//        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/home/radoslav/objs/patch" + sp.id + (Math.random() * 10) + ".obj"))) {
+//            String line = "";
+//            for (Point v : sp.vertices){
+//                line = "v " + v.toString();
+//                bw.write(line);
+//                bw.newLine();
+//                line = "vn " + Point.subtractPoints(v, sp.sphere.center).makeUnit().toString();
+//                bw.write(line);
+//                bw.newLine();
+//            }
+//            for (Face f : sp.dbFaces){
+//                int i1 = f.a + 1;
+//                int i2 = f.b + 1;
+//                int i3 = f.c + 1;
+//                line = "f " + i1 + "//" + i1 + " " + i2 + "//" + i2 + " " + i3 + "//" + i3;
+//                bw.write(line);
+//                bw.newLine();
+//            }
+//            bw.flush();
+//        } catch (IOException e){
+//            e.printStackTrace();
+//        }
+//    }
 
     public static void exportCP_(SphericalPatch sp){
         try (BufferedWriter bw = new BufferedWriter(new FileWriter("/home/radoslav/objs/newB_" + sp.id + ".obj"))){

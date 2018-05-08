@@ -13,14 +13,15 @@ public class ToroidalPatch {
     public List<Arc> convexPatchArcs;
     public List<Arc> concavePatchArcs;
 
-    public List<Point> vrts;
+    //public List<Point> vrts;
     public CuspTriangle tr1;
     public CuspTriangle tr2;
 
     public List<Point> vertices;
     public List<Vector> normals;
-    public List<Face> faces;
-
+    //public List<Face> faces;
+    //public List<Integer> faces;
+    public int[] faces;
     //public int vbo[] = new int[1];
     public int vboOffset;
     //public int faceCount;
@@ -39,9 +40,9 @@ public class ToroidalPatch {
 
         convexPatchArcs = new ArrayList<>();
         concavePatchArcs = new ArrayList<>();
-        vrts = new ArrayList<>();
+        //vrts = new ArrayList<>();
         vertices = new ArrayList<>();
         normals = new ArrayList<>();
-        faces = new ArrayList<>();
+        //faces = new ArrayList<>();
     }
 }

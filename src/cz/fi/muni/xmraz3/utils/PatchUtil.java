@@ -30,6 +30,7 @@ public class PatchUtil {
     }
     private static Vector circleN = new Vector(0, 0, 0);
     private static Point point = new Point(0, 0, 0);
+    private static List<Point> middlevrts = new ArrayList<>(17);
     public static void torProcessSelfIntersection(ToroidalPatch tp){
         try {
             if (!tp.circular) {
@@ -286,7 +287,7 @@ public class PatchUtil {
                 i++;
             }
             middlevrts.add(cusps[1]);*/
-            List<Point> middlevrts;
+
             //Vector toS = Point.subtractPoints(cusps[0], circle).makeUnit();
             //Vector toE = Point.subtractPoints(cusps[1], circle).makeUnit();
             //Vector n = Vector.getNormalVector(toE, toS).makeUnit();

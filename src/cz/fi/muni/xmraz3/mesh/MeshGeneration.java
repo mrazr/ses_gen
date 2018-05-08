@@ -62,6 +62,7 @@ public class MeshGeneration {
             }
             if (!a.meshed) {
                 if (a.boundaries.size() > 0) {
+                    ArcUtil.indexPoints(a);
                     if (a.convexPatch) {
                         afm._initializeConvexAFM(a, Math.toRadians(SesConfig.minAlpha), 0.2 * Surface.maxEdgeLen,Surface.maxEdgeLen * (Math.sqrt(3) / 2.f), SesConfig.edgeLimit, Surface.maxEdgeLen);
                     } else {
@@ -389,14 +390,17 @@ public class MeshGeneration {
     private static Point prevProbe = new Point(0, 0, 0);
 
     private static int nextFaceID = 0;
+    private static List<Point> leftVArc = new ArrayList<>(17);
+    private static List<Point> rightVArc = new ArrayList<>(17);
     private static void meshToroidalPatch(ToroidalPatch tp, Arc bottom, Arc top, Arc left, Arc right, boolean special){
         try {
             if (tp.id == 8871){
                 int a = 32;
             }
-            List<Point> leftVArc = new ArrayList<>();
+            //List<Point> leftVArc = new ArrayList<>();
+            leftVArc.clear();
             leftVArc.addAll(left.vrts);
-            List<Point> rightVArc = new ArrayList<>();
+            //List<Point> rightVArc = new ArrayList<>();
             //Point currProbe = null;
             //Point prevProbe = left.center;
             prevProbe.setAsMidpoint(left.center, left.center);

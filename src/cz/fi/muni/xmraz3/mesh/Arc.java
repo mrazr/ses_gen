@@ -30,10 +30,6 @@ public class Arc {
     public Vector toEnd1;
     public Vector toEnd2;
 
-    //public Edge endEdge1;
-    //public Edge endEdge2;
-    //public List<Edge> lines; //maybe dont need this
-
     public SphericalPatch owner;
 
     public Arc next;

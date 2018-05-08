@@ -20,6 +20,8 @@ public class ArcUtil {
     private static Point temp = new Point(0, 0, 0);
     private static Vector n = new Vector(0, 0, 0);
     private static Vector u = new Vector(0, 0, 0);
+    private static List<Point> currVrts = new ArrayList<>(17);
+    private static List<Point> newVrts = new ArrayList<>(17);
     public static void refineArc(Arc a, double maxLen, boolean fixedCount, int numOfSubdivisions, boolean fullCircle){
         try {
             int it = 0;
@@ -38,11 +40,14 @@ public class ArcUtil {
             } else if (!fixedCount && Math.PI - angle < 0.0){
                 refineArc(a, 0, true, 1, false);
             }
-            while ((!fixedCount && Point.distance(a.vrts.get(0), a.vrts.get(1)) > Surface.refineFac * maxLen) || (fixedCount && it < numOfSubdivisions)) {
-                List<Point> newVerts = new ArrayList<>();
-                for (int i = 0; i < a.vrts.size() - ((fullCircle) ? 0 : 1); ++i) {
+            currVrts.clear();
+            newVrts.clear();
+            currVrts.addAll(a.vrts);
+            while ((!fixedCount && Point.distance(currVrts.get(0), currVrts.get(1)) > Surface.refineFac * maxLen) || (fixedCount && it < numOfSubdivisions)) {
+                //List<Point> newVerts = new ArrayList<>();
+                for (int i = 0; i < currVrts.size() - ((fullCircle) ? 0 : 1); ++i) {
                     Point tmp = null;
-                    if (a.vrts.size() == 2){
+                    if (currVrts.size() == 2){
                         if (a.mid != null) {
                             tmp = a.mid;
                         } else {
@@ -54,27 +59,32 @@ public class ArcUtil {
                             tmp = Point.translatePoint(a.center, v);
                         }
                     } else {
-                        if (i < a.vrts.size() - 1) {
-                            tmp = temp.assignTranslation(a.vrts.get(i), v.changeVector(a.vrts.get(i + 1), a.vrts.get(i)).multiply(0.5f));
+                        if (i < currVrts.size() - 1) {
+                            tmp = temp.assignTranslation(currVrts.get(i), v.changeVector(currVrts.get(i + 1), currVrts.get(i)).multiply(0.5f));
                         } else {
-                            tmp = temp.assignTranslation(a.vrts.get(i), v.changeVector(a.vrts.get(0), a.vrts.get(i)).multiply(0.5f));
+                            tmp = temp.assignTranslation(currVrts.get(i), v.changeVector(currVrts.get(0), currVrts.get(i)).multiply(0.5f));
                         }
                         v.changeVector(tmp, a.center).makeUnit().multiply(a.radius);
                         tmp = Point.translatePoint(a.center, v);
                     }
 
-                    newVerts.add(a.vrts.get(i));
-                    newVerts.add(tmp);
-                    if (!fullCircle && i == a.vrts.size() - 2) {
-                        newVerts.add(a.vrts.get(i + 1));
+                    newVrts.add(currVrts.get(i));
+                    newVrts.add(tmp);
+                    if (!fullCircle && i == currVrts.size() - 2) {
+                        newVrts.add(currVrts.get(i + 1));
                     }
                 }
-                a.vrts = newVerts;
+                currVrts.clear();
+                currVrts.addAll(newVrts);
+                newVrts.clear();
+                //a.vrts = newVerts;
                 it++;
             }
-            if (a.baseSubdivision < 0){
-                a.baseSubdivision = getSubdivisionLevel(a);
-            }
+            a.vrts.clear();
+            a.vrts.addAll(currVrts);
+            //if (a.baseSubdivision < 0){
+            //    a.baseSubdivision = getSubdivisionLevel(a);
+            //}
         } catch (Exception e){
             e.printStackTrace();
         }
@@ -151,22 +161,22 @@ public class ArcUtil {
         Arc longer = (a1.radius - a2.radius > 0.0) ? a1 : a2;
         Arc shorter = (a1 == longer) ? a2 : a1;
         if (!meshRefine) {
-            int currentLevel = getSubdivisionLevel(shorter);
-            refineArc(shorter, maxlen, false, 0, false);
-            int numOfDivs = getSubdivisionLevel(shorter) - currentLevel;
-            refineArc(longer, 0, true, numOfDivs, false);
+            //int currentLevel = getSubdivisionLevel(shorter);
+            //refineArc(shorter, maxlen, false, 0, false);
+            //int numOfDivs = getSubdivisionLevel(shorter) - currentLevel;
+            //refineArc(longer, 0, true, numOfDivs, false);
         } else {
             int currentLevel = getSubdivisionLevel(longer);
             int subdivisionDifference = currentLevel - getSubdivisionLevel(shorter);
-            refineArc(longer, maxlen, false, 0, false, null);//edgeSplit.get(longer.owner.id));
+            refineArc(longer, maxlen, false, 0, false);//, null);//edgeSplit.get(longer.owner.id));
             int numOfDivs = subdivisionDifference + getSubdivisionLevel(longer) - currentLevel;
-            refineArc(shorter, 0, true, numOfDivs, false, null);//edgeSplit.get(shorter.owner.id));
-            for (Point v : shorter.vrts){
-                v.arc = shorter;
-            }
-            for (Point v : longer.vrts){
-                v.arc = longer;
-            }
+            refineArc(shorter, 0, true, numOfDivs, false);//, null);//edgeSplit.get(shorter.owner.id));
+            //for (Point v : shorter.vrts){
+            //    v.arc = shorter;
+            //}
+            //for (Point v : longer.vrts){
+            //    v.arc = longer;
+            //}
         }
     }
 
@@ -337,18 +347,18 @@ public class ArcUtil {
         return arc;
     }
     private static List<Arc> queue = new ArrayList<>();
+    private static List<Arc> newB = new ArrayList<>(10);
     public static void linkArcs(SphericalPatch sp) {
         try {
             //List<Arc> queue = new ArrayList<>(sp.arcs);
-            if (sp.id == 3505){
-                int x = 3;
-            }
             queue.clear();
             queue.addAll(sp.arcs);
+
             boolean setValid = true;
             int loopEndIdx = 0;
             while (queue.size() > 0) {
-                ArrayList<Arc> newB = new ArrayList<>();
+                //ArrayList<Arc> newB = new ArrayList<>();
+                newB.clear();
                 Arc l = queue.get(loopEndIdx);
                 newB.add(l);
                 queue.remove(l);
@@ -432,7 +442,8 @@ public class ArcUtil {
                     //l.endEdge2.next = newB.get(0).endEdge1;
                     Boundary b = new Boundary();
                     b.patch = sp;
-                    b.arcs = newB;
+                    //b.arcs = newB;
+                    b.arcs.addAll(newB);
                     sp.boundaries.add(b);
                     ArcUtil.buildEdges(b, true);
                     for (Point v : b.vrts){
@@ -880,7 +891,7 @@ public class ArcUtil {
                         a.refined = ArcUtil.dbgCloneArc(a);
                         a.refined.owner = a.owner;
                         if (a.owner.intersectingPatches.contains(a.opposite.owner.id) && a.cuspTriangle == null) {
-                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, null);//MeshGeneration.concaveEdgeSplitMap.get(a.owner.id));
+                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false);//, null);//MeshGeneration.concaveEdgeSplitMap.get(a.owner.id));
                             a.opposite.refined = ArcUtil.cloneArc(a.refined);
                             ArcUtil.reverseArc(a.opposite.refined, true);
                             int c = 432;
@@ -911,7 +922,7 @@ public class ArcUtil {
                             int c = 4;
                         }
                         try {
-                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false, null);//MeshGeneration.concaveEdgeSplitMap.get(a.owner.id));
+                            ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false);//, null);//MeshGeneration.concaveEdgeSplitMap.get(a.owner.id));
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -1088,6 +1099,17 @@ public class ArcUtil {
                         b.nestedBoundaries.add(c);
                     }
                 }
+            }
+        }
+    }
+
+    public static void indexPoints(SphericalPatch sp){
+        sp.vertices.clear();
+        sp.nextVertexID = 0;
+        for (Boundary b : sp.boundaries){
+            for (Point p : b.vrts){
+                p._id = sp.nextVertexID++;
+                sp.vertices.add(p);
             }
         }
     }

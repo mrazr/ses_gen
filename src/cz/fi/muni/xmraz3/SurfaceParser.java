@@ -580,11 +580,14 @@ public class SurfaceParser {
 
             PatchUtil.processIntersectingConcavePatches();
 
-            ArcUtil.refineArcsOnConvexPatches();
+            ArcUtil.constructConvexBoundaries();
+            ArcUtil.refineArcsOnSphericalPatches();
+
+            //ArcUtil.refineArcsOnConvexPatches();
 
             ArcUtil.nestConvexPatchBoundaries();
 
-            ArcUtil.refineArcsOnConcavePatches();
+            //ArcUtil.refineArcsOnConcavePatches();
 
             long _parseEndTime = System.currentTimeMillis();
 
@@ -637,14 +640,15 @@ public class SurfaceParser {
             //sp.faceCount = 0;
             //sp.vertices.clear();
         }
-        ArcUtil.refineArcsOnConvexPatches();
+        //ArcUtil.refineArcsOnConvexPatches();
         for (SphericalPatch sp : Surface.triangles){
             ArcUtil.resetArcs(sp);
             sp.meshed = false;
             //sp.faces.clear();
             //sp.faceCount = 0;
         }
-        ArcUtil.refineArcsOnConcavePatches();
+        ArcUtil.refineArcsOnSphericalPatches();
+        //ArcUtil.refineArcsOnConcavePatches();
         MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
         MeshGeneration.startMeshing();
         fillCommonVertices();
@@ -1213,31 +1217,31 @@ public class SurfaceParser {
 //        }
 //    }
 
-    public static void exportCP_(SphericalPatch sp){
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/home/radoslav/objs/newB_" + sp.id + ".obj"))){
-            int off = 0;
-            for (Boundary b : sp.boundaries){
-                Boundary b_ = new Boundary();
-                for (Arc a : b.arcs){
-                    b_.arcs.add(a.refined);
-                }
-                ArcUtil.buildEdges(b_, true);
-                for (Point v : b_.vrts){
-                    bw.write("v " + v.toString());
-                    bw.newLine();
-                }
-                for (int i = 1; i <= b_.vrts.size(); ++i){
-                    if (i == b_.vrts.size()){
-                        bw.write("l " + (i + off) + " " + (1 + off));
-                    } else {
-                        bw.write("l " + (i + off) + " " + (i + 1 + off));
-                    }
-                    bw.newLine();
-                }
-                off += b_.vrts.size();
-            }
-        } catch (IOException e){
-            e.printStackTrace();
-        }
-    }
+//    public static void exportCP_(SphericalPatch sp){
+//        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/home/radoslav/objs/newB_" + sp.id + ".obj"))){
+//            int off = 0;
+//            for (Boundary b : sp.boundaries){
+//                Boundary b_ = new Boundary();
+//                for (Arc a : b.arcs){
+//                    b_.arcs.add(a.refined);
+//                }
+//                ArcUtil.buildEdges(b_, true);
+//                for (Point v : b_.vrts){
+//                    bw.write("v " + v.toString());
+//                    bw.newLine();
+//                }
+//                for (int i = 1; i <= b_.vrts.size(); ++i){
+//                    if (i == b_.vrts.size()){
+//                        bw.write("l " + (i + off) + " " + (1 + off));
+//                    } else {
+//                        bw.write("l " + (i + off) + " " + (i + 1 + off));
+//                    }
+//                    bw.newLine();
+//                }
+//                off += b_.vrts.size();
+//            }
+//        } catch (IOException e){
+//            e.printStackTrace();
+//        }
+//    }
 }

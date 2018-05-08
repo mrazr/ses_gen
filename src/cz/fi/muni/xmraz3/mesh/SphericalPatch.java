@@ -32,7 +32,7 @@ public class SphericalPatch {
     public boolean convexPatch = true;
     public boolean valid = true;
     public boolean meshed = false;
-    public boolean trimmed = false;
+    //public boolean trimmed = false;
 
     //opengl stuff
     //public int[] vao = new int[2];

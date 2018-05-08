@@ -206,23 +206,23 @@ public class MeshGeneration {
                     }
                 }
             }
-            for (Arc a : tp.convexPatchArcs){
-                if (a.refined == null){
-                    a.refined = ArcUtil.dbgCloneArc(a);
-                    a.refined.owner = a.owner;
-                    ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false);
-                }
-            }
-            for (Arc a : tp.concavePatchArcs){
-                if (a.refined == null){
-                    a.refined = ArcUtil.dbgCloneArc(a);
-                    a.refined.owner = a.owner;
-                    ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false);
-                }
-            }
+//            for (Arc a : tp.convexPatchArcs){
+//                if (a.refined == null){
+//                    a.refined = ArcUtil.dbgCloneArc(a);
+//                    a.refined.owner = a.owner;
+//                    ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false);
+//                }
+//            }
+//            for (Arc a : tp.concavePatchArcs){
+//                if (a.refined == null){
+//                    a.refined = ArcUtil.dbgCloneArc(a);
+//                    a.refined.owner = a.owner;
+//                    ArcUtil.refineArc(a.refined, SesConfig.edgeLimit, false, 0, false);
+//                }
+//            }
             if (tp.tr1 != null){
                 List<Point> top = new ArrayList<>();
-                for (int i = 0; i < tp.tr1.base.refined.vrts.size(); ++i){
+                for (int i = 0; i < tp.tr1.base.vrts.size(); ++i){
                     top.add(tp.tr1.cuspPoint);
                 }
                 Arc left = new Arc(tp.tr1.left.center, tp.tr1.left.radius);
@@ -230,10 +230,10 @@ public class MeshGeneration {
                 ArcUtil.reverseArc(left, true);
                 Arc topL = new Arc(tp.tr1.cuspPoint, 0);
                 topL.vrts.addAll(top);
-                meshToroidalPatch(tp, tp.tr1.base.refined, topL, left, tp.tr1.right, true);
+                meshToroidalPatch(tp, tp.tr1.base, topL, left, tp.tr1.right, true);
 
                 top.clear();
-                for (int i = 0; i < tp.tr2.base.refined.vrts.size(); ++i){
+                for (int i = 0; i < tp.tr2.base.vrts.size(); ++i){
                     top.add(tp.tr2.cuspPoint);
                 }
                 left = new Arc(tp.tr2.left.center, tp.tr2.left.radius);
@@ -241,15 +241,15 @@ public class MeshGeneration {
                 ArcUtil.reverseArc(left, true);
                 topL.vrts.clear();
                 topL.vrts.addAll(top);
-                meshToroidalPatch(tp, tp.tr2.base.refined, topL, left, tp.tr2.right, true);
+                meshToroidalPatch(tp, tp.tr2.base, topL, left, tp.tr2.right, true);
                 transferFacesToPatch(tp);
                 Surface.toriFacesCount += tp.faces.length / 3;
                 return;
             }
-            Arc bottom = tp.convexPatchArcs.get(0).refined;
+            Arc bottom = tp.convexPatchArcs.get(0);
             Arc left = null;
             Arc right = null;
-            Arc top = tp.convexPatchArcs.get(1).refined;
+            Arc top = tp.convexPatchArcs.get(1);
 
             //Vector a1toa2 = Point.subtractPoints(tp.convexPatchArcs.get(0).owner.sphere.center, tp.convexPatchArcs.get(1).owner.sphere.center).makeUnit();
             atom1ToAtom2.changeVector(tp.convexPatchArcs.get(0).owner.sphere.center, tp.convexPatchArcs.get(1).owner.sphere.center).makeUnit();
@@ -360,9 +360,9 @@ public class MeshGeneration {
 
                 } else {
                     //left = (Point.subtractPoints(bottom.end2, tp.concavePatchArcs.get(0).end2).sqrtMagnitude() < 0.0001) ? tp.concavePatchArcs.get(0).refined : tp.concavePatchArcs.get(1).refined;
-                    left = (Point.distance(bottom.end2, tp.concavePatchArcs.get(0).end2) < 0.0001) ? tp.concavePatchArcs.get(0).refined : tp.concavePatchArcs.get(1).refined;
+                    left = (Point.distance(bottom.end2, tp.concavePatchArcs.get(0).end2) < 0.0001) ? tp.concavePatchArcs.get(0) : tp.concavePatchArcs.get(1);
                     ArcUtil.reverseArc(left, true);
-                    right = (left == tp.concavePatchArcs.get(0).refined) ? tp.concavePatchArcs.get(1).refined : tp.concavePatchArcs.get(0).refined;
+                    right = (left == tp.concavePatchArcs.get(0)) ? tp.concavePatchArcs.get(1) : tp.concavePatchArcs.get(0);
                     if (left.vrts.size() != right.vrts.size()){
                         Arc fewer = (left.vrts.size() > right.vrts.size()) ? right : left;
                         Arc more = (left == fewer) ? right : left;
@@ -421,14 +421,15 @@ public class MeshGeneration {
                     }
                 } else {
                     if (!special) {
-                        rightVArc.add(bottom.vrts.get(bottom.vrts.size() - i - 1));
-                        /*Point mid = Point.translatePoint(top.vrts.get(i), Point.subtractPoints(bottom.vrts.get(bottom.vrts.size() - i - 1), top.vrts.get(i)).multiply(0.5f));
-                        Vector v = Point.subtractPoints(mid, currProbe).makeUnit().multiply(Double.longBitsToDouble(Main.probeRadius.get()));
-                        mid = Point.translatePoint(currProbe, v);
-                        newHelp.add(mid);*/
-                        rightVArc.add(top.vrts.get(i));
+                        //rightVArc.add(bottom.vrts.get(bottom.vrts.size() - i - 1));
+                        ///*Point mid = Point.translatePoint(top.vrts.get(i), Point.subtractPoints(bottom.vrts.get(bottom.vrts.size() - i - 1), top.vrts.get(i)).multiply(0.5f));
+                        //Vector v = Point.subtractPoints(mid, currProbe).makeUnit().multiply(Double.longBitsToDouble(Main.probeRadius.get()));
+                        //mid = Point.translatePoint(currProbe, v);
+                        //newHelp.add(mid);*/
+                        //rightVArc.add(top.vrts.get(i));
                         //newHelp = Util.refineLoop(newHelp, currProbe, Double.longBitsToDouble(Main.probeRadius.get()), Main.maxEdgeLen);
-                        rightVArc = ArcUtil.generateCircArc(bottom.vrts.get(bottom.vrts.size() - i - 1), top.vrts.get(i), currProbe, SesConfig.probeRadius, left.vrts.size() - 1, false);
+                        rightVArc.clear();
+                        rightVArc = ArcUtil.generateCircArc(bottom.vrts.get(bottom.vrts.size() - i - 1), top.vrts.get(i), currProbe, SesConfig.probeRadius, left.vrts.size() - 1, false, rightVArc);
                         if (rightVArc.size() != left.vrts.size()){
                             System.out.println("incorrect num of verts");
                         }
@@ -438,17 +439,18 @@ public class MeshGeneration {
                             }
                         }
                     } else {
-                        List<Point> vrts = ArcUtil.generateCircArc(bottom.vrts.get(bottom.vrts.size() - i - 1), top.vrts.get(i), currProbe, SesConfig.probeRadius, left.vrts.size() - 1, false);
-                        if (vrts == null){
-                            System.out.println("this is null");
-                            rightVArc.add(bottom.vrts.get(bottom.vrts.size() - i -1));
-                            rightVArc.add(top.vrts.get(i));
-                        } else {
-                            rightVArc.addAll(vrts);
-                            if (vrts.size() != left.vrts.size()){
-                                System.err.println("vrts.size != left.vrts.size()");
-                            }
-                        }
+                        rightVArc.clear();
+                        ArcUtil.generateCircArc(bottom.vrts.get(bottom.vrts.size() - i - 1), top.vrts.get(i), currProbe, SesConfig.probeRadius, left.vrts.size() - 1, false, rightVArc);
+                        //if (vrts == null){
+                        //    System.out.println("this is null");
+                        //    rightVArc.add(bottom.vrts.get(bottom.vrts.size() - i -1));
+                        //    rightVArc.add(top.vrts.get(i));
+                        //} else {
+                        //    rightVArc.addAll(vrts);
+                        //    if (vrts.size() != left.vrts.size()){
+                        //        System.err.println("vrts.size != left.vrts.size()");
+                        //    }
+                        //}
                     }
                 }
                 for (int j = 0; j < left.vrts.size() - 1; ++j) {

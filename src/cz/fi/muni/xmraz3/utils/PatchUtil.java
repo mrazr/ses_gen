@@ -294,11 +294,12 @@ public class PatchUtil {
             v1.changeVector(cusps[0], circle).makeUnit(); //toS
             v2.changeVector(cusps[1], circle).makeUnit(); //toE
             n.assignNormalVectorOf(v2, v1).makeUnit();
+            middlevrts.clear();
             if (n.dotProduct(circleN) > 0.0){
                 //System.out.println("guns n roses");
-                middlevrts = ArcUtil.generateCircArc(cusps[0], cusps[1], circle, radius, 2, true);
+                ArcUtil.generateCircArc(cusps[0], cusps[1], circle, radius, 2, true, middlevrts);
             } else {
-                middlevrts = ArcUtil.generateCircArc(cusps[0], cusps[1], circle, radius, 2, false);
+                ArcUtil.generateCircArc(cusps[0], cusps[1], circle, radius, 2, false, middlevrts);
             }
             Arc leftMid = new Arc(circle, radius);
             leftMid.owner = leftL.owner;
@@ -398,15 +399,15 @@ public class PatchUtil {
 
             SphericalPatch left = leftL.owner;
             SphericalPatch right = rightL.owner;
-            if (!left.trimmed){
-                left.trimmed = true;
-                Surface.trimmedTriangles++;
-            }
+//            if (!left.trimmed){
+//                left.trimmed = true;
+//                Surface.trimmedTriangles++;
+//            }
 
-            if (!right.trimmed){
-                right.trimmed = true;
-                Surface.trimmedTriangles++;
-            }
+//            if (!right.trimmed){
+//                right.trimmed = true;
+//                Surface.trimmedTriangles++;
+//            }
 
             if (left.intersectingPatches.contains(right.id) || right.intersectingPatches.contains(left.id)){
                 System.out.println("found al double trimming " + left.id + " " + right.id);
@@ -1503,10 +1504,10 @@ public class PatchUtil {
                         generateNewBoundaries2(sp, intersectionPoints, p, radius, sp2.id,false);
                         i++;
                         currIter++;
-                        if (!sp.trimmed){
-                            sp.trimmed = true;
-                            Surface.trimmedTriangles++;
-                        }
+//                        if (!sp.trimmed){
+//                            sp.trimmed = true;
+//                            Surface.trimmedTriangles++;
+//                        }
                     }
                 } else if (intersectionPoints.size() == 0) {
                     Boundary newB = ArcUtil.generateCircularBoundary(p, radius);

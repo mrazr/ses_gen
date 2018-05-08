@@ -1105,6 +1105,9 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     concaveVerticesCount += cp.vertices.size();
                 }
                 for (ToroidalPatch tp : Surface.rectangles){
+                    if (tp.faces == null){
+                        continue;
+                    }
                     boffsets.put(accumulator);
                     accumulator += tp.faces.length;// * 3;//tp.vrts.size() / 2;
                     toriVerticesCount += tp.faces.length;//tp.vrts.size() / 2;
@@ -1795,7 +1798,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             SurfaceParser.exportPatch(sp);
             SurfaceParser.exportCP(sp, "/home/radoslav/objs/cp_" + sp.id + ".obj");
             //SurfaceParser.exportOldFaces(sp);
-            SurfaceParser.exportCP_(sp);
+            //SurfaceParser.exportCP_(sp);
         }
 
         if (keyEvent.getKeyChar() == 'i'){
@@ -1803,7 +1806,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             SurfaceParser.exportPatch(sp);
             SurfaceParser.exportCP(sp, "/home/radoslav/objs/concp_" + sp.id + ".obj");
             //SurfaceParser.exportOldFaces(sp);
-            SurfaceParser.exportCP_(sp);
+            //SurfaceParser.exportCP_(sp);
         }
 
         if (keyEvent.getKeyChar() == ']'){
@@ -2130,6 +2133,9 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 int h = 0;
                 //selectedToriP.set(hoverAtom - convexPatches.size() - concavePatchList.size());
                 for (int i = 0; i < Surface.rectangles.size(); ++i){
+                    if (Surface.rectangles.get(i).faces == null){
+                        continue;
+                    }
                     h += Surface.rectangles.get(i).faces.length;//.vrts.size() / 2;
                     if (localCount < h){
                         hoverSelectID = i;

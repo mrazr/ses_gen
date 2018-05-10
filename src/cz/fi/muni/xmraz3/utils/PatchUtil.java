@@ -75,8 +75,10 @@ public class PatchUtil {
                 tr2.base = top;
 
                 Arc target = null;
-                for (Boundary b : left.boundaries){
-                    for (Arc a : b.arcs){
+                for (int i = 0; i < left.boundaries.size(); ++i){
+                    Boundary b = left.boundaries.get(i);
+                    for (int j = 0; j < b.arcs.size(); ++j){
+                        Arc a = b.arcs.get(j);
                         if (Point.distance(tr1.base.end2, a.end2) < 0.001){
                             target = a;
                             break;
@@ -89,8 +91,10 @@ public class PatchUtil {
                 }
                 tr1.cuspPoint = tr1.left.end1;
                 target = null;
-                for (Boundary b : right.boundaries){
-                    for (Arc a : b.arcs){
+                for (int i = 0; i < right.boundaries.size(); ++i){
+                    Boundary b = right.boundaries.get(i);
+                    for (int j = 0; j < b.arcs.size(); ++j){
+                        Arc a = b.arcs.get(j);
                         if (Point.distance(tr1.base.end1, a.end1) < 0.001){
                             target = a;
                             break;
@@ -99,8 +103,10 @@ public class PatchUtil {
                 }
                 tr1.right = target;
                 target = null;
-                for (Boundary b : right.boundaries){
-                    for (Arc a : b.arcs){
+                for (int i = 0; i < right.boundaries.size(); ++i){
+                    Boundary b = right.boundaries.get(i);
+                    for (int j = 0; j < b.arcs.size(); ++j){
+                        Arc a = b.arcs.get(j);
                         if (Point.distance(tr2.base.end2, a.end2) < 0.001){
                             target = a;
                             break;
@@ -110,8 +116,10 @@ public class PatchUtil {
                 tr2.left = target;
                 tr2.cuspPoint = tr2.left.end1;
                 target = null;
-                for (Boundary b : left.boundaries){
-                    for (Arc a : b.arcs){
+                for (int i = 0; i < left.boundaries.size(); ++i){
+                    Boundary b = left.boundaries.get(i);
+                    for (int j = 0; j < b.arcs.size(); ++j){
+                        Arc a = b.arcs.get(j);
                         if (Point.distance(tr2.base.end1, a.end1) < 0.001){
                             target = a;
                             break;
@@ -319,7 +327,7 @@ public class PatchUtil {
             //leftMid.endEdge2 = new Edge(leftMid.vrts.size() - 2, leftMid.vrts.size() - 1);
             //leftMid.endEdge2.p1 = leftMid.vrts.get(leftMid.vrts.size() - 2);
             //leftMid.endEdge2.p2 = leftMid.end2;
-            leftMid.mid = middlevrts.get(1);
+            //leftMid.mid = middlevrts.get(1);
             //leftMid.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
             ArcUtil.refineArc(leftMid, Surface.maxEdgeLen, false,0, false);
             //Util.reverserOrder(leftMid, true);
@@ -339,7 +347,7 @@ public class PatchUtil {
             //rightMid.vrts = ArcUtil.cloneArc(leftMid);
             //Util.reverserOrder(rightMid, true);
             ArcUtil.reverseArc(rightMid, true);
-            ArcUtil.replaceMiddleVertex(rightMid, new Point(leftMid.mid));
+            //ArcUtil.replaceMiddleVertex(rightMid, new Point(leftMid.mid));
             rightMid.baseSubdivision = leftMid.baseSubdivision;
             rightMid.next = rightEnd;
             rightEnd.prev = rightMid;
@@ -489,6 +497,9 @@ public class PatchUtil {
             e.printStackTrace();
         }
     }
+    private static List<Arc> newArcs = new ArrayList<>();
+    private static List<Boundary> newBs = new ArrayList<>();
+    private static Plane _p = new Plane(new Point(0, 0, 0), new Vector(0, 0, 0));
 
     public static void processIntersectingArcsOnPatch(Arc arc){
         if (!arc.intersecting || !arc.valid){
@@ -510,8 +521,10 @@ public class PatchUtil {
         }
         //Plane p1 = new Plane(arc.center, n1);
         p1.redefine(arc.center, n1);
-        for (Boundary b : sp.boundaries){
-            for (Arc k : b.arcs){
+        for (int i = 0; i < sp.boundaries.size(); ++i){
+            Boundary b = sp.boundaries.get(i);
+            for (int j = 0; j < b.arcs.size(); ++j){
+                Arc k = b.arcs.get(j);
                 if (k == arc || k == arc.prev || k == arc.next){
                     continue;
                 }
@@ -579,8 +592,10 @@ public class PatchUtil {
                     System.out.println(p.toString());
                 }*/
             //System.err.println("FOUND IT");
-            for (Boundary b : sp.boundaries){
-                for (Arc a : b.arcs){
+            for (int i = 0; i < sp.boundaries.size(); ++i){
+                Boundary b = sp.boundaries.get(i);
+                for (int j = 0; j < b.arcs.size(); ++j){
+                    Arc a = b.arcs.get(j);
                     a.valid = false;
                 }
             }
@@ -594,17 +609,20 @@ public class PatchUtil {
             Edge ed2 = new Edge(0, 0);
             ed2.p1 = f1;
             ed2.p2 = f2;*/
-            List<Boundary> newBs = new ArrayList<>();
+            //intersectionPointsList<Boundary> newBs = new ArrayList<>();
+            newBs.clear();
             Boundary b = new Boundary();
             b.patch = sp;
             Arc start = arc.next.next;
             Arc a = start;
             do {
-                Plane p = new Plane(a.center, a.normal);
+                //Plane p = new Plane(a.center, a.normal);
+                _p.redefine(a.center, a.normal);
                 boolean trim = false;
                 Point in = null;
-                for (Point i : intersectionPoints){
-                    if (Math.abs(p.checkPointLocation(i)) < 0.001 && a.isInside(i)){
+                for (int j = 0; j < intersectionPoints.size(); ++j){
+                    Point i = intersectionPoints.get(j);
+                    if (Math.abs(_p.checkPointLocation(i)) < 0.001 && a.isInside(i)){
                         trim = true;
                         if (in == null || Point.distance(in, a.end1) - Point.distance(i, a.end1) > 0.0){
                             in = i;
@@ -657,15 +675,18 @@ public class PatchUtil {
             newBs.add(b);
             b = new Boundary();
             b.patch = sp;
-            List<Arc> newArcs = new ArrayList<>();
+            newArcs.clear();
+            //List<Arc> newArcs = b.arcs;//new ArrayList<>();
             start = arc.prev.prev;
             a = start;
             do {
-                Plane p = new Plane(a.center, a.normal);
+                //Plane p = new Plane(a.center, a.normal);
+                _p.redefine(a.center, a.normal);
                 boolean trim = false;
                 Point in = null;
-                for (Point i : intersectionPoints){
-                    if (Math.abs(p.checkPointLocation(i)) < 0.001 && a.isInside(i)){
+                for (int j = 0; j < intersectionPoints.size(); ++j){
+                    Point i = intersectionPoints.get(j);
+                    if (Math.abs(_p.checkPointLocation(i)) < 0.001 && a.isInside(i)){
                         trim = true;
                         if (in == null || Point.distance(in, a.end2) - Point.distance(i, a.end2) > 0.0) {
                             in = i;
@@ -676,7 +697,7 @@ public class PatchUtil {
                     a.vrts.clear();
                     a.vrts.add(in);
                     a.vrts.add(a.end2);
-                    a.mid = null;
+                    //a.mid = null;
                     //a.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
                     a.setEndPoints(in, a.end2, false);
                     ArcUtil.refineArc(a, Surface.maxEdgeLen, false,0, false);
@@ -686,7 +707,7 @@ public class PatchUtil {
                     arc.vrts.clear();
                     arc.vrts.add(arc.end1);
                     arc.vrts.add(in);
-                    arc.mid = null;
+                    //arc.mid = null;
                     //arc.refineLoop(Main.maxEdgeLen, 0.0, false, 0, false);
                     arc.setEndPoints(arc.end1, in, false);
                     ArcUtil.refineArc(arc, Surface.maxEdgeLen, false,0, false);
@@ -848,7 +869,7 @@ public class PatchUtil {
         }
         ArcUtil.buildEdges(b, true);
         newBS.add(b);
-        int kratky = shortArcs(b);
+        //int kratky = shortArcs(b);
         return in1Arc.bOwner;
     }
     private static List<Boundary> newBS = new ArrayList<>();
@@ -1251,7 +1272,8 @@ public class PatchUtil {
         ArcUtil.buildEdges(b, true);
         newBS.add(b);
         int kratky  = shortArcs(b);
-        for (Boundary b_ : toRemove2){
+        for (int i = 0; i < toRemove2.size(); ++i){
+            Boundary b_ = toRemove2.get(i);
             if (!toRemove.contains(b_)){
                 toRemove.add(b_);
             }
@@ -1374,12 +1396,14 @@ public class PatchUtil {
                 //}
 
                 updatePatchBoundaries(sp, toRemove, newBS);
-                for (Boundary b : newBS){
+                for (int j = 0; j < newBS.size(); ++j){
+                    Boundary b = newBS.get(j);
                     if (b.nestedBoundaries.size() > 0){
                         continue;
                     }
                     boolean valid = false;
-                    for (Arc a : b.arcs){
+                    for (int k = 0; k < b.arcs.size(); ++k){
+                        Arc a = b.arcs.get(k);
                         if (a.cuspTriangle != null || a.torus != null){
                             valid = true;
                             break;
@@ -1415,14 +1439,38 @@ public class PatchUtil {
         SurfaceParser.exportCircle(currCirc, currRad, currInt.get(0), "/home/radoslav/objs/cir_" + curr.id + "_" + currIter + ".obj");
         SurfaceParser.exportPoints(currInt, currCirc.v, "/home/radoslav/objs/poi_" + curr.id + "_" + currIter + ".obj");
     }
+
+    private static Boundary _b = new Boundary();
+    private static Arc _a1 = new Arc(new Point(0, 0, 0), 1.0);
+    private static Arc _a2 = new Arc(new Point(0, 0, 0), 1.0);
+    private static List<Point> vrtsPool = new ArrayList<>(17);
+    private static List<Neighbor<double[], SphericalPatch>> neighbors = new ArrayList<>(50);
+
     private static void trimConcavePatch(SphericalPatch sp){
         //if (!planePoolInitialized){
         //    for (int i = 0; i < 50; ++i){
         //        planePool.add(i, new Plane(new Point(0, 0, 0), new Vector(0, 0, 0)));
         //    }
         //}
+        if (vrtsPool.size() == 0){
+            for (int i = 0; i < 17; ++i){
+                vrtsPool.add(new Point(0, 0, 0));
+            }
+            _b.arcs.add(_a1);
+            _b.arcs.add(_a2);
+            //Arc fff = sp.boundaries.get(0).arcs.get(0);
+            //Arc _bah = ArcUtil.cloneArc(fff);
+            //_bah.vrts.clear();
+            //_bah.vrts.add(_bah.end1);
+            //_bah.end2 = Point.translatePoint(_bah.center, _bah.toEnd1.multiply(-_bah.radius));
+            //_bah.vrts.add(_bah.end2);
+            //_bah.setEndPoints(_bah.end1, _bah.end2, false);
+            //ArcUtil.refineArc(_bah, SesConfig.edgeLimit, false, 0, false);
+            //System.out.println("here she comes, watch out boy, shell chew you up, shes a manEATER");
+        }
         try {
-            List<Neighbor<double[], SphericalPatch>> neighbors = new ArrayList<>();
+            neighbors.clear();
+            //List<Neighbor<double[], SphericalPatch>> neighbors = new ArrayList<>();
             Surface.probeTree.range(sp.sphere.center.getData(), 2 * SesConfig.probeRadius, neighbors); //causes slf4j warning
             Collections.sort(neighbors, new Comparator<Neighbor<double[], SphericalPatch>>() {
                 @Override
@@ -1434,7 +1482,7 @@ public class PatchUtil {
                 }
             });
             boolean trimmed = false;
-            int i = 0;
+            //int i = 0;
             planes.put(sp.id, new ArrayList<>());
             for (Boundary b : sp.boundaries){
                 for (Arc a : b.arcs){
@@ -1502,7 +1550,7 @@ public class PatchUtil {
                         sp.intersectingPatches.add(sp2.id);
 
                         generateNewBoundaries2(sp, intersectionPoints, p, radius, sp2.id,false);
-                        i++;
+                        //i++;
                         currIter++;
 //                        if (!sp.trimmed){
 //                            sp.trimmed = true;
@@ -1510,10 +1558,13 @@ public class PatchUtil {
 //                        }
                     }
                 } else if (intersectionPoints.size() == 0) {
-                    Boundary newB = ArcUtil.generateCircularBoundary(p, radius);
+                    //Boundary newB = ArcUtil.generateCircularBoundary(p, radius);
+                    ArcUtil.redefineBoundary(_b, p, radius, vrtsPool, 45);
+                    ArcUtil.buildEdges(_b, true);
                     boolean nest = false;
                     List<Boundary> removeFromSP = new ArrayList<>();
                     List<Boundary> processed = new ArrayList<>();
+                    Boundary _newB = null;
                     for (Boundary b : sp.boundaries){
                         if (removeFromSP.contains(b) || processed.contains(b)){
                             continue;
@@ -1521,23 +1572,39 @@ public class PatchUtil {
                         boolean isInside = true;
                         for (Arc a : b.arcs){
                             Plane rho = new Plane(a.center, a.normal);
-                            isInside = isInside && newB.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0);
+                            isInside = isInside && _b.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0); //newB -> _b
                         }
                         if (isInside){
                             for (Boundary nb : b.nestedBoundaries){
                                 for (Arc a : nb.arcs){
                                     Plane rho = new Plane(a.center, a.normal);
-                                    isInside = isInside && newB.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0);
+                                    isInside = isInside && _b.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0);
                                 }
                             }
                             if (isInside) {
-                                newB.nestedBoundaries.add(b);
-                                newB.nestedBoundaries.addAll(b.nestedBoundaries);
-                                for (Boundary nb : newB.nestedBoundaries) {
-                                    nb.nestedBoundaries.add(newB);
+                                _newB = new Boundary();
+                                Point _center = new Point(_b.arcs.get(0).center);
+                                Arc _a1 = ArcUtil.cloneArc(_b.arcs.get(0));
+                                //Arc _a2 = ArcUtil.cloneArc(_b.arcs.get(1));
+                                _a1.center = _center;
+                                Arc _a2 = new Arc(_a1.center, _a1.radius);
+                                _a2.setEndPoints(_a1.end2, _a1.end1, false);
+                                _a2.setNormal(_a1.normal);
+                                _a2.vrts.add(_a2.end1);
+                                for (int _i = 1; _i < _b.arcs.get(1).vrts.size() - 1; ++_i){
+                                    _a2.vrts.add(new Point(_b.arcs.get(1).vrts.get(_i)));
+                                }
+                                _a2.vrts.add(_a2.end2);
+                                _newB.arcs.add(_a1);
+                                _newB.arcs.add(_a2);
+                                ArcUtil.buildEdges(_newB, true);
+                                _newB.nestedBoundaries.add(b);
+                                _newB.nestedBoundaries.addAll(b.nestedBoundaries);
+                                for (Boundary nb : _newB.nestedBoundaries) {
+                                    nb.nestedBoundaries.add(_newB);
                                 }
                                 toRemove.clear();
-                                for (Boundary nb : newB.nestedBoundaries){
+                                for (Boundary nb : _newB.nestedBoundaries){
                                     for (Arc a : nb.arcs){
                                         if (!a.vrts.stream().allMatch(v -> p.checkPointLocation(v) > 0.0)){
                                             toRemove.add(nb);
@@ -1545,20 +1612,20 @@ public class PatchUtil {
                                         }
                                     }
                                 }
-                                newB.nestedBoundaries.removeAll(toRemove);
+                                _newB.nestedBoundaries.removeAll(toRemove);
                                 removeFromSP.addAll(toRemove);
-                                for (Boundary nb : newB.nestedBoundaries){
+                                for (Boundary nb : _newB.nestedBoundaries){
                                     nb.nestedBoundaries.removeAll(toRemove);
                                 }
-                                processed.addAll(newB.nestedBoundaries);
+                                processed.addAll(_newB.nestedBoundaries);
                                 nest = true;
                             }
                         }
                     }
                     if (nest){
-                        newB.patch = sp;
+                        _newB.patch = sp;
                         sp.boundaries.removeAll(removeFromSP);
-                        sp.boundaries.add(newB);
+                        sp.boundaries.add(_newB);
                     }
 
                 }
@@ -1580,8 +1647,10 @@ public class PatchUtil {
         //Plane p = new Plane(circle, n);
         circleN.changeVector(sp.sphere.center, circle).makeUnit();
         p1.redefine(circle, circleN);
-        for (Boundary b : sp.boundaries){
-            for (Arc a : b.arcs){
+        for (int i = 0; i < sp.boundaries.size(); ++i){
+            Boundary b = sp.boundaries.get(i);
+            for (int j = 0; j < b.arcs.size(); ++j){
+                Arc a = b.arcs.get(j);
                 /*if (a.torus != null || exclude != null && (a == exclude || a == exclude.next || a == exclude.prev)){
                         continue;
                 }*/
@@ -1668,7 +1737,8 @@ public class PatchUtil {
 
     private static Point findOptimalPoint(List<Point> points, List<Point> usedPoints, SphericalPatch sp, Plane plane){
         try {
-            for (Point p : points) {
+            for (int i = 0; i < points.size(); ++i) {
+                Point p = points.get(i);
                 if (usedPoints.contains(p)){
                     continue;
                 }
@@ -1707,14 +1777,16 @@ public class PatchUtil {
             invalid.clear();
             findIntersectionPoints(sp, arc.center, arc.radius, intersectionPoints, exclude);
             //List<Point> invalid = new ArrayList<>();
-            for (Point v : intersectionPoints){
+            for (int i = 0; i < intersectionPoints.size(); ++i){
+                Point v = intersectionPoints.get(i);
                 if (Point.distance(v, arc.prev.end1) < 0.0015 || Point.distance(v, arc.next.end2) < 0.0015){
                     invalid.add(v);
                 }
             }
             intersectionPoints.removeAll(invalid);
             if (intersectionPoints.size() > 1){ //theoretically at most 2 intersection points should be encountered(and in most cases), 1 point is special case which is not handled right now(it is rare)
-                for (Boundary b : sp.boundaries){
+                for (int i = 0; i < sp.boundaries.size(); ++i){
+                    Boundary b = sp.boundaries.get(i);
                     for (Arc a : b.arcs){
                         a.valid = false;
                     }
@@ -1992,65 +2064,7 @@ public class PatchUtil {
         return num;
     }
 
-    private static List<Point> patchSplit(List<Point> intersectionPoints, Point origin, Point start, SphericalPatch sp, Plane circle){
-        boolean init = true;
-        Point end = null;
-        Arc startArc = null;
-        Arc endArc = null;
-        Arc originArc = ArcUtil.findContainingArc(origin, circle, sp, null);
-        Arc a = null;
-        //List<Point> usablePoints = new ArrayList<>(intersectionPoints);
-        //List<Point> usedPoints = new ArrayList<>();
-        usablePoints.clear();
-        usablePoints.addAll(intersectionPoints);
-        usedPoints.clear();
-        //usablePoints.remove(origin);
-        //usedPoints.add(origin);
-        Point predecessor = ArcUtil.findClosestPointOnCircle(intersectionPoints, origin, false, circle.p, circle.v, false);
-        int involvedPoints = 2;
-        do {
 
-            if (init) {
-                usablePoints.remove(start);
-                usedPoints.add(start);
-                end = ArcUtil.findClosestPointOnCircle(usablePoints, start, false, circle.p, circle.v, true);
-                startArc = ArcUtil.findContainingArc(start, circle, sp, null);
-                endArc = ArcUtil.findContainingArc(end, circle, sp, null);
-                if (startArc.bOwner != endArc.bOwner){
-                    return usedPoints;
-                }
-                involvedPoints++;
-                a = (startArc == endArc) ? ((ArcUtil.getOrder(startArc, start, end) < 0) ? startArc : startArc.next) : startArc.next;
-                init = false;
-
-            } else {
-                for (Point p : usablePoints){
-                    if (a.isInside(p)) {
-                        start = p;
-                        init = true;
-                        break;
-                    }
-                }
-                if (!init) {
-                    a = a.next;
-                }
-            }
-
-            if (a == endArc){
-                if (endArc == originArc){
-                    return usedPoints;
-                }
-                start = end;
-                init = true;
-            }
-
-            if (a == originArc){
-                return usedPoints;
-            }
-
-
-        } while (true);
-    }
     private static List<Point> usedPoints = new ArrayList<>();
     private static List<Point> usablePoints = new ArrayList<>();
     private static List<Point> usedPoints2 = new ArrayList<>();
@@ -2120,8 +2134,10 @@ public class PatchUtil {
     }
 
     private static boolean checkBoundaryOwn(SphericalPatch sp){
-        for (Boundary b : sp.boundaries){
-            for (Arc a : b.arcs){
+        for (int i = 0; i < sp.boundaries.size(); ++i){
+            Boundary b = sp.boundaries.get(i);
+            for (int j = 0; j < b.arcs.size(); ++j){
+                Arc a = b.arcs.get(j);
                 if (a.bOwner != b){
                     return true;
                 }
@@ -2140,34 +2156,41 @@ public class PatchUtil {
     }
 
     private static void updatePatchBoundaries(SphericalPatch sp, List<Boundary> toRemove, List<Boundary> toAdd){
-        for (Boundary b : toRemove){
-            for (Boundary nb : b.nestedBoundaries){
+        for (int i = 0; i < toRemove.size(); ++i){
+            Boundary b = toRemove.get(i);
+            for (int j = 0; j < b.nestedBoundaries.size(); ++j){
+                Boundary nb = b.nestedBoundaries.get(j);
                 nb.nestedBoundaries.remove(b);
             }
         }
-        for (Boundary b : toRemove){
+        for (int i = 0; i < toRemove.size(); ++i){
+            Boundary b = toRemove.get(i);
             if (b.mergeSplit.size() == 1){
                 Boundary b2 = b.mergeSplit.get(0);
                 if (b2.mergeSplit.size() == 1){
-                    for (Boundary nb : b.nestedBoundaries){
+                    for (int j = 0; j < b.nestedBoundaries.size(); ++j){
+                        Boundary nb = b.nestedBoundaries.get(j);
                         if (areNested(b2, nb)){
                             b2.nestedBoundaries.add(nb);
                             nb.nestedBoundaries.add(b2);
                         } else {
                             sp.boundaries.remove(nb);
-                            for (Boundary nb_ : nb.nestedBoundaries){
+                            for (int k = 0; k < nb.nestedBoundaries.size(); ++k){
+                                Boundary nb_ = nb.nestedBoundaries.get(k);
                                 nb_.nestedBoundaries.remove(nb);
                             }
                         }
                     }
                 } else if (b2.mergeSplit.size() > 1){
-                    for (Boundary nb : b.nestedBoundaries){
+                    for (int j = 0; j < b.nestedBoundaries.size(); ++j){
+                        Boundary nb = b.nestedBoundaries.get(j);
                         if (areNested(b2, nb)){
                             b2.nestedBoundaries.add(nb);
                             nb.nestedBoundaries.add(b2);
                         } else {
                             sp.boundaries.remove(nb);
-                            for (Boundary nb_ : nb.nestedBoundaries){
+                            for (int k = 0; k < nb.nestedBoundaries.size(); ++k){
+                                Boundary nb_ = nb.nestedBoundaries.get(k);
                                 nb_.nestedBoundaries.remove(nb);
                             }
                         }
@@ -2176,14 +2199,17 @@ public class PatchUtil {
                 }
                 b2.mergeSplit.stream().forEach(b_ -> b_.mergeSplit.clear());
             } else if (b.mergeSplit.size() > 1){
-                for (Boundary newB : b.mergeSplit){
-                    for (Boundary nb : b.nestedBoundaries){
+                for (int j = 0; j < b.mergeSplit.size(); ++j){
+                    Boundary newB = b.mergeSplit.get(j);
+                    for (int k = 0; k < b.nestedBoundaries.size(); ++k){
+                        Boundary nb = b.nestedBoundaries.get(k);
                         if (areNested(newB, nb)){
                             newB.nestedBoundaries.add(nb);
                             nb.nestedBoundaries.add(newB);
                         } else {
                             sp.boundaries.remove(nb);
-                            for (Boundary nb_ : nb.nestedBoundaries){
+                            for (int l = 0; l < nb.nestedBoundaries.size(); ++l){
+                                Boundary nb_ = nb.nestedBoundaries.get(l);
                                 nb_.nestedBoundaries.remove(nb);
                             }
                         }
@@ -2296,9 +2322,12 @@ public class PatchUtil {
     }
 
     private static boolean pointsLieOnPatch(SphericalPatch sp, List<Point> points){
-        for (Boundary b : sp.boundaries){
-            for (Arc a : b.arcs){
-                for (Point p : points){
+        for (int i = 0; i < sp.boundaries.size(); ++i){
+            Boundary b = sp.boundaries.get(i);
+            for (int j = 0; j < b.arcs.size(); ++j){
+                Arc a = b.arcs.get(j);
+                for (int k = 0; k < points.size(); ++k){
+                    Point p = points.get(k);
                     if (a.isInside(p)){
                         return true;
                     }

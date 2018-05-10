@@ -154,7 +154,7 @@ public class Vector {
     }
     private static double[] data = new double[3];
     private static double[] ndata = new double[3];
-    public Vector getPerpendicularVector(){
+    public Vector getPerpendicularVector(Vector in){
         int zero = -1;
         int first = -1;
         int second = -1;
@@ -204,11 +204,12 @@ public class Vector {
                 break;
             }
         }
-        Vector v = new Vector(ndata);
-        if (Math.abs(v.dotProduct(this)) > 0.0001){
+        //Vector v = new Vector(ndata);
+        in.changeVector(ndata[0], ndata[1], ndata[2]);
+        if (Math.abs(in.dotProduct(this)) > 0.0001){
             System.out.println("something wrong");
         }
-        return v;
+        return in;
     }
 
     public Vector changeVector(Point p, Point q){

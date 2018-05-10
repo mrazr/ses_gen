@@ -83,6 +83,8 @@ public class AdvancingFrontMethod {
         return Point.translatePoint(origin, dir);
     }
 
+    private float[] nvector = new float[3];
+    private float[] _vecToRotate = new float[3];
     private Point generateNewTestPoint(Vector normal, Vector edgeVector, double atomradius, double height, Point origin, boolean t){
         //double cosA = Math.cos(Math.PI - Math.acos((2 * Math.pow(atomradius, 2) - Math.pow(height, 2)) / (2 * Math.pow(atomradius, 2))));
         double cosA = (2 * Math.pow(atomradius, 2) - Math.pow(height, 2)) / (2 * Math.pow(atomradius, 2));
@@ -94,8 +96,14 @@ public class AdvancingFrontMethod {
         /*Vector ector = new Vector(edgeVector);
         ector.makeUnit();*/
         aV1.changeVector(edgeVector).makeUnit();
-        q.setFromAngleNormalAxis(-1.0f * (float)angle, aV1.getFloatData());
-        float[] nvector = new float[] {(float)normal.getX(), (float)normal.getY(), (float)normal.getZ()};
+        _vecToRotate[0] = (float)aV1.getX();
+        _vecToRotate[1] = (float)aV1.getY();
+        _vecToRotate[2] = (float)aV1.getZ();
+        q.setFromAngleNormalAxis(-1.0f * (float)angle, _vecToRotate);
+        //float[] nvector = new float[] {(float)normal.getX(), (float)normal.getY(), (float)normal.getZ()};
+        nvector[0] = (float)normal.getX();
+        nvector[1] = (float)normal.getY();
+        nvector[2] = (float)normal.getZ();
         nvector = q.rotateVector(nvector, 0, nvector, 0);
         //Vector v = new Vector(nvector[0], nvector[1], nvector[2]);
         //v.makeUnit().multiply(height);
@@ -269,15 +277,18 @@ public class AdvancingFrontMethod {
         facets = new ArrayList<>();
         nodes = new ArrayList<>();
         pastFacets = new ArrayList<>();
-        nodeEdgeMap = new ArrayList<>();
+        nodeEdgeMap = new ArrayList<>(150);
         processedBoundaries = new ArrayList<>();
         newPoints = new ArrayList<>();
         loops = new LinkedList<>();
-        for (int i = 0; i < 150; ++i){
+        for (int i = 0; i < 500; ++i){
             edgePool.add(i, new Edge(0, 0));
         }
-        for (int i = 0; i < 150; ++i){
+        for (int i = 0; i < 300; ++i){
             facePool.add(i, new Face(0, 0, 0));
+        }
+        for (int i = 0; i < 150; ++i){
+            nodeEdgeMap.add(new ArrayList<>());
         }
     }
 
@@ -520,7 +531,8 @@ public class AdvancingFrontMethod {
     }
 
     private boolean checkForIntersectingEdges(Edge e1, Edge e2, List<Edge> toInspect, List<Edge> toIgnore){
-        for (Edge k : toInspect){
+        for (int i = 0; i < toInspect.size(); ++i){
+            Edge k = toInspect.get(i);//
             if (toIgnore.contains(k)){
                 continue;
             }
@@ -610,12 +622,12 @@ public class AdvancingFrontMethod {
 //        //atom.vertices.addAll(nodes);
 //    }
 
-    public List<Edge> edgePool = new ArrayList<>(150);
+    public List<Edge> edgePool = new ArrayList<>(500);
     private int nextEdgeID = 0;
     private int nextAFMID = 0;
-    private List<Face> facePool = new ArrayList<>(150);
+    private List<Face> facePool = new ArrayList<>(300);
     public int nextFaceID = 0;
-    //private int nextNEMID = 0;
+    private int nextNEMID = 0;
 
     private void initializeAFMDataStructures(){
         if (atomComplete){
@@ -631,9 +643,11 @@ public class AdvancingFrontMethod {
         nextEdgeID = 0;
         nextAFMID = 0;
         //nextFaceID = 0;
-        nodeEdgeMap.clear();
+        //nodeEdgeMap.clear();
+        nextNEMID = 0;
         Boundary b = null;
-        for (Boundary c : patch.boundaries){
+        for (int i = 0; i < patch.boundaries.size(); ++i){
+            Boundary c = patch.boundaries.get(i);
             if (!processedBoundaries.contains(c)){
                 b = c;
                 break;
@@ -645,7 +659,8 @@ public class AdvancingFrontMethod {
         } catch (Exception e){
             e.printStackTrace();
         }
-        for (Boundary c : patch.boundaries){
+        for (int i = 0; i < patch.boundaries.size(); ++i){
+            Boundary c = patch.boundaries.get(i);
             if (processedBoundaries.contains(c)){
                 continue;
             }
@@ -660,16 +675,24 @@ public class AdvancingFrontMethod {
         toProcess.clear();
         toProcess.add(b);
         toProcess.addAll(b.nestedBoundaries);
-        for (Boundary c : toProcess) {
+        for (int i = 0; i < toProcess.size(); ++i) {
+            Boundary c = toProcess.get(i);
             boundaryEdges.clear();
             //ArcUtil.buildEdges(c, true, 0.5);
-            for (Point p : c.vrts){
-                p.afmIdx = nodeEdgeMap.size();
-                nodeEdgeMap.add(new ArrayList<>());
+            for (int j = 0; j < c.vrts.size(); ++j){
+                Point p = c.vrts.get(j);
+                if (nextNEMID >= nodeEdgeMap.size()){
+                    nodeEdgeMap.add(new ArrayList<>());
+                }
+                //p.afmIdx = nodeEdgeMap.size();
+                p.afmIdx = nextNEMID;
+                //nodeEdgeMap.add(new ArrayList<>());
+                nodeEdgeMap.get(nextNEMID).clear();
+                nextNEMID++;
             }
-            for (int i = 0; i < c.vrts.size(); ++i){
-                Point p1 = c.vrts.get(i);
-                Point p2 = (i < c.vrts.size() - 1) ? c.vrts.get(i + 1) : c.vrts.get(0);
+            for (int j = 0; j < c.vrts.size(); ++j){
+                Point p1 = c.vrts.get(j);
+                Point p2 = (j < c.vrts.size() - 1) ? c.vrts.get(j + 1) : c.vrts.get(0);
                 if (nextEdgeID >= edgePool.size()){
                     edgePool.add(new Edge(0, 0));
                 }
@@ -684,9 +707,9 @@ public class AdvancingFrontMethod {
                 //facets.add(e);
             }
             nodes.addAll(c.vrts);
-            for (int i = 0; i < boundaryEdges.size(); ++i){
-                Edge e1 = boundaryEdges.get(i);
-                Edge e2 = (i < boundaryEdges.size() - 1) ? boundaryEdges.get(i + 1) : boundaryEdges.get(0);
+            for (int j = 0; j < boundaryEdges.size(); ++j){
+                Edge e1 = boundaryEdges.get(j);
+                Edge e2 = (j < boundaryEdges.size() - 1) ? boundaryEdges.get(j + 1) : boundaryEdges.get(0);
                 e1.next = e2;
                 e2.prev = e1;
             }
@@ -719,6 +742,8 @@ public class AdvancingFrontMethod {
     }
 
     private List<Edge> boundaryEdges = new ArrayList<>();
+    private List<Boundary> bs = new ArrayList<>();
+    private List<Point> trueCands = new ArrayList<>();
 
     public void _initializeConcaveAFM2(SphericalPatch cp, double mAlpha, double dTolerance, double height, double edgeLength, double baseLength){
         if (this.patch == null || cp != this.patch){
@@ -736,10 +761,11 @@ public class AdvancingFrontMethod {
         //meshVertList = cp.vertices;
         facets.clear();
         nodes.clear();
-        nodeEdgeMap.clear();
+        //nodeEdgeMap.clear();
         pastFacets.clear();
         nextEdgeID = 0;
         nextAFMID = 0;
+        nextNEMID = 0;
         //nextFaceID = 0;
         loops.clear();
         newPoints.clear();
@@ -760,26 +786,36 @@ public class AdvancingFrontMethod {
 
         //vrtsOffset = 0;
         b = cp.boundaries.get(0);
-        for (Boundary c : cp.boundaries){
+        for (int i = 0; i < cp.boundaries.size(); ++i){
+            Boundary c = cp.boundaries.get(i);
             if (!processedBoundaries.contains(c)){
                 b = c;
                 break;
             }
         }
-        List<Boundary> bs = new ArrayList<>();
+        //List<Btundary> bs = new ArrayList<>();
+
+        bs.clear();
         bs.add(b);
         bs.addAll(b.nestedBoundaries);
         processedBoundaries.add(b);
         processedBoundaries.addAll(b.nestedBoundaries);
-        for (Boundary bb : bs) {
+        for (int i = 0; i < bs.size(); ++i) {
+            Boundary bb =  bs.get(i);
             boundaryEdges.clear();
-            for (Point p : bb.vrts){
-                p.afmIdx = nodeEdgeMap.size();
-                nodeEdgeMap.add(new ArrayList<>());
+            for (int j = 0; j < bb.vrts.size(); ++j){
+                Point p = bb.vrts.get(j);
+                if (nextNEMID >= nodeEdgeMap.size()){
+                    nodeEdgeMap.add(new ArrayList<>());
+                }
+                //p.afmIdx = nodeEdgeMap.size();
+                p.afmIdx = nextNEMID;
+                nodeEdgeMap.get(nextNEMID).clear();
+                nextNEMID++;
             }
-            for (int i = 0; i < bb.vrts.size(); ++i){
-                Point p1 = bb.vrts.get(i);
-                Point p2 = (i < bb.vrts.size() - 1) ? bb.vrts.get(i + 1) : bb.vrts.get(0);
+            for (int j = 0; j < bb.vrts.size(); ++j){
+                Point p1 = bb.vrts.get(j);
+                Point p2 = (j < bb.vrts.size() - 1) ? bb.vrts.get(j + 1) : bb.vrts.get(0);
                 if (nextEdgeID >= edgePool.size()){
                     edgePool.add(new Edge(0, 0));
                 }
@@ -794,9 +830,9 @@ public class AdvancingFrontMethod {
                 //facets.add(e);
             }
             nodes.addAll(bb.vrts);
-            for (int i = 0; i < boundaryEdges.size(); ++i){
-                Edge e1 = boundaryEdges.get(i);
-                Edge e2 = (i < boundaryEdges.size() - 1) ? boundaryEdges.get(i + 1) : boundaryEdges.get(0);
+            for (int j = 0; j < boundaryEdges.size(); ++j){
+                Edge e1 = boundaryEdges.get(j);
+                Edge e2 = (j < boundaryEdges.size() - 1) ? boundaryEdges.get(j + 1) : boundaryEdges.get(0);
                 e1.next = e2;
                 e2.prev = e1;
             }
@@ -961,7 +997,8 @@ public class AdvancingFrontMethod {
                     }*/
 
                     boolean intersects = false;
-                    for (Edge ek : facets){
+                    for (int i = 0; i < facets.size(); ++i){
+                        Edge ek = facets.get(i);
                         if (ek == e || ek == e.prev || ek == e.next || ek.loopID != activeLoop){
                             continue;
                         }
@@ -1002,7 +1039,8 @@ public class AdvancingFrontMethod {
                         //eL.p1.afmSelect = 1;
                     }*/
                     boolean intersects = false;
-                    for (Edge ek : facets){
+                    for (int i = 0; i < facets.size(); ++i){
+                        Edge ek = facets.get(i);
                         if (ek == e || ek == e.prev || ek == e.next || ek.loopID != activeLoop){
                             continue;
                         }
@@ -1031,7 +1069,7 @@ public class AdvancingFrontMethod {
             //    System.out.println("Limit angle: " + Math.toDegrees(this.minAlpha));
 //
             //}
-            List<Point> trueCands = new ArrayList<>();
+            //List<Point> trueCands = new ArrayList<>();
             trueCands.clear();
             //THIS IS WHERE criterionPointEdgeDistance() was
             if (candidates.isEmpty() || true) {
@@ -1058,7 +1096,8 @@ public class AdvancingFrontMethod {
             //if (verbose && patch.faces.size() > 16){
             //    System.out.println("Cand size: " + candidates.size());
             //}
-            for (Point p : candidates){
+            for (int i = 0; i < candidates.size(); ++i){
+                Point p = candidates.get(i);
                 if (computeAngle(aV1.changeVector(p, e.p1).makeUnit(), aV2.changeVector(e.p2, e.p1).makeUnit(), n1) > Math.toRadians(SesConfig.minAlpha)
                         || computeAngle(aV1.changeVector(e.p1, e.p2).makeUnit(), aV2.changeVector(p, e.p2).makeUnit(), n2) > Math.toRadians(SesConfig.minAlpha)){// || (Math.abs(midNormal.dotProduct(computeTriangleNormal(e.p1, e.p2, p))) < 0.0)) {
                     continue;
@@ -1089,7 +1128,8 @@ public class AdvancingFrontMethod {
                 while (candidates.contains(e.p2)){
                     candidates.remove(e.p2);
                 }
-                for (Point c : candidates){
+                for (int i = 0; i < candidates.size(); ++i){
+                    Point c = candidates.get(i);
                     if (Math.abs(aV1.changeVector(c, e.p1).makeUnit().dotProduct(aV2.changeVector(c, e.p2).makeUnit()) - 1.0) < 0.01){
                         removePoints.add(c);
                     }
@@ -1110,7 +1150,8 @@ public class AdvancingFrontMethod {
                             //eL.p1 = e.p1;
                             //eL.p2 = e.next.p2;
                             boolean intersects = false;
-                            for (Edge ek : facets){
+                            for (int i = 0; i < facets.size(); ++i){
+                                Edge ek = facets.get(i);
                                 if (ek == e || ek == e.prev || ek == e.next || ek.loopID != activeLoop){
                                     continue;
                                 }
@@ -1137,7 +1178,8 @@ public class AdvancingFrontMethod {
                             //eL.p1 = e.p2;
                             //eL.p2 = e.prev.p1;
                             boolean intersects = false;
-                            for (Edge ek : facets){
+                            for (int i = 0; i < facets.size(); ++i){
+                                Edge ek = facets.get(i);
                                 if (ek == e || ek == e.prev || ek == e.next || ek.loopID != activeLoop){
                                     continue;
                                 }
@@ -1583,7 +1625,7 @@ public class AdvancingFrontMethod {
             //    System.out.println("Limit angle: " + Math.toDegrees(this.minAlpha));
 //
             //}
-            List<Point> trueCands = new ArrayList<>();
+            //List<Point> trueCands = new ArrayList<>();
             trueCands.clear();
             //THIS IS WHERE criterionPointEdgeDistance() was
             if (candidates.isEmpty() || true) {
@@ -1838,7 +1880,8 @@ public class AdvancingFrontMethod {
     }
 
     private void criterionPointEdgeDistance(){
-        for (Edge ef : facets){
+        for (int i = 0; i < facets.size(); ++i){
+            Edge ef = facets.get(i);
             if (ef == e){ // || ef.loopID != activeLoop){
                 continue;
             }
@@ -1897,7 +1940,8 @@ public class AdvancingFrontMethod {
     }
 
     private void pointEdgeDistanceCriterion(Point p){
-        for (Edge eF : facets){
+        for (int i = 0; i < facets.size(); ++i){
+            Edge eF = facets.get(i);
             if (eF == e || eF.loopID != activeLoop){// || eF.loopID != activeLoop){
                 continue;
             }
@@ -1931,7 +1975,8 @@ public class AdvancingFrontMethod {
     }
 
     private void pointPointDistanceCriterion(Point p){
-        for (Point p2 : nodes){
+        for (int i = 0; i < nodes.size(); ++i){
+            Point p2 = nodes.get(i);
             if (p2 == e.p1 || p2 == e.p2){
                 continue;
             }
@@ -1960,8 +2005,13 @@ public class AdvancingFrontMethod {
         //    System.out.println(patch.faces.size() + ". face by new face");
         //}
         Point pTest = new Point(testPoint);
-        pTest.afmIdx = nodeEdgeMap.size();
-        nodeEdgeMap.add(new ArrayList<>());
+        pTest.afmIdx = nextNEMID;//nodeEdgeMap.size();
+        if (nextNEMID >= nodeEdgeMap.size()){
+            nodeEdgeMap.add(new ArrayList<>());
+        }
+        //nodeEdgeMap.add(new ArrayList<>());
+        nodeEdgeMap.get(nextNEMID).clear();
+        nextNEMID++;
         nodes.add(pTest);
         pTest._id = patch.nextVertexID++;
         patch.vertices.add(pTest);
@@ -2232,13 +2282,22 @@ public class AdvancingFrontMethod {
         faceGenerated = true;
     }
 
+    private List<Edge> relevantEdges = new ArrayList<>();
     private void _generateBridgeFace(Point pt){
         ///if (verbose) {
         ///    System.out.println(patch.faces.size() + ". face constructed with bridge edge");
         ///}
         List<Edge> pointEdges = nodeEdgeMap.get(pt.afmIdx);
         if (pointEdges.size() != 2){
-            List<Edge> relevantEdges = pointEdges.stream().filter(f -> f.loopID == activeLoop).collect(Collectors.toList());
+            relevantEdges.clear();
+            //List<Edge> relevantEdges = pointEdges.stream().filter(f -> f.loopID == activeLoop).collect(Collectors.toList());
+            //pointEdges = relevantEdges;
+            for (int i = 0; i < pointEdges.size(); ++i){
+                Edge e = pointEdges.get(i);
+                if (e.loopID == activeLoop){
+                    relevantEdges.add(e);
+                }
+            }
             pointEdges = relevantEdges;
         }
         if (pointEdges.size() == 2) {

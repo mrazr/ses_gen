@@ -350,7 +350,7 @@ public class SurfaceParser {
             }
             cpl1.end1 = cpl1.vrts.get(0);
             cpl1.end2 = cpl1.vrts.get(2);
-            cpl1.mid = mid;
+            //cpl1.mid = mid;
 
             cpl1.setEndPoints(cpl1.vrts.get(0), cpl1.vrts.get(2), true);
 
@@ -399,7 +399,7 @@ public class SurfaceParser {
             if (VectorUtil.determinantVec3(v1.getFloatData(), v2.getFloatData(), v3.getFloatData()) > 0.f) {
                 ArcUtil.reverseArc(cpl2, true);
             }
-            cpl2.mid = mid;
+            //cpl2.mid = mid;
 
             cpl2.setEndPoints(cpl2.vrts.get(0), cpl2.vrts.get(2), true);
 
@@ -445,7 +445,7 @@ public class SurfaceParser {
             if (VectorUtil.determinantVec3(v1.getFloatData(), v2.getFloatData(), v3.getFloatData()) > 0.f) {
                 ArcUtil.reverseArc(cpl3, true);
             }
-            cpl3.mid = mid;
+            //cpl3.mid = mid;
 
             cpl3.setEndPoints(cpl3.vrts.get(0), cpl3.vrts.get(2), true);
 
@@ -591,11 +591,29 @@ public class SurfaceParser {
 
             long _parseEndTime = System.currentTimeMillis();
 
+            try {
+                System.in.read();
+                System.out.println("After constructing");
+            } catch (Exception e){
+                e.printStackTrace();
+            }
             if (SesConfig.useGUI) {
                 MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
             }
+            try {
+                System.in.read();
+                System.out.println("After gpu push");
+            } catch (Exception e){
+                e.printStackTrace();
+            }
             MeshGeneration.startMeshing();
             while (!MeshGeneration.finished.get()){}
+            try {
+                System.out.println("After mesh wait");
+                System.in.read();
+            } catch (Exception e){
+                e.printStackTrace();
+            }
             if (SesConfig.useGUI){
                 MainWindow.mainWindow.pushTori();
                 MainWindow.mainWindow.pushConvex();

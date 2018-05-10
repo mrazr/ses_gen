@@ -29,11 +29,16 @@ public class MeshGeneration {
     public boolean isRunning(){
         return !free.get();
     }
+    private static AdvancingFrontMethod[] afms;
 
     private MeshGeneration(){
         THREAD_COUNT = Runtime.getRuntime().availableProcessors();
         //System.out.println("Initializing MeshGeneration with " + THREAD_COUNT + " threads");
         v = new Vector[THREAD_COUNT];
+        afms = new AdvancingFrontMethod[THREAD_COUNT];
+        for (int i = 0; i < THREAD_COUNT; ++i){
+            afms[i] = new AdvancingFrontMethod();
+        }
         //v[0] = new Vector(0, 0, 0);
         //v[1] = new Vector(0, 0, 0);
         //v[2] = new Vector(0, 0, 0);
@@ -52,7 +57,7 @@ public class MeshGeneration {
 
     private static void generateMesh(int start, int end, List<SphericalPatch> patches, int threadIdx) {
         free.set(false);
-        AdvancingFrontMethod afm = new AdvancingFrontMethod();
+        AdvancingFrontMethod afm = afms[threadIdx];//new AdvancingFrontMethod();
         long startTime = System.currentTimeMillis();
         for (int i = start; i < end; ++i) {
             SphericalPatch a = patches.get(i);
@@ -98,6 +103,9 @@ public class MeshGeneration {
                 }
                 System.out.println("Total number of triangles generated: " + trianglesGenerated.get());
                 finished.set(true);
+                for (int i = 0; i < afms.length; ++i){
+                    afms[i] = null;
+                }
             }
         }
     }
@@ -155,6 +163,12 @@ public class MeshGeneration {
             }
         }
         System.out.println("Toroidal patches meshed in " + (System.currentTimeMillis() - startTime) + " milliseconds");
+        try {
+            System.in.read();
+            System.out.println("After tori mesh");
+        } catch (Exception e){
+            e.printStackTrace();
+        }
         MeshGeneration.threads_done.set(0);
         int step = SesConfig.atomCount / THREAD_COUNT;
         for (int i = 0; i < THREAD_COUNT; ++i){
@@ -185,6 +199,10 @@ public class MeshGeneration {
         while (!MeshGeneration.free.get()){}
     }
 
+    private static List<Point> _top = new ArrayList<>(17);
+    private static Arc _left = new Arc(new Point(0, 0, 0), 1.0);
+    private static Arc _topL = new Arc(new Point(0, 0, 0), 1.0);
+    private static Arc _right = new Arc(new Point(0, 0, 0), 1.0);
     public static void meshToroidalPatch(ToroidalPatch tp){
         try {
             /*if ((!circular && concavePatchArcs.size() < 2) || !concavePatchArcs.get(0).valid || !concavePatchArcs.get(1).valid){
@@ -221,27 +239,36 @@ public class MeshGeneration {
 //                }
 //            }
             if (tp.tr1 != null){
-                List<Point> top = new ArrayList<>();
+                _top.clear();
                 for (int i = 0; i < tp.tr1.base.vrts.size(); ++i){
-                    top.add(tp.tr1.cuspPoint);
+                    _top.add(tp.tr1.cuspPoint);
                 }
-                Arc left = new Arc(tp.tr1.left.center, tp.tr1.left.radius);
-                left.vrts.addAll(tp.tr1.left.vrts);
-                ArcUtil.reverseArc(left, true);
-                Arc topL = new Arc(tp.tr1.cuspPoint, 0);
-                topL.vrts.addAll(top);
-                meshToroidalPatch(tp, tp.tr1.base, topL, left, tp.tr1.right, true);
+                //Arc left = new Arc(tp.tr1.left.center, tp.tr1.left.radius);
+                _left.center.change(tp.tr1.left.center);
+                _left.radius = tp.tr1.left.radius;
+                _left.vrts.clear();
+                _left.vrts.addAll(tp.tr1.left.vrts);
+                ArcUtil.reverseArc(_left, true);
+                //Arc topL = new Arc(tp.tr1.cuspPoint, 0);
+                _topL.center.change(tp.tr1.cuspPoint);
+                _topL.radius = 0;
+                _topL.vrts.clear();
+                _topL.vrts.addAll(_top);
+                meshToroidalPatch(tp, tp.tr1.base, _topL, _left, tp.tr1.right, true);
 
-                top.clear();
+                _top.clear();
                 for (int i = 0; i < tp.tr2.base.vrts.size(); ++i){
-                    top.add(tp.tr2.cuspPoint);
+                    _top.add(tp.tr2.cuspPoint);
                 }
-                left = new Arc(tp.tr2.left.center, tp.tr2.left.radius);
-                left.vrts.addAll(tp.tr2.left.vrts);
-                ArcUtil.reverseArc(left, true);
-                topL.vrts.clear();
-                topL.vrts.addAll(top);
-                meshToroidalPatch(tp, tp.tr2.base, topL, left, tp.tr2.right, true);
+                //left = new Arc(tp.tr2.left.center, tp.tr2.left.radius);
+                _left.center.change(tp.tr2.left.center);
+                _left.radius = tp.tr2.left.radius;
+                _left.vrts.clear();
+                _left.vrts.addAll(tp.tr2.left.vrts);
+                ArcUtil.reverseArc(_left, true);
+                _topL.vrts.clear();
+                _topL.vrts.addAll(_top);
+                meshToroidalPatch(tp, tp.tr2.base, _topL, _left, tp.tr2.right, true);
                 transferFacesToPatch(tp);
                 Surface.toriFacesCount += tp.faces.length / 3;
                 return;
@@ -269,7 +296,8 @@ public class MeshGeneration {
                     Point bottomCusp = Point.translatePoint(centerOfTorus, v1.changeVector(bottom.owner.sphere.center, top.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
                     Point topCusp = Point.translatePoint(centerOfTorus, v1.changeVector(top.owner.sphere.center, bottom.owner.sphere.center).makeUnit().multiply(centerToCuspLength));
                     Arc topForBottomRect = new Arc(bottom.center, bottom.radius);
-                    for (Point p : bottom.vrts) {
+                    for (int i = 0; i < bottom.vrts.size(); ++i) {
+                        //Point p = bottom.vrts.get(i);
                         topForBottomRect.vrts.add(bottomCusp);
                     }
                     Point newCenter = (Point.distance(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)) < 0.0001) ? tp.probe1 : tp.probe2;
@@ -296,7 +324,8 @@ public class MeshGeneration {
                     meshToroidalPatch(tp, bottom, topForBottomRect, left, right, false);
 
                     Arc bottomForTopRect = new Arc(top.center, top.radius);
-                    for (Point p : top.vrts){
+                    for (int i = 0; i < top.vrts.size(); ++i){
+                        //Point p = top.vrts.get(i);
                         bottomForTopRect.vrts.add(topCusp);
                     }
                     newCenter = (Point.distance(top.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), top.owner.sphere)) < 0.0001) ? tp.probe1 : tp.probe2;
@@ -325,24 +354,30 @@ public class MeshGeneration {
                 } else {
 
                     Point newCenter = (Point.distance(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)) < 0.0001) ? tp.probe1 : tp.probe2;
-                    left = new Arc(newCenter, SesConfig.probeRadius);
-                    left.vrts.add(bottom.end2);
-                    left.vrts.add(top.end1);
-                    left.setEndPoints(bottom.end2, top.end1, true);
-                    ArcUtil.refineArc(left, SesConfig.edgeLimit, false, 0, false);
+                    //left = new Arc(newCenter, SesConfig.probeRadius);
+                    _left.center.change(newCenter);
+                    _left.radius = SesConfig.probeRadius;
+                    _left.vrts.clear();
+                    _left.vrts.add(bottom.end2);
+                    _left.vrts.add(top.end1);
+                    _left.setEndPoints(bottom.end2, top.end1, true);
+                    ArcUtil.refineArc(_left, SesConfig.edgeLimit, false, 0, false);
                     //ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
-                    newCenter = (Point.distance(left.center, tp.probe1) < 0.0001) ? tp.probe2 : tp.probe1;
-                    right = new Arc(newCenter, SesConfig.probeRadius);
+                    newCenter = (Point.distance(_left.center, tp.probe1) < 0.0001) ? tp.probe2 : tp.probe1;
+                    //right = new Arc(newCenter, SesConfig.probeRadius);
 
-                    right.vrts.add(bottom.end1);
-                    right.vrts.add(top.end2);
-                    right.setEndPoints(bottom.end1, top.end2, true);
-                    ArcUtil.refineArc(right, SesConfig.edgeLimit, false, 0, false);
+                    _right.center.change(newCenter);
+                    _right.radius = SesConfig.probeRadius;
+                    _right.vrts.clear();
+                    _right.vrts.add(bottom.end1);
+                    _right.vrts.add(top.end2);
+                    _right.setEndPoints(bottom.end1, top.end2, true);
+                    ArcUtil.refineArc(_right, SesConfig.edgeLimit, false, 0, false);
                     //ArcUtil.refineArc(right, SesConfig.edgeLimit, false,3, false);
-                    if (right.vrts.size() != left.vrts.size()){
+                    if (_right.vrts.size() != _left.vrts.size()){
                         System.out.println("weird");
                     }
-                    meshToroidalPatch(tp, bottom, top, left, right, false);
+                    meshToroidalPatch(tp, bottom, top, _left, _right, false);
                     transferFacesToPatch(tp);
                     Surface.toriFacesCount += tp.faces.length / 3;
                     //tp.circleMeshed = true;
@@ -433,11 +468,11 @@ public class MeshGeneration {
                         if (rightVArc.size() != left.vrts.size()){
                             System.out.println("incorrect num of verts");
                         }
-                        for (Point bod : rightVArc){
-                            if (bod == null){
-                                System.out.println(" ");
-                            }
-                        }
+                        //for (Point bod : rightVArc){
+                        //    if (bod == null){
+                        //        System.out.println(" ");
+                        //    }
+                        //}
                     } else {
                         rightVArc.clear();
                         ArcUtil.generateCircArc(bottom.vrts.get(bottom.vrts.size() - i - 1), top.vrts.get(i), currProbe, SesConfig.probeRadius, left.vrts.size() - 1, false, rightVArc);
@@ -503,11 +538,11 @@ public class MeshGeneration {
 
                     //tp.vrts.add(leftVArc.get(j + 1)); // = 2
                     //vrts.add(new Point(color));
-                    n = Point.subtractPoints(prevProbe, leftVArc.get(j + 1)).makeUnit();
+                    //n = Point.subtractPoints(prevProbe, leftVArc.get(j + 1)).makeUnit();
                     //tp.vrts.add(new Point(n.getFloatData()));
                     //tp.vrts.add(rightVArc.get(j)); // = 1
                     //vrts.add(new Point(color));
-                    n = Point.subtractPoints(currProbe, rightVArc.get(j)).makeUnit();
+                    //n = Point.subtractPoints(currProbe, rightVArc.get(j)).makeUnit();
                     //tp.vrts.add(new Point(n.getFloatData()));
                     //tp.vrts.add(rightVArc.get(j + 1)); // = 3
                     //vrts.add(new Point(color));

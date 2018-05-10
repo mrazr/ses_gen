@@ -65,6 +65,13 @@ public class Point {
         z = Surface.scaleFactor * (Double)jObj.get("z");
     }
 
+    public Point change(Point p){
+        this.x = p.x;
+        this.y = p.y;
+        this.z = p.z;
+        return this;
+    }
+
     public static Point translatePoint(Point p, Vector v){
         double nX = p.x + v.getX();
         double nY = p.y + v.getY();

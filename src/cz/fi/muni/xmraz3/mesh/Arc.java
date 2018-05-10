@@ -20,7 +20,7 @@ public class Arc {
     public Point center;
     public Point end1;
     public Point end2;
-    public Point mid;
+    //public Point mid;
     public Point midProbe;
     public List<Point> vrts;
 
@@ -54,6 +54,8 @@ public class Arc {
         this.radius = radius;
         id = nextID++;
         normal = new Vector(0, 0, 0);
+        toEnd1 = new Vector(0, 0, 0);
+        toEnd2 = new Vector(0, 0, 0);
         vrts = new ArrayList<>();
         //lines = new ArrayList<>();
     }
@@ -100,10 +102,13 @@ public class Arc {
     public void setEndPoints(Point e1, Point e2, boolean computeNormal){
         end1 = e1;
         end2 = e2;
-        toEnd1 = Point.subtractPoints(end1, center).makeUnit();
-        toEnd2 = Point.subtractPoints(end2, center).makeUnit();
+        //toEnd1 = Point.subtractPoints(end1, center).makeUnit();
+        //toEnd2 = Point.subtractPoints(end2, center).makeUnit();
+        toEnd1.changeVector(end1, center).makeUnit();
+        toEnd2.changeVector(end2, center).makeUnit();
         if (computeNormal){
-            normal = Vector.getNormalVector(toEnd1, toEnd2).makeUnit();
+            normal.assignNormalVectorOf(toEnd1, toEnd2).makeUnit();
+            //normal = Vector.getNormalVector(toEnd1, toEnd2).makeUnit();
         }
     }
 

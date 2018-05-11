@@ -282,6 +282,8 @@ public class SurfaceParser {
         }
     }
 
+    private static Plane _plane = new Plane(new Point(0, 0, 0), new Vector(0, 0, 0));
+    private static List<Arc> q = new ArrayList<>();
     private static void constructConcavePatchArcs(Sphere probe, int atom1, int atom2, int atom3){
         try {
             SphericalPatch a1 = Surface.convexPatches.get(atom1);
@@ -301,7 +303,8 @@ public class SurfaceParser {
             v1.changeVector(a2.sphere.center, a1.sphere.center).makeUnit();
             v2.changeVector(a3.sphere.center, a1.sphere.center).makeUnit();
             Vector _n = Vector.getNormalVector(v1, v2).makeUnit();
-            Plane _plane = new Plane(a1.sphere.center, _n);
+            //Plane _plane = new Plane(a1.sphere.center, _n);
+            _plane.redefine(a1.sphere.center, _n);
             if (_plane.checkPointLocation(probe.center) < 0.0){
                 _n.multiply(-1.0);
             }
@@ -458,7 +461,8 @@ public class SurfaceParser {
             //cpl3.endEdge1.next = cpl3.endEdge2;
             //cpl3.endEdge2.prev = cpl3.endEdge1;
 
-            List<Arc> q = new ArrayList<>();
+            //List<Arc> q = new ArrayList<>();
+            q.clear();
             q.add(cpl2);
             q.add(cpl3);
             Point start = cpl1.end1;
@@ -579,7 +583,11 @@ public class SurfaceParser {
 
 
             PatchUtil.processIntersectingConcavePatches();
-
+            //try {
+            //    System.in.read();
+            //} catch (Exception e){
+            //    e.printStackTrace();
+            //}
             ArcUtil.constructConvexBoundaries();
             ArcUtil.refineArcsOnSphericalPatches();
 
@@ -591,29 +599,29 @@ public class SurfaceParser {
 
             long _parseEndTime = System.currentTimeMillis();
 
-            try {
-                System.in.read();
-                System.out.println("After constructing");
-            } catch (Exception e){
-                e.printStackTrace();
-            }
+            //try {
+            //    System.in.read();
+            //    System.out.println("After constructing");
+            //} catch (Exception e){
+            //    e.printStackTrace();
+            //}
             if (SesConfig.useGUI) {
                 MainWindow.mainWindow.sendPatchesLists(Surface.convexPatches, Surface.triangles);
             }
-            try {
-                System.in.read();
-                System.out.println("After gpu push");
-            } catch (Exception e){
-                e.printStackTrace();
-            }
+            //try {
+            //    System.in.read();
+            //    System.out.println("After gpu push");
+            //} catch (Exception e){
+            //    e.printStackTrace();
+            //}
             MeshGeneration.startMeshing();
             while (!MeshGeneration.finished.get()){}
-            try {
-                System.out.println("After mesh wait");
-                System.in.read();
-            } catch (Exception e){
-                e.printStackTrace();
-            }
+            //try {
+            //    System.out.println("After mesh wait");
+            //    System.in.read();
+            //} catch (Exception e){
+            //    e.printStackTrace();
+            //}
             if (SesConfig.useGUI){
                 MainWindow.mainWindow.pushTori();
                 MainWindow.mainWindow.pushConvex();

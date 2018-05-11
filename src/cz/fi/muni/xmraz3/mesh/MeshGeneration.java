@@ -163,12 +163,12 @@ public class MeshGeneration {
             }
         }
         System.out.println("Toroidal patches meshed in " + (System.currentTimeMillis() - startTime) + " milliseconds");
-        try {
-            System.in.read();
-            System.out.println("After tori mesh");
-        } catch (Exception e){
-            e.printStackTrace();
-        }
+        //try {
+        //    System.in.read();
+        //    System.out.println("After tori mesh");
+        //} catch (Exception e){
+        //    e.printStackTrace();
+        //}
         MeshGeneration.threads_done.set(0);
         int step = SesConfig.atomCount / THREAD_COUNT;
         for (int i = 0; i < THREAD_COUNT; ++i){

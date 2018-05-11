@@ -1223,7 +1223,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, meshEbo[CONVEX]);
                     for (Integer i : convexPatchesSelect) {
                         SphericalPatch a = convexPatchList.get(i);
-                        int off = (convexFaceCountShow > a.faces.length / 3) ? a.faces.length / 3 : convexFaceCountShow;
+                        int off = (convexFaceCountShow > a.faces.length / 3) ? a.faces.length : convexFaceCountShow * 3;
                         gl.glDrawElements(GL4.GL_TRIANGLES,  a.faces.length - off, GL4.GL_UNSIGNED_INT, a.eboOffset * Integer.BYTES);
                     }
                 }
@@ -1296,7 +1296,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, meshEbo[CONCAVE]);
                     for (Integer i : concavePatchesSelect) {
                         SphericalPatch a = concavePatchList.get(i);
-                        int off = (concaveFaceCountShow > a.faces.length / 3) ? a.faces.length / 3 : concaveFaceCountShow;
+                        int off = (concaveFaceCountShow > a.faces.length / 3) ? a.faces.length / 3 : concaveFaceCountShow * 3;
                         gl.glDrawElements(GL4.GL_TRIANGLES, a.faces.length - off, GL4.GL_UNSIGNED_INT, a.eboOffset * Integer.BYTES);
                     }
                     gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -1781,8 +1781,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             convexFaceCountShow = 0;
         }
         if (keyEvent.getKeyCode() == KeyEvent.VK_F4){
-            concaveFaceCountShow = (concavePatchesSelect.size() > 0) ? Surface.triangles.get(concavePatchesSelect.get(0)).faces.length : 0;
-            convexFaceCountShow = (convexPatchesSelect.size() > 0) ? Surface.convexPatches.get(convexPatchesSelect.get(0)).faces.length : 0;
+            concaveFaceCountShow = (concavePatchesSelect.size() > 0) ? Surface.triangles.get(concavePatchesSelect.get(0)).faces.length / 3: 0;
+            convexFaceCountShow = (convexPatchesSelect.size() > 0) ? Surface.convexPatches.get(convexPatchesSelect.get(0)).faces.length / 3 : 0;
         }
         if (keyEvent.getKeyCode() == KeyEvent.VK_F5){
             if (concavePatchesSelect.size() > 0) {

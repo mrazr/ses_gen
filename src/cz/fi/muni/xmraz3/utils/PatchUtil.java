@@ -58,8 +58,24 @@ public class PatchUtil {
                 int g = 32;
             }
             if (leftL.owner.intersectingPatches.contains(rightL.owner.id)){
-                Arc cpl1 = leftL.owner.boundaries.get(0).arcs.stream().filter(a -> a.intersecting).findFirst().get();
-                Arc cpl2 = rightL.owner.boundaries.get(0).arcs.stream().filter(a -> a.intersecting).findFirst().get();
+                //Arc cpl1 = leftL.owner.boundaries.get(0).arcs.stream().filter(a -> a.intersecting).findFirst().get();
+                //Arc cpl2 = rightL.owner.boundaries.get(0).arcs.stream().filter(a -> a.intersecting).findFirst().get();
+                Arc cpl1 = null;
+                Arc cpl2 = null;
+                for (int i = 0; i < leftL.owner.boundaries.get(0).arcs.size(); ++i){
+                    Arc a = leftL.owner.boundaries.get(0).arcs.get(i);
+                    if (a.intersecting){
+                        cpl1 = a;
+                        break;
+                    }
+                }
+                for (int i = 0; i < rightL.owner.boundaries.get(0).arcs.size(); ++i){
+                    Arc a = rightL.owner.boundaries.get(0).arcs.get(i);
+                    if (a.intersecting){
+                        cpl2 = a;
+                        break;
+                    }
+                }
                 //Main.processSelfIntersectingConcavePatch(cpl1);
                 //Main.processSelfIntersectingConcavePatch(cpl2);
                 processIntersectingArcsOnPatch(cpl2);
@@ -516,9 +532,6 @@ public class PatchUtil {
         Vector u1 = v1.changeVector(arc.end1, arc.center).makeUnit();
         Vector u2 = v2.changeVector(arc.end2, arc.center).makeUnit();
         Vector n1 = v3.changeVector(sp.sphere.center, arc.center).makeUnit();
-        if (sp.id == 30419){
-            int fd=  43;
-        }
         //Plane p1 = new Plane(arc.center, n1);
         p1.redefine(arc.center, n1);
         for (int i = 0; i < sp.boundaries.size(); ++i){
@@ -528,7 +541,13 @@ public class PatchUtil {
                 if (k == arc || k == arc.prev || k == arc.next){
                     continue;
                 }
-                boolean allInside = k.vrts.stream().allMatch(p -> p1.checkPointLocation(p) > 0.0);
+                boolean allInside = true;//k.vrts.stream().allMatch(p -> p1.checkPointLocation(p) > 0.0);
+                for (int l = 0; l < k.vrts.size(); ++l){
+                    if (!(p1.checkPointLocation(k.vrts.get(l)) > 0.0)){
+                        allInside = false;
+                        break;
+                    }
+                }
                 if (allInside){
                     continue;
                 }
@@ -566,7 +585,17 @@ public class PatchUtil {
                                     lastPoI = in1;
                                     pointOfIntersection.add(in1);
                                 }*/
-                            if (!intersectionPoints.stream().anyMatch(p -> Point.distance(p, in1) < 0.001)){
+                            boolean foundSimilar = false;
+                            for (int l = 0; l < intersectionPoints.size(); ++l){
+                                if (Point.distance(in1, intersectionPoints.get(l)) < 0.001){
+                                    foundSimilar = true;
+                                    break;
+                                }
+                            }
+                            //if (!intersectionPoints.stream().anyMatch(p -> Point.distance(p, in1) < 0.001)){
+                            //    intersectionPoints.add(new Point(in1));
+                            //}
+                            if (!foundSimilar){
                                 intersectionPoints.add(new Point(in1));
                             }
                         }
@@ -575,7 +604,17 @@ public class PatchUtil {
                                     lastPoI = in2;
                                     pointOfIntersection.add(in2);
                                 }*/
-                            if (!intersectionPoints.stream().anyMatch(p -> Point.distance(p, in2) < 0.001)){
+                            //if (!intersectionPoints.stream().anyMatch(p -> Point.distance(p, in2) < 0.001)){
+                            //    intersectionPoints.add(new Point(in2));
+                            //}
+                            boolean foundSimilar = false;
+                            for (int l = 0; l < intersectionPoints.size(); ++l){
+                                if (Point.distance(in2, intersectionPoints.get(l)) < 0.001){
+                                    foundSimilar = true;
+                                    break;
+                                }
+                            }
+                            if (!foundSimilar){
                                 intersectionPoints.add(new Point(in2));
                             }
                         }
@@ -583,15 +622,7 @@ public class PatchUtil {
                 }
             }
         }
-        if (intersectionPoints.size() == 1){
-            System.out.println("111");
-        }
         if (found && intersectionPoints.size() == 2) {
-                /*System.out.println("For " + cpl.owner.id + " found " + pointOfIntersection.size() + " pois");
-                for (Point p : pointOfIntersection){
-                    System.out.println(p.toString());
-                }*/
-            //System.err.println("FOUND IT");
             for (int i = 0; i < sp.boundaries.size(); ++i){
                 Boundary b = sp.boundaries.get(i);
                 for (int j = 0; j < b.arcs.size(); ++j){
@@ -880,6 +911,7 @@ public class PatchUtil {
         //List<Boundary> toRemove2 = new ArrayList<>();
         toRemove2.clear();
         Boundary b = new Boundary();
+        Point newArcCenter = new Point(circle.p);
         b.patch = sp;
         Arc start = a1;
         Arc a = a2;
@@ -901,7 +933,7 @@ public class PatchUtil {
             if (toBridge){ //|| forceBridge){
                 Arc newA = null; //retrieveBridgeArc(sp.id, otherPatch, in2, in1);
                 if (newA == null) {
-                    newA = new Arc(circle.p, radius);
+                    newA = new Arc(newArcCenter, radius);
                     newA.setEndPoints(in1, in2, false);
                     newA.setNormal(circle.v);
                     newA.vrts.add(in1);
@@ -1115,14 +1147,11 @@ public class PatchUtil {
                         System.out.println("found arc of cusp 3");
                     }*/
                     ArcUtil.refineArc(newA, Surface.maxEdgeLen, false, 0, false);
-                    if (a.torus != null){
-                        System.out.println("found torus 3");
-                    }
                     if (a.opposite != null){
                         newA.opposite = a.opposite;
                         newA.opposite.opposite = newA;
                         //ArcUtil.refineArc(newA, 0, true, ArcUtil.getSubdivisionLevel(newA.opposite), false);
-                        if (a.torus != null){
+                        if (a.torus != null){//this should not happen
                             newA.torus = a.torus;
                             Arc finalA = a;
                             a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
@@ -1130,6 +1159,7 @@ public class PatchUtil {
                                 public boolean test(Arc arc) {
                                     return arc.id == finalA.id;
                                 }
+
                             });
                             newA.torus.concavePatchArcs.add(newA);
                         } else if (a.cuspTriangle != null){
@@ -1207,13 +1237,21 @@ public class PatchUtil {
                     //ArcUtil.refineArc(newA, 0, true, ArcUtil.getSubdivisionLevel(newA.opposite), false);
                     if (a.torus != null){
                         newA.torus = a.torus;
-                        Arc finalA = a;
-                        a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
-                            @Override
-                            public boolean test(Arc arc) {
-                                return arc.id == finalA.id;
+                        //Arc finalA = a;
+                        //a.torus.concavePatchArcs.removeIf(new Predicate<Arc>() {
+                        //    @Override
+                        //    public boolean test(Arc arc) {
+                        //        return arc.id == finalA.id;
+                        //    }
+                        //});
+                        int l = 0;
+                        while (l < a.torus.concavePatchArcs.size()){
+                            if (a.torus.concavePatchArcs.get(l).id == a.id){
+                                a.torus.concavePatchArcs.remove(l);
+                                break;
                             }
-                        });
+                            l++;
+                        }
                         newA.torus.concavePatchArcs.add(newA);
                     } else if (a.cuspTriangle != null){
                         newA.cuspTriangle = a.cuspTriangle;
@@ -1271,7 +1309,7 @@ public class PatchUtil {
         } while (forceContinue || in1 != pStart);
         ArcUtil.buildEdges(b, true);
         newBS.add(b);
-        int kratky  = shortArcs(b);
+        //int kratky  = shortArcs(b);
         for (int i = 0; i < toRemove2.size(); ++i){
             Boundary b_ = toRemove2.get(i);
             if (!toRemove.contains(b_)){
@@ -1342,20 +1380,33 @@ public class PatchUtil {
                     //List<Point> ps = (intersectionPoints.size() > 2) ?  patchSplit(intersectionPoints, in1, in2, sp, circle) : intersectionPoints;
                     List<Point> ps = (intersectionPoints.size() > 2) ? getUsablePoints(intersectionPoints, in1, in2, sp, circle) : intersectionPoints;
 
-                    boolean inside = a1.vrts.stream().allMatch(p -> (Point.distance(p, p1) < 0.001) || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
-                            a1.next.vrts.stream().allMatch(p -> Point.distance(p, p1) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
-                            a1.prev.vrts.stream().allMatch(p -> Point.distance(p, p1) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
-                            a2.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
-                            a2.next.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
-                            a2.prev.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001);
+                    //boolean inside = a1.vrts.stream().allMatch(p -> (Point.distance(p, p1) < 0.001) || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
+                    //        a1.next.vrts.stream().allMatch(p -> Point.distance(p, p1) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
+                    //        a1.prev.vrts.stream().allMatch(p -> Point.distance(p, p1) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
+                    //        a2.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
+                    //        a2.next.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001) &&
+                    //        a2.prev.vrts.stream().allMatch(p -> Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0 || circle.distanceFromPlane(p) < 0.001);
+                    boolean inside = false;
+                    if (arcInsideHyperspace(a1, circle, p1) && arcInsideHyperspace(a1.next, circle, p1) && arcInsideHyperspace(a1.prev, circle, p1) &&
+                            arcInsideHyperspace(a2, circle, p2) && arcInsideHyperspace(a2.next, circle, p2) && arcInsideHyperspace(a2.prev, circle, p2)){
+                        inside = true;
+                    }
                     if (!force && inside){
                         return;
                     }
 
                     if (Point.distance(in1, a1.end2) < 0.001 && Point.distance(in2, a2.end2) < 0.001){
                         boolean allInside = true;
-                        for (Arc a : a1.bOwner.arcs){
-                            allInside = allInside && a.vrts.stream().allMatch(p -> (Point.distance(p, p1) < 0.001 || Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0));
+                        for (int j = 0; j < a1.bOwner.arcs.size(); ++j){
+                            Arc a = a1.bOwner.arcs.get(j);
+                            //allInside = allInside && a.vrts.stream().allMatch(p -> (Point.distance(p, p1) < 0.001 || Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0));
+                            for (int l = 0; l < a.vrts.size(); ++l){
+                                Point point = a.vrts.get(l);
+                                if (!(Point.distance(point, p1) < 0.001 || Point.distance(point, p2) < 0.001 || circle.checkPointLocation(point) > 0.0)){
+                                    allInside = false;
+                                    break;
+                                }
+                            }
                         }
                         if (allInside){
                             return;
@@ -1364,9 +1415,20 @@ public class PatchUtil {
 
                     if (a1.next == a2.prev && Point.distance(in1, a1.end2) < 0.001 && Point.distance(in2, a2.end1) < 0.001){
                         //System.err.println(sp.id + " a1n == a2p " + intersectionPoints.size());
-                        if (a1.next.vrts.stream().allMatch(p -> (Point.distance(p, p1) < 0.001 || Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0))){
+                        boolean allInside = true;
+                        for (int j = 0; j < a1.next.vrts.size(); ++j){
+                            Point point = a1.next.vrts.get(j);
+                            if (!(Point.distance(point, p1) < 0.001 || Point.distance(point, p2) < 0.001 || circle.checkPointLocation(point) > 0.0)){
+                                allInside = false;
+                                break;
+                            }
+                        }
+                        if (allInside){
                             return;
                         }
+                        //if (a1.next.vrts.stream().allMatch(p -> (Point.distance(p, p1) < 0.001 || Point.distance(p, p2) < 0.001 || circle.checkPointLocation(p) > 0.0))){
+                        //    return;
+                        //}
                     }
 
 
@@ -1445,13 +1507,17 @@ public class PatchUtil {
     private static Arc _a2 = new Arc(new Point(0, 0, 0), 1.0);
     private static List<Point> vrtsPool = new ArrayList<>(17);
     private static List<Neighbor<double[], SphericalPatch>> neighbors = new ArrayList<>(50);
+    private static Plane rho = new Plane(new Point(0, 0, 0), new Vector(0, 0, 0));
+    private static List<Boundary> removeFromSP = new ArrayList<>();
+    private static List<Boundary> processed = new ArrayList<>();
 
     private static void trimConcavePatch(SphericalPatch sp){
-        //if (!planePoolInitialized){
-        //    for (int i = 0; i < 50; ++i){
-        //        planePool.add(i, new Plane(new Point(0, 0, 0), new Vector(0, 0, 0)));
-        //    }
-        //}
+        if (!planePoolInitialized){
+            for (int i = 0; i < 50; ++i){
+                planePool.add(i, new Plane(new Point(0, 0, 0), new Vector(0, 0, 0)));
+            }
+            planePoolInitialized = true;
+        }
         if (vrtsPool.size() == 0){
             for (int i = 0; i < 17; ++i){
                 vrtsPool.add(new Point(0, 0, 0));
@@ -1483,17 +1549,27 @@ public class PatchUtil {
             });
             boolean trimmed = false;
             //int i = 0;
-            planes.put(sp.id, new ArrayList<>());
-            for (Boundary b : sp.boundaries){
-                for (Arc a : b.arcs){
-                    Plane p = new Plane(a.center, a.normal);
-                    planes.get(sp.id).add(p);
+            //planes.put(sp.id, new ArrayList<>());
+
+            nextPlaneID = 0;
+            for (int i = 0; i < sp.boundaries.size(); ++i){
+                Boundary b = sp.boundaries.get(i);
+                for (int j = 0; j < b.arcs.size(); ++j){
+                    Arc a = b.arcs.get(j);
+                    if (nextPlaneID >= planePool.size()){
+                        planePool.add(new Plane(new Point(0, 0, 0), new Vector(0, 0, 0)));
+                    }
+                    Plane p = planePool.get(nextPlaneID);
+                    p.redefine(a.center, a.normal);
+                    nextPlaneID++;
+                    //Plane p = new Plane(a.center, a.normal);
+                    //planes.get(sp.id).add(p);
                 }
             }
             currIter = 0;
             curr = sp;
-            nextPlaneID = 0;
-            for (Neighbor<double[], SphericalPatch> n : neighbors) {
+            for (int i = 0; i < neighbors.size(); ++i) {
+                Neighbor<double[], SphericalPatch> n = neighbors.get(i);
                 if (n.value == sp) {
                     continue;
                 }
@@ -1501,9 +1577,15 @@ public class PatchUtil {
                 if (sp.intersectingPatches.contains(sp2.id)) {
                     continue;
                 }
-                Point center = new Point(0, 0, 0);
+                if (nextPlaneID >= planePool.size()){
+                    planePool.add(new Plane(new Point(0, 0, 0), new Vector(0, 0, 0)));
+                }
+                Plane intersectingPlane = planePool.get(nextPlaneID);
+                Point center = intersectingPlane.p;
                 double radius = computeIntersectionCircle(sp.sphere.center, sp2.sphere.center, center, SesConfig.probeRadius);
-                Vector nV = Point.subtractPoints(sp.sphere.center, center).makeUnit();
+                intersectingPlane.v.changeVector(sp.sphere.center, center).makeUnit();
+                intersectingPlane.redefine(intersectingPlane.p, intersectingPlane.v);
+                //Vector nV = Point.subtractPoints(sp.sphere.center, center).makeUnit();
 
                 if (Point.distance(sp.sphere.center, sp2.sphere.center) < 0.008){
                     continue;
@@ -1513,13 +1595,13 @@ public class PatchUtil {
                 //}
                 //Plane p = planePool.get(nextPlaneID++);
                 //p.redefine(center, nV);
-                Plane p = new Plane(center, nV);
+                //Plane p = new Plane(center, nV);
                 intersectionPoints.clear();
                 exclude.clear();
                 findIntersectionPoints(sp, center, radius, intersectionPoints, exclude);
 
                 currInt = intersectionPoints;
-                currCirc = p;
+                currCirc = intersectingPlane;
                 currRad = radius;
                 toRemove.clear();
                 if (sp.id == 30419 && sp2.id == 30435){
@@ -1536,20 +1618,20 @@ public class PatchUtil {
                         continue;
                     }
                     boolean identicalIntersector = false;
-                    //for (int _i = 0; i < nextPlaneID; ++i){
-                    //    if (planePool.get(_i).isIdenticalWith(p)){
-                    //        identicalIntersector = true;
-                    //        break;
-                    //    }
-                    //}
-                    //if (!identicalIntersector){
-                    //
-                    //}
-                    if (planes.get(sp.id).stream().noneMatch(plane -> plane.isIdenticalWith(p))) {
-                        planes.get(sp.id).add(p);
+                    for (int j = 0; j < nextPlaneID; ++j){
+                        if (planePool.get(j).isIdenticalWith(intersectingPlane)){
+                            identicalIntersector = true;
+                            break;
+                        }
+                    }
+                    if (!identicalIntersector){
+                        nextPlaneID++;
+                    }
+                    if (!identicalIntersector){//p!identicalIntersector){//lanes.get(sp.id).stream().noneMatch(plane -> plane.isIdenticalWith(p))) {
+                        //planes.get(sp.id).add(p);
                         sp.intersectingPatches.add(sp2.id);
 
-                        generateNewBoundaries2(sp, intersectionPoints, p, radius, sp2.id,false);
+                        generateNewBoundaries2(sp, intersectionPoints, intersectingPlane, radius, sp2.id,false);
                         //i++;
                         currIter++;
 //                        if (!sp.trimmed){
@@ -1559,26 +1641,46 @@ public class PatchUtil {
                     }
                 } else if (intersectionPoints.size() == 0) {
                     //Boundary newB = ArcUtil.generateCircularBoundary(p, radius);
-                    ArcUtil.redefineBoundary(_b, p, radius, vrtsPool, 45);
+                    ArcUtil.redefineBoundary(_b, intersectingPlane, radius, vrtsPool, 45);
                     ArcUtil.buildEdges(_b, true);
                     boolean nest = false;
-                    List<Boundary> removeFromSP = new ArrayList<>();
-                    List<Boundary> processed = new ArrayList<>();
+                    //List<Boundary> removeFromSP = new ArrayList<>();
+                    //List<Boundary> processed = new ArrayList<>();
+                    removeFromSP.clear();
+                    processed.clear();
                     Boundary _newB = null;
-                    for (Boundary b : sp.boundaries){
+                    for (int j = 0; j < sp.boundaries.size(); ++j){
+                        Boundary b = sp.boundaries.get(j);
                         if (removeFromSP.contains(b) || processed.contains(b)){
                             continue;
                         }
                         boolean isInside = true;
-                        for (Arc a : b.arcs){
-                            Plane rho = new Plane(a.center, a.normal);
-                            isInside = isInside && _b.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0); //newB -> _b
+                        for (int k = 0; k < b.arcs.size(); ++k){
+                            Arc a = b.arcs.get(k);
+                            //Plane rho = new Plane(a.center, a.normal);
+                            rho.redefine(a.center, a.normal);
+                            //isInside = isInside && _b.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0); //newB -> _b
+                            for (int l = 0; l < _b.vrts.size(); ++l){
+                                if (!(rho.checkPointLocation(_b.vrts.get(l)) > 0.0)){
+                                    isInside = false;
+                                    break;
+                                }
+                            }
                         }
                         if (isInside){
-                            for (Boundary nb : b.nestedBoundaries){
-                                for (Arc a : nb.arcs){
-                                    Plane rho = new Plane(a.center, a.normal);
-                                    isInside = isInside && _b.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0);
+                            for (int k = 0; k < b.nestedBoundaries.size(); ++k){
+                                Boundary nb = b.nestedBoundaries.get(k);
+                                for (int l = 0; l < nb.arcs.size(); ++l){
+                                    Arc a = nb.arcs.get(l);
+                                    //Plane rho = new Plane(a.center, a.normal);
+                                    rho.redefine(a.center, a.normal);
+                                    //isInside = isInside && _b.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0);
+                                    for (int m = 0; m < _b.vrts.size(); ++m){
+                                        if (!(rho.checkPointLocation(_b.vrts.get(m)) > 0.0)){
+                                            isInside = false;
+                                            break;
+                                        }
+                                    }
                                 }
                             }
                             if (isInside) {
@@ -1591,8 +1693,8 @@ public class PatchUtil {
                                 _a2.setEndPoints(_a1.end2, _a1.end1, false);
                                 _a2.setNormal(_a1.normal);
                                 _a2.vrts.add(_a2.end1);
-                                for (int _i = 1; _i < _b.arcs.get(1).vrts.size() - 1; ++_i){
-                                    _a2.vrts.add(new Point(_b.arcs.get(1).vrts.get(_i)));
+                                for (int k = 1; k < _b.arcs.get(1).vrts.size() - 1; ++k){
+                                    _a2.vrts.add(new Point(_b.arcs.get(1).vrts.get(k)));
                                 }
                                 _a2.vrts.add(_a2.end2);
                                 _newB.arcs.add(_a1);
@@ -1600,21 +1702,31 @@ public class PatchUtil {
                                 ArcUtil.buildEdges(_newB, true);
                                 _newB.nestedBoundaries.add(b);
                                 _newB.nestedBoundaries.addAll(b.nestedBoundaries);
-                                for (Boundary nb : _newB.nestedBoundaries) {
+                                for (int k = 0; k < _newB.nestedBoundaries.size(); ++k) {
+                                    Boundary nb = _newB.nestedBoundaries.get(k);
                                     nb.nestedBoundaries.add(_newB);
                                 }
                                 toRemove.clear();
-                                for (Boundary nb : _newB.nestedBoundaries){
-                                    for (Arc a : nb.arcs){
-                                        if (!a.vrts.stream().allMatch(v -> p.checkPointLocation(v) > 0.0)){
-                                            toRemove.add(nb);
-                                            break;
+                                for (int k = 0; k < _newB.nestedBoundaries.size(); ++k){
+                                    Boundary nb = _newB.nestedBoundaries.get(k);
+                                    for (int l = 0; l < nb.arcs.size(); ++l){
+                                        Arc a = nb.arcs.get(l);
+                                        //if (!a.vrts.stream().allMatch(v -> intersectingPlane.checkPointLocation(v) > 0.0)){
+                                        //    toRemove.add(nb);
+                                        //    break;
+                                        //}
+                                        for (int m = 0; m < a.vrts.size(); ++m){
+                                            if (!(intersectingPlane.checkPointLocation(a.vrts.get(m)) > 0.0)){
+                                                toRemove.add(nb);
+                                                break;
+                                            }
                                         }
                                     }
                                 }
                                 _newB.nestedBoundaries.removeAll(toRemove);
                                 removeFromSP.addAll(toRemove);
-                                for (Boundary nb : _newB.nestedBoundaries){
+                                for (int k = 0; k < _newB.nestedBoundaries.size(); ++k){
+                                    Boundary nb = _newB.nestedBoundaries.get(k);
                                     nb.nestedBoundaries.removeAll(toRemove);
                                 }
                                 processed.addAll(_newB.nestedBoundaries);
@@ -1630,7 +1742,6 @@ public class PatchUtil {
 
                 }
             }
-            planes.get(sp.id).clear();
             int a = 8777;
         } catch (Exception e){
             e.printStackTrace();
@@ -1654,8 +1765,25 @@ public class PatchUtil {
                 /*if (a.torus != null || exclude != null && (a == exclude || a == exclude.next || a == exclude.prev)){
                         continue;
                 }*/
-                if (a.torus != null || exclude.size() > 0 && (exclude.stream().anyMatch(a_ -> a_ == a || a_.next == a || a_.prev == a))){
+
+
+                //if (a.torus != null || exclude.size() > 0 && (exclude.stream().anyMatch(a_ -> a_ == a || a_.next == a || a_.prev == a))){
+                //    continue;
+                //}
+                if (a.torus != null){
                     continue;
+                } else if (exclude.size() > 0){
+                    boolean _continue = false;
+                    for (int k = 0; k < exclude.size(); ++k){
+                        Arc a_ = exclude.get(k);
+                        if (a_ == a || a_.next == a || a_.prev == a){
+                           _continue = true;
+                           break;
+                        }
+                    }
+                    if (_continue){
+                        continue;
+                    }
                 }
                 //boolean allInside = a.vrts.stream().allMatch(v -> p.checkPointLocation(v) > 0.0);
                 /*boolean allInside = p.checkPointLocation(a.end1) > 0.0 && p.checkPointLocation(a.mid) > 0.0 && p.checkPointLocation(a.end2) > 0.0;
@@ -1694,7 +1822,14 @@ public class PatchUtil {
                         in1.assignTranslation(midOfChord, vInt.makeUnit().multiply(odv2));
                         in2.assignTranslation(midOfChord, vInt.multiply(-1.0));
                         if (a.isInside(in1)){// && ArcUtil.findContainingArc(in1, p1, sp, null) != null){
-                            if (intersectionPoints.stream().noneMatch(v -> Point.distance(in1, v) < 0.01)){
+                            boolean foundSimilar = false;
+                            for (int k = 0; k < intersectionPoints.size(); ++k){
+                                if (Point.distance(in1, intersectionPoints.get(k)) < 0.01){
+                                   foundSimilar = true;
+                                   break;
+                                }
+                            }
+                            if (!foundSimilar){//intersectionPoints.stream().noneMatch(v -> Point.distance(in1, v) < 0.01)){
                                 Point _p = new Point(in1);
                                 _p.arc = a;
                                 if (Point.distance(a.end1, _p) < 0.001 && nextSign(_p, a, p1) < 0.0){
@@ -1703,15 +1838,31 @@ public class PatchUtil {
                                     _p.arc = a.next;
                                 }
                                 intersectionPoints.add(_p);
+                                //if (a.cuspTriangle != null){
+                                //    if (!a.vrts.stream().allMatch(point -> p1.checkPointLocation(point) > 0.0 || p1.distanceFromPlane(point) < 0.002)){
+                                //        intersectionPoints.remove(_p);
+                                //    }
+                                //}
                                 if (a.cuspTriangle != null){
-                                    if (!a.vrts.stream().allMatch(point -> p1.checkPointLocation(point) > 0.0 || p1.distanceFromPlane(point) < 0.002)){
-                                        intersectionPoints.remove(_p);
+                                    for (int k = 0; k < a.vrts.size(); ++k){
+                                        Point point = a.vrts.get(k);
+                                        if (!(p1.checkPointLocation(point) > 0.0 || p1.distanceFromPlane(point) < 0.002)){
+                                            intersectionPoints.remove(_p);
+                                            break;
+                                        }
                                     }
                                 }
                             }
                         }
                         if (a.isInside(in2)){// && ArcUtil.findContainingArc(in2, p1, sp, null) != null) {
-                            if (intersectionPoints.stream().noneMatch(v -> Point.distance(in2, v) < 0.01)){
+                            boolean foundSimilar = false;
+                            for (int k = 0; k < intersectionPoints.size(); ++k){
+                                if (Point.distance(in2, intersectionPoints.get(k)) < 0.01){
+                                    foundSimilar = true;
+                                    break;
+                                }
+                            }
+                            if (!foundSimilar){//*/intersectionPoints.stream().noneMatch(v -> Point.distance(in2, v) < 0.01)){
                                 Point _p = new Point(in2);
                                 _p.arc = a;
                                 if (Point.distance(a.end1, _p) < 0.001 && nextSign(_p, a, p1) < 0.0){
@@ -1720,9 +1871,18 @@ public class PatchUtil {
                                     _p.arc = a.next;
                                 }
                                 intersectionPoints.add(_p);
+                                //if (a.cuspTriangle != null){
+                                //    if (!a.vrts.stream().allMatch(point -> p1.checkPointLocation(point) > 0.0 || p1.distanceFromPlane(point) < 0.002)){
+                                //        intersectionPoints.remove(_p);
+                                //    }
+                                //}
                                 if (a.cuspTriangle != null){
-                                    if (!a.vrts.stream().allMatch(point -> p1.checkPointLocation(point) > 0.0 || p1.distanceFromPlane(point) < 0.002)){
-                                        intersectionPoints.remove(_p);
+                                    for (int k = 0; k < a.vrts.size(); ++k){
+                                        Point point = a.vrts.get(k);
+                                        if (!(p1.checkPointLocation(point) > 0.0 || p1.distanceFromPlane(point) < 0.002)){
+                                            intersectionPoints.remove(_p);
+                                            break;
+                                        }
                                     }
                                 }
                             }
@@ -1787,12 +1947,15 @@ public class PatchUtil {
             if (intersectionPoints.size() > 1){ //theoretically at most 2 intersection points should be encountered(and in most cases), 1 point is special case which is not handled right now(it is rare)
                 for (int i = 0; i < sp.boundaries.size(); ++i){
                     Boundary b = sp.boundaries.get(i);
-                    for (Arc a : b.arcs){
+                    for (int j = 0; j < b.arcs.size(); ++j){
+                        Arc a = b.arcs.get(j);
                         a.valid = false;
                     }
                 }
-                Plane circle = new Plane(arc.center, arc.normal);
-                List<Boundary> newBS = new ArrayList<>();
+                Plane circle = rho;// new Plane(arc.center, arc.normal);
+                rho.redefine(arc.center, arc.normal);
+                //List<Boundary> newBS = new ArrayList<>();
+                newBS.clear();
                 Point first = ArcUtil.findClosestPointOnCircle(intersectionPoints, arc.end1, true, arc.center, arc.normal, true);
                 intersectionPoints.remove(first);
                 Arc a = first.arc;//ArcUtil.findContainingArc(first, circle, sp, arc);
@@ -2115,11 +2278,21 @@ public class PatchUtil {
                 init = true;
             } else {
                 Point newStart = null;
-                for (Point p : usablePoints){
+                for (int i = 0; i < usablePoints.size(); ++i){
+                    Point p = usablePoints.get(i);
                     if (a.isInside(p)){
-                        final Arc arc = a;
-                        Optional<Point> otherP = usablePoints.stream().filter(v -> v != p && arc.isInside(v)).findFirst();
-                        newStart = (otherP.isPresent()) ? ((ArcUtil.getOrder(a, p, otherP.get()) < 0) ? p : otherP.get()) : p;
+                        //final Arc arc = a;
+                        //Optional<Point> otherP = usablePoints.stream().filter(v -> v != p && arc.isInside(v)).findFirst();
+                        //newStart = (otherP.isPresent()) ? ((ArcUtil.getOrder(a, p, otherP.get()) < 0) ? p : otherP.get()) : p;
+                        Point otherP = null;
+                        for (int l = 0; l < usablePoints.size(); ++l){
+                            Point v = usablePoints.get(l);
+                            if (v != p && a.isInside(v)){
+                                otherP = v;
+                                break;
+                            }
+                        }
+                        newStart = (otherP != null) ? ((ArcUtil.getOrder(a, p, otherP) < 0) ? p : otherP) : p;
                         break;
                     }
                 }
@@ -2197,7 +2370,10 @@ public class PatchUtil {
                     }
 
                 }
-                b2.mergeSplit.stream().forEach(b_ -> b_.mergeSplit.clear());
+                //b2.mergeSplit.stream().forEach(b_ -> b_.mergeSplit.clear());
+                for (int j = 0; j < b2.mergeSplit.size(); ++j){
+                    b2.mergeSplit.get(j).mergeSplit.clear();
+                }
             } else if (b.mergeSplit.size() > 1){
                 for (int j = 0; j < b.mergeSplit.size(); ++j){
                     Boundary newB = b.mergeSplit.get(j);
@@ -2219,22 +2395,54 @@ public class PatchUtil {
                 b.mergeSplit.clear();
             }
         }
-        toAdd.stream().forEach(b -> b.mergeSplit.clear());
+        //toAdd.stream().forEach(b -> b.mergeSplit.clear());
+        for (int i = 0; i < toAdd.size(); ++i){
+            toAdd.get(i).mergeSplit.clear();
+        }
         sp.boundaries.removeAll(toRemove);
         sp.boundaries.addAll(toAdd);
     }
 
     private static boolean areNested(Boundary b1, Boundary b2){
-        boolean nest = b1.arcs.stream().allMatch(a -> {
-            Plane rho = new Plane(a.center, a.normal);
-            return b2.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0);
-        });
-        if (nest){
-            nest = b2.arcs.stream().allMatch(a -> {
-                Plane rho = new Plane(a.center, a.normal);
-                return b1.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0);
-            });
-            if (!nest){
+        //boolean nest = b1.arcs.stream().allMatch(a -> {
+        //    //Plane rho = new Plane(a.center, a.normal);
+        //    rho.redefine(a.center, a.normal);
+        //    return b2.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0);
+        //});
+        boolean _nest = true;
+        for (int i = 0; i < b1.arcs.size(); ++i){
+            Arc a = b1.arcs.get(i);
+            rho.redefine(a.center, a.normal);
+            for (int j = 0; j < b2.vrts.size(); ++j){
+                if (!(rho.checkPointLocation(b2.vrts.get(j)) > 0.0)){
+                    _nest = false;
+                    break;
+                }
+            }
+            if (!_nest){
+                break;
+            }
+        }
+        if (_nest){
+            //nest = b2.arcs.stream().allMatch(a -> {
+            //    //Plane rho = new Plane(a.center, a.normal);
+            //    rho.redefine(a.center, a.normal);
+            //    return b1.vrts.stream().allMatch(v -> rho.checkPointLocation(v) > 0.0);
+            //});
+            for (int i = 0; i < b2.arcs.size(); ++i){
+                Arc a = b2.arcs.get(i);
+                rho.redefine(a.center, a.normal);
+                for (int j = 0; j < b1.vrts.size(); ++j){
+                    if (!(rho.checkPointLocation(b1.vrts.get(j)) > 0.0)){
+                        _nest = false;
+                        break;
+                    }
+                }
+                if (!_nest){
+                    break;
+                }
+            }
+            if (!_nest){
                 return false;
             }
         } else {
@@ -2443,6 +2651,18 @@ public class PatchUtil {
         _genVector.changeVector(_p, circle.p).multiply(10.f);
         _nextPoint.assignTranslation(circle.p, _genVector);
         return circle.checkPointLocation(_nextPoint);
+    }
+
+    private static boolean arcInsideHyperspace(Arc a, Plane circle, Point p){
+        boolean inside = true;
+        for (int i = 0; i < a.vrts.size(); ++i){
+            Point point = a.vrts.get(i);
+            if (!(Point.distance(p, point) < 0.001 || circle.checkPointLocation(point) > 0.0 || circle.distanceFromPlane(point) < 0.001)){
+               inside = false;
+               break;
+            }
+        }
+        return inside;
     }
 
 

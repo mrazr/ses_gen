@@ -243,6 +243,7 @@ public class MeshGeneration {
                 for (int i = 0; i < tp.tr1.base.vrts.size(); ++i){
                     _top.add(tp.tr1.cuspPoint);
                 }
+                tp.probes = new Point[2 * tp.tr1.base.vrts.size()];
                 //Arc left = new Arc(tp.tr1.left.center, tp.tr1.left.radius);
                 _left.center.change(tp.tr1.left.center);
                 _left.radius = tp.tr1.left.radius;
@@ -268,6 +269,7 @@ public class MeshGeneration {
                 ArcUtil.reverseArc(_left, true);
                 _topL.vrts.clear();
                 _topL.vrts.addAll(_top);
+                tp.arcVertsCount = tp.tr1.left.vrts.size();
                 meshToroidalPatch(tp, tp.tr2.base, _topL, _left, tp.tr2.right, true);
                 transferFacesToPatch(tp);
                 Surface.toriFacesCount += tp.faces.length / 3;
@@ -300,6 +302,7 @@ public class MeshGeneration {
                         //Point p = bottom.vrts.get(i);
                         topForBottomRect.vrts.add(bottomCusp);
                     }
+                    tp.probes = new Point[2 * bottom.vrts.size()];
                     Point newCenter = (Point.distance(bottom.end2, Sphere.getContactPoint(new Sphere(tp.probe1, SesConfig.probeRadius), bottom.owner.sphere)) < 0.0001) ? tp.probe1 : tp.probe2;
                     left = new Arc(newCenter, SesConfig.probeRadius);
                     left.vrts.add(bottom.end2);
@@ -307,9 +310,9 @@ public class MeshGeneration {
                     Vector v;
                     left.vrts.add(bottomCusp);
                     left.setEndPoints(bottom.end2, bottomCusp, true);
-                    ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
+                    //ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
                     ArcUtil.refineArc(left, SesConfig.edgeLimit, false,0, false);
-
+                    int subdLevel = ArcUtil.getSubdivisionLevel(left);
                     newCenter = (Point.distance(left.center, tp.probe1) < 0.0001) ? tp.probe2 : tp.probe1;
 
                     right = new Arc(newCenter, SesConfig.probeRadius);
@@ -320,7 +323,7 @@ public class MeshGeneration {
                     right.vrts.add(bottomCusp);
                     right.setEndPoints(bottom.end1, bottomCusp, true);
                     int numOfDivs = (int)(Math.log10(left.vrts.size() - 1) / Math.log10(2));
-                    ArcUtil.refineArc(right, SesConfig.edgeLimit, true, numOfDivs, false);
+                    ArcUtil.refineArc(right, SesConfig.edgeLimit, true, subdLevel, false);
                     meshToroidalPatch(tp, bottom, topForBottomRect, left, right, false);
 
                     Arc bottomForTopRect = new Arc(top.center, top.radius);
@@ -335,8 +338,8 @@ public class MeshGeneration {
                     //v = Point.subtractPoints(mid, left.center).makeUnit().multiply(left.radius);
                     left.vrts.add(topCusp);
                     left.setEndPoints(top.end2, topCusp, true);
-                    ArcUtil.refineArc(left, SesConfig.edgeLimit, true,3, false);
-                    ArcUtil.refineArc(left, SesConfig.edgeLimit, false, 0, false);
+                    ArcUtil.refineArc(left, SesConfig.edgeLimit, true,subdLevel, false);
+                    //ArcUtil.refineArc(left, SesConfig.edgeLimit, false, 0, false);
                     newCenter = (Point.subtractPoints(left.center, tp.probe1).sqrtMagnitude() < 0.0001) ? tp.probe2 : tp.probe1;
                     right = new Arc(newCenter, SesConfig.probeRadius);
                     right.vrts.add(top.end1);
@@ -346,7 +349,8 @@ public class MeshGeneration {
                     right.vrts.add(topCusp);
                     right.setEndPoints(top.end1, topCusp, true);
                     numOfDivs = (int)(Math.log10(left.vrts.size() - 1) / Math.log10(2));
-                    ArcUtil.refineArc(right, SesConfig.edgeLimit, true, numOfDivs, false);
+                    ArcUtil.refineArc(right, SesConfig.edgeLimit, true, subdLevel, false);
+                    tp.arcVertsCount = left.vrts.size();
                     meshToroidalPatch(tp, top, bottomForTopRect, left, right, false);
                     transferFacesToPatch(tp);
                     Surface.toriFacesCount += tp.faces.length / 3;
@@ -377,6 +381,8 @@ public class MeshGeneration {
                     if (_right.vrts.size() != _left.vrts.size()){
                         System.out.println("weird");
                     }
+                    tp.probes = new Point[bottom.vrts.size()];
+                    tp.arcVertsCount = _left.vrts.size();
                     meshToroidalPatch(tp, bottom, top, _left, _right, false);
                     transferFacesToPatch(tp);
                     Surface.toriFacesCount += tp.faces.length / 3;
@@ -404,6 +410,8 @@ public class MeshGeneration {
                         int diff = ArcUtil.getSubdivisionLevel(more) - ArcUtil.getSubdivisionLevel(fewer);
                         ArcUtil.refineArc(fewer, SesConfig.edgeLimit, true, diff, false);
                     }
+                    tp.probes = new Point[bottom.vrts.size()];
+                    tp.arcVertsCount = left.vrts.size();
                     meshToroidalPatch(tp, bottom, top, left, right, false);
                     transferFacesToPatch(tp);
                     Surface.toriFacesCount += tp.faces.length;
@@ -433,12 +441,17 @@ public class MeshGeneration {
                 int a = 32;
             }
             //List<Point> leftVArc = new ArrayList<>();
+            int vertexOffset = tp.vertices.size();
+            int arcLen = left.vrts.size();
+            int probeOffset = (tp.vertices.size() > 0) ? bottom.vrts.size() : 0;
             leftVArc.clear();
             leftVArc.addAll(left.vrts);
             //List<Point> rightVArc = new ArrayList<>();
             //Point currProbe = null;
             //Point prevProbe = left.center;
             prevProbe.setAsMidpoint(left.center, left.center);
+            tp.probes[probeOffset] = new Point(prevProbe);
+            tp.vertices.addAll(leftVArc);
             for (int i = 1; i < bottom.vrts.size(); ++i) {
                 Point vert = bottom.vrts.get(bottom.vrts.size() - i - 1);
                 //Vector toProbe = Point.subtractPoints(vert, bottom.owner.sphere.center).makeUnit().multiply(SesConfig.probeRadius);
@@ -488,94 +501,118 @@ public class MeshGeneration {
                         //}
                     }
                 }
-                for (int j = 0; j < left.vrts.size() - 1; ++j) {
-                    //Point newPoint = null;
-                    /*if (i < bottom.vrts.size() - 1) {
-                        if (j < left.vrts.size() - 2) {
-                            Vector v = Point.subtractPoints(top.vrts.get(i), bottom.vrts.get(bottom.vrts.size() - i - 1)).multiply((float)(j + 1) / (float)(left.vrts.size() - 1));
-                            newPoint = Point.translatePoint(bottom.vrts.get(bottom.vrts.size() - i - 1), v);
-                            v = Point.subtractPoints(newPoint, currProbe).makeUnit().multiply(Double.longBitsToDouble(Main.probeRadius.get()));
-                            newPoint = Point.translatePoint(currProbe, v);
-                        } else {
-                            newPoint = top.vrts.get(i);
-                        }
-                        newHelp.add(newPoint);
-                    }*/
-                    //float[] color = (i < bottom.vrts.size() - 2) ? green : blue;
-                    int offset = tp.vertices.size();
-                    /*for (Point p : vertices){
-                        if (p.idx < 0){
-                            offset++;
-                        }
-                    }*/
-                    //tp.vrts.add(leftVArc.get(j)); // = 0
-                    Vector n = Point.subtractPoints(prevProbe, leftVArc.get(j)).makeUnit();
-                    //n.changeVector(prevProbe, leftVArc.get(j)).makeUnit();
-                    //tp.vrts.add(new Point(n.getFloatData()));
-
-                    tp.vertices.add(leftVArc.get(j)); // = 0
-                    tp.normals.add(n);
-
-                    //vrts.add(new Point(color));
-                    //tp.vrts.add(rightVArc.get(j)); // = 1
-                    //vrts.add(new Point(color));
-                    n = Point.subtractPoints(currProbe, rightVArc.get(j)).makeUnit();
-                    //tp.vrts.add(new Point(n.getFloatData()));
-
-                    tp.vertices.add(rightVArc.get(j));
-                    tp.normals.add(n);
-
-                    //tp.vrts.add(leftVArc.get(j + 1)); // = 2
-                    //vrts.add(new Point(color));
-                    if (prevProbe == null || leftVArc.get(j + 1) == null){
-                        System.out.println(" ");
-                    }
-                    n = Point.subtractPoints(prevProbe, leftVArc.get(j + 1)).makeUnit();
-                    //tp.vrts.add(new Point(n.getFloatData()));
-
-                    tp.vertices.add(leftVArc.get(j + 1));
-                    tp.normals.add(n);
-
-                    //tp.vrts.add(leftVArc.get(j + 1)); // = 2
-                    //vrts.add(new Point(color));
-                    //n = Point.subtractPoints(prevProbe, leftVArc.get(j + 1)).makeUnit();
-                    //tp.vrts.add(new Point(n.getFloatData()));
-                    //tp.vrts.add(rightVArc.get(j)); // = 1
-                    //vrts.add(new Point(color));
-                    //n = Point.subtractPoints(currProbe, rightVArc.get(j)).makeUnit();
-                    //tp.vrts.add(new Point(n.getFloatData()));
-                    //tp.vrts.add(rightVArc.get(j + 1)); // = 3
-                    //vrts.add(new Point(color));
-                    n = Point.subtractPoints(currProbe, rightVArc.get(j + 1)).makeUnit();
-                    //tp.vrts.add(new Point(n.getFloatData()));
-
-                    tp.vertices.add(rightVArc.get(j + 1));
-                    tp.normals.add(n);
-
-                    if (nextFaceID >= facePool.size()){
-                        facePool.add(new Face(0, 0, 0));
-                        facePool.add(new Face(0, 0, 0));
-                    }
-                    Face f1 = facePool.get(nextFaceID++);
-                    Face f2 = facePool.get(nextFaceID++);
-                    f1.a = offset;
-                    f1.b = offset + 1;
-                    f1.c = offset + 2;
-
-                    f2.a = offset + 2;
-                    f2.b = offset + 1;
-                    f2.c = offset + 3;
-                    //tp.faces.add(offset);
-                    //tp.faces.add(offset + 1);
-                    //tp.faces.add(offset + 2);
-//
-                    //tp.faces.add(offset + 2);
-                    //tp.faces.add(offset + 1);
-                    //tp.faces.add(offset + 3);
-                    //tp.faces.add(new Face(offset, offset + 1, offset + 2));
-                    //tp.faces.add(new Face(offset + 2, offset + 1, offset + 3));
-                    Surface.numoftriangles += 2;
+                int l = (tp.vertices.size() - vertexOffset) / arcLen - 1;
+                int r = l + 1;
+                int m = arcLen;
+                tp.vertices.addAll(rightVArc);
+                if (r >= tp.probes.length){
+                    System.out.println("this is it");
                 }
+                tp.probes[r + probeOffset] = new Point(currProbe);
+                for (int j = 0; j < left.vrts.size() - 1; ++j){
+                    if (nextFaceID >= facePool.size()){
+                         facePool.add(new Face(0, 0, 0));
+                         facePool.add(new Face(0, 0, 0));
+                     }
+                     Face f1 = facePool.get(nextFaceID++);
+                     Face f2 = facePool.get(nextFaceID++);
+                     f1.a = l * m + j + vertexOffset;
+                     f1.b = r * m + j + vertexOffset;
+                     f1.c = l * m + j + vertexOffset + 1;
+
+                     f2.a = l * m + j + vertexOffset + 1;
+                     f2.b = r * m + j + vertexOffset;
+                     f2.c = r * m + j + vertexOffset + 1;
+                     Surface.numoftriangles += 2;
+                }
+//                for (int j = 0; j < left.vrts.size() - 1; ++j) {
+//                    //Point newPoint = null;
+//                    /*if (i < bottom.vrts.size() - 1) {
+//                        if (j < left.vrts.size() - 2) {
+//                            Vector v = Point.subtractPoints(top.vrts.get(i), bottom.vrts.get(bottom.vrts.size() - i - 1)).multiply((float)(j + 1) / (float)(left.vrts.size() - 1));
+//                            newPoint = Point.translatePoint(bottom.vrts.get(bottom.vrts.size() - i - 1), v);
+//                            v = Point.subtractPoints(newPoint, currProbe).makeUnit().multiply(Double.longBitsToDouble(Main.probeRadius.get()));
+//                            newPoint = Point.translatePoint(currProbe, v);
+//                        } else {
+//                            newPoint = top.vrts.get(i);
+//                        }
+//                        newHelp.add(newPoint);
+//                    }*/
+//                    //float[] color = (i < bottom.vrts.size() - 2) ? green : blue;
+//                    int offset = tp.vertices.size();
+//                    /*for (Point p : vertices){
+//                        if (p.idx < 0){
+//                            offset++;
+//                        }
+//                    }*/
+//                    //tp.vrts.add(leftVArc.get(j)); // = 0
+//                    Vector n = Point.subtractPoints(prevProbe, leftVArc.get(j)).makeUnit();
+//                    //n.changeVector(prevProbe, leftVArc.get(j)).makeUnit();
+//                    //tp.vrts.add(new Point(n.getFloatData()));
+//
+//                    tp.vertices.add(leftVArc.get(j)); // = 0
+//                    tp.normals.add(n);
+//
+//                    //vrts.add(new Point(color));
+//                    //tp.vrts.add(rightVArc.get(j)); // = 1
+//                    //vrts.add(new Point(color));
+//                    n = Point.subtractPoints(currProbe, rightVArc.get(j)).makeUnit();
+//                    //tp.vrts.add(new Point(n.getFloatData()));
+//
+//                    tp.vertices.add(rightVArc.get(j));
+//                    tp.normals.add(n);
+//
+//                    //tp.vrts.add(leftVArc.get(j + 1)); // = 2
+//                    //vrts.add(new Point(color));
+//                    if (prevProbe == null || leftVArc.get(j + 1) == null){
+//                        System.out.println(" ");
+//                    }
+//                    n = Point.subtractPoints(prevProbe, leftVArc.get(j + 1)).makeUnit();
+//                    //tp.vrts.add(new Point(n.getFloatData()));
+//
+//                    tp.vertices.add(leftVArc.get(j + 1));
+//                    tp.normals.add(n);
+//
+//                    //tp.vrts.add(leftVArc.get(j + 1)); // = 2
+//                    //vrts.add(new Point(color));
+//                    //n = Point.subtractPoints(prevProbe, leftVArc.get(j + 1)).makeUnit();
+//                    //tp.vrts.add(new Point(n.getFloatData()));
+//                    //tp.vrts.add(rightVArc.get(j)); // = 1
+//                    //vrts.add(new Point(color));
+//                    //n = Point.subtractPoints(currProbe, rightVArc.get(j)).makeUnit();
+//                    //tp.vrts.add(new Point(n.getFloatData()));
+//                    //tp.vrts.add(rightVArc.get(j + 1)); // = 3
+//                    //vrts.add(new Point(color));
+//                    n = Point.subtractPoints(currProbe, rightVArc.get(j + 1)).makeUnit();
+//                    //tp.vrts.add(new Point(n.getFloatData()));
+//
+//                    tp.vertices.add(rightVArc.get(j + 1));
+//                    tp.normals.add(n);
+//
+//                    if (nextFaceID >= facePool.size()){
+//                        facePool.add(new Face(0, 0, 0));
+//                        facePool.add(new Face(0, 0, 0));
+//                    }
+//                    Face f1 = facePool.get(nextFaceID++);
+//                    Face f2 = facePool.get(nextFaceID++);
+//                    f1.a = offset;
+//                    f1.b = offset + 1;
+//                    f1.c = offset + 2;
+//
+//                    f2.a = offset + 2;
+//                    f2.b = offset + 1;
+//                    f2.c = offset + 3;
+//                    //tp.faces.add(offset);
+//                    //tp.faces.add(offset + 1);
+//                    //tp.faces.add(offset + 2);
+////
+//                    //tp.faces.add(offset + 2);
+//                    //tp.faces.add(offset + 1);
+//                    //tp.faces.add(offset + 3);
+//                    //tp.faces.add(new Face(offset, offset + 1, offset + 2));
+//                    //tp.faces.add(new Face(offset + 2, offset + 1, offset + 3));
+//                    Surface.numoftriangles += 2;
+//                }
                 leftVArc.clear();
                 leftVArc.addAll(rightVArc);
                 prevProbe.setAsMidpoint(currProbe, currProbe);

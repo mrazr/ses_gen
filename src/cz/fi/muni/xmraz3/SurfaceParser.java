@@ -711,8 +711,12 @@ public class SurfaceParser {
     //main export methods
 
     public static boolean exportOBJ(String filename, char mask){
+        if (Surface.commonVrts.size() == 0){
+            fillCommonVertices();
+        }
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(filename))){
             int offset = 0;
+            Vector _normal = new Vector(0, 0, 0);
             int ownIdx = Surface.commonVrts.size() + 1;
             for (Point p : Surface.commonVrts){
                 bw.write("v " + p.toString());
@@ -731,17 +735,18 @@ public class SurfaceParser {
                 /*for (int i = 0; i < vrts.size(); ++i){
 
                 }*/
-                    List<Vector> norms = new ArrayList<>();
+                   // List<Vector> norms = new ArrayList<>();
                     int ownVerticesCount = 0;
                     for (Point p : vrts) {
                         if (p.idx > 0) {
                             continue;
                         }
-                        Vector n = Point.subtractPoints(p, a.sphere.center).makeUnit();
-                        norms.add(n);
+                        //Vector n = Point.subtractPoints(p, a.sphere.center).makeUnit();
+                        _normal.changeVector(p, a.sphere.center).makeUnit();
+                        //norms.add(n);
                         bw.write("v " + p.toString());
                         bw.newLine();
-                        bw.write("vn " + n.toString());
+                        bw.write("vn " + _normal.toString());
                         bw.newLine();
                         ownVerticesCount++;
                         p.ownIdx = ownIdx++;
@@ -790,10 +795,11 @@ public class SurfaceParser {
                         if (p.idx > 0) {
                             continue;
                         }
-                        Vector n = Point.subtractPoints(cp.sphere.center, p).makeUnit();
+                        //Vector n = Point.subtractPoints(cp.sphere.center, p).makeUnit();
+                        _normal.changeVector(cp.sphere.center, p);
                         bw.write("v " + p.toString());
                         bw.newLine();
-                        bw.write("vn " + n.toString());
+                        bw.write("vn " + _normal.toString());
                         bw.newLine();
                         ownVerticesCount++;
                         p.ownIdx = ownIdx++;
@@ -845,9 +851,11 @@ public class SurfaceParser {
                         if (p.idx > 0) {
                             continue;
                         }
+                        _normal.changeVector(tp.probes[PatchUtil.getTorusProbeIdx(tp, i)], p).makeUnit();
                         bw.write("v " + p.toString());
                         bw.newLine();
-                        bw.write("vn " + normals.get(i).toString());
+                        //bw.write("vn " + normals.get(i).toString());
+                        bw.write("vn " + _normal.toString());
                         bw.newLine();
                         ownVerticesCount++;
                         p.ownIdx = ownIdx++;
@@ -985,11 +993,13 @@ public class SurfaceParser {
     public static boolean exportSTLText(String file){
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))){
             List<Point> vrts;
-            //List<Integer> faces;
             int[] faces;
             bw.write("solid ");
             bw.newLine();
             for (SphericalPatch a : Surface.convexPatches){
+                if (a.faces == null){
+                    continue;
+                }
                 vrts = a.vertices;
                 faces = a.faces;
                 for (int i = 0; i < a.faces.length; i += 3){ //Face f : faces){
@@ -1010,6 +1020,9 @@ public class SurfaceParser {
                 }
             }
             for (SphericalPatch cp : Surface.triangles){
+                if (cp.faces == null){
+                    continue;
+                }
                 vrts = cp.vertices;
                 faces = cp.faces;
                 for (int i = 0; i < cp.faces.length; i += 3){ //Face f : faces){
@@ -1030,8 +1043,10 @@ public class SurfaceParser {
                 }
             }
             for (ToroidalPatch rp : Surface.rectangles){
+                if (rp.faces == null){
+                    continue;
+                }
                 vrts = rp.vertices;
-                //faces = rp.faces;
                 int[] _faces = rp.faces;
                 for (int i = 0; i < _faces.length; i += 3){//Face f : faces){
                     bw.write("facet normal 0.0 0.0 0.0");
@@ -1052,7 +1067,6 @@ public class SurfaceParser {
             }
             bw.write("endsolid");
             bw.flush();
-            bw.close();
         } catch (IOException e){
             e.printStackTrace();
             return false;

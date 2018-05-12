@@ -145,6 +145,7 @@ public class PatchUtil {
                 tr2.right = target;
                 tp.tr1 = tr1;
                 tp.tr2 = tr2;
+                //equalizeVertexCount(tp.tr1, tp.tr2);
                 return;
             }
             if (tp.id == 8871){
@@ -506,6 +507,7 @@ public class PatchUtil {
                 System.out.println(" ");
             }
             tp.tr2.cuspPoint = cusps[1];
+            //equalizeVertexCount(tp.tr1, tp.tr2);
             leftStart.torus = leftEnd.torus = rightStart.torus = rightEnd.torus = null;
             tp.concavePatchArcs.clear();
         } catch (Exception e){
@@ -2637,9 +2639,9 @@ public class PatchUtil {
             dir = -1;
         }
         Point _p = genP(a, p, dir);
-        //Vector ak = Point.subtractPoints(_p, circle.p).multiply(10.f);
-        _genVector.changeVector(_nextPoint, circle.p).multiply(10.f);
+        //Vector ak = Point.subtractPoints(_p, circle.p).multiply(10.f); _genVector.changeVector(_nextPoint, circle.p).multiply(10.f);
         //Point __p = Point.translatePoint(circle.p, ak);
+        _genVector.changeVector(_nextPoint, circle.p).multiply(10.f);
         _nextPoint.assignTranslation(circle.p, _genVector);
         return dir * circle.checkPointLocation(_nextPoint) < 0.0;
     }
@@ -2665,5 +2667,42 @@ public class PatchUtil {
         return inside;
     }
 
+    private static void refineArcForNvertices(Arc a, int n){
+        if (a.vrts.size() >= n){
+            return;
+        }
+        int currSubd = ArcUtil.getSubdivisionLevel(a);
+        int target = (int)(Math.log10(n) / Math.log10(2));
+        ArcUtil.refineArc(a, SesConfig.edgeLimit, true, (target - currSubd), false);
+    }
 
+    private static void equalizeVertexCount(CuspTriangle tr1, CuspTriangle tr2){
+        int maxCount = Math.max(Math.max(tr1.left.vrts.size(), tr1.right.vrts.size()), Math.max(tr2.left.vrts.size(), tr2.right.vrts.size()));
+        refineArcForNvertices(tr1.left, maxCount);
+        refineArcForNvertices(tr1.right, maxCount);
+        refineArcForNvertices(tr2.left, maxCount);
+        refineArcForNvertices(tr2.right, maxCount);
+    }
+
+    public static int getTorusProbeIdx(ToroidalPatch tp, int vertexID){
+        if (tp.tr1 != null){
+           int firstPatchVertexCount = tp.tr1.base.vrts.size() * tp.tr1.left.vrts.size();
+           int arcLen = (vertexID >= firstPatchVertexCount) ? tp.tr2.left.vrts.size() : tp.tr1.left.vrts.size();
+           int probeOffset = (vertexID >= firstPatchVertexCount) ? tp.tr1.base.vrts.size() : 0;
+           int vertexOffset = (probeOffset > 0) ? firstPatchVertexCount : 0;
+           return (vertexID - vertexOffset) / arcLen + probeOffset;
+        } else {
+           if (tp.concavePatchArcs.size() == 0){
+              if (getProbeAxisDistance(tp.probe1, tp.convexPatchArcs.get(0).center, tp.convexPatchArcs.get(1).center) - SesConfig.probeRadius < 0.0){
+                  int arcLen = tp.vertices.size() / 2 * tp.convexPatchArcs.get(0).vrts.size();
+                  return vertexID / arcLen;
+              } else {
+                 int arcLen = tp.vertices.size() / tp.convexPatchArcs.get(0).vrts.size();
+                 return vertexID / arcLen;
+              }
+           } else {
+               return vertexID / tp.concavePatchArcs.get(0).vrts.size();
+           }
+        }
+    }
 }

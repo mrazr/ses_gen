@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="GUI" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="cz.fi.muni.xmraz3.Main" />
+    <module name="ses_gen" />
+    <option name="PROGRAM_PARAMETERS" value="-gui -e 0.4" />
+    <option name="VM_PARAMETERS" value="-Xms1G -Xmx1G" />
+    <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
+    <method />
+  </configuration>
+</component>

@@ -1637,8 +1637,6 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
     }
     private void pushToriMeshToGPU(){
         stopRendering.set(true);
-        List<Point> vrtsNormals = new ArrayList<>();
-        //List<Float> _vrtsNormals = new ArrayList<>();
         FloatBuffer _vrtsNormals = GLBuffers.newDirectFloatBuffer(Surface.toriFacesCount * 3 * 2 * 3);
         int vboOffset = 0;
         int faceCount = 0;

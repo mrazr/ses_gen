@@ -2694,7 +2694,7 @@ public class PatchUtil {
         } else {
            if (tp.concavePatchArcs.size() == 0){
               if (getProbeAxisDistance(tp.probe1, tp.convexPatchArcs.get(0).center, tp.convexPatchArcs.get(1).center) - SesConfig.probeRadius < 0.0){
-                  int arcLen = tp.vertices.size() / 2 * tp.convexPatchArcs.get(0).vrts.size();
+                  int arcLen = tp.vertices.size() / (2 * tp.convexPatchArcs.get(0).vrts.size());
                   return vertexID / arcLen;
               } else {
                  int arcLen = tp.vertices.size() / tp.convexPatchArcs.get(0).vrts.size();

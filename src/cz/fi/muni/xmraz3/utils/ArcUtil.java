@@ -1156,29 +1156,34 @@ public class ArcUtil {
     }
 
     public static void refineArcsOnSphericalPatches(){
-        for (SphericalPatch sp : Surface.convexPatches){
-            for (int i = 0; i < sp.boundaries.size(); ++i){
-                Boundary b = sp.boundaries.get(i);
-                for (int j = 0; j < b.arcs.size(); ++j){
-                    Arc a = b.arcs.get(j);
-                    Arc opposite = a.opposite;
-                    if (opposite.owner.id < sp.id){
-                        continue;
+        try {
+            for (SphericalPatch sp : Surface.convexPatches) {
+                for (int i = 0; i < sp.boundaries.size(); ++i) {
+                    Boundary b = sp.boundaries.get(i);
+                    for (int j = 0; j < b.arcs.size(); ++j) {
+                        Arc a = b.arcs.get(j);
+                        Arc opposite = a.opposite;
+                        if (opposite.owner.id < sp.id) {
+                            continue;
+                        }
+                        double edgeLimit = (b.arcs.size() > 2) ? SesConfig.edgeLimit : 0.75 * SesConfig.edgeLimit;
+                        refineOppositeArcs(a, opposite, edgeLimit, true, true);
                     }
-                    refineOppositeArcs(a, opposite, SesConfig.edgeLimit, true, true);
+                    buildEdges(b, true);
                 }
-                buildEdges(b, true);
             }
-        }
-        for (SphericalPatch sp : Surface.triangles){
-            for (int i = 0; i < sp.boundaries.size(); ++i){
-                Boundary b = sp.boundaries.get(i);
-                for (int j = 0; j < b.arcs.size(); ++j){
-                    Arc a = b.arcs.get(j);
-                    refineArc(a, SesConfig.edgeLimit, false, 0, false);
+            for (SphericalPatch sp : Surface.triangles) {
+                for (int i = 0; i < sp.boundaries.size(); ++i) {
+                    Boundary b = sp.boundaries.get(i);
+                    for (int j = 0; j < b.arcs.size(); ++j) {
+                        Arc a = b.arcs.get(j);
+                        refineArc(a, SesConfig.edgeLimit, false, 0, false);
+                    }
+                    buildEdges(b, true);
                 }
-                buildEdges(b, true);
             }
+        } catch (Exception e){
+            e.printStackTrace();
         }
     }
 

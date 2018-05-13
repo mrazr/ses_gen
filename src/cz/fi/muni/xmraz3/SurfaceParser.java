@@ -231,19 +231,21 @@ public class SurfaceParser {
                 atom2.arcs.remove(atom2Arcs[0]);
                 atom2.arcs.remove(atom2Arcs[1]);
             }
-            for (Arc a : atom1Arcs){
-                for (Arc j : atom2Arcs){
-                    if (Point.distance(a.midProbe, j.midProbe) < 0.001){
-                        a.opposite = j;
-                        j.opposite = a;
-                        ToroidalPatch tp = new ToroidalPatch(probe1.center, probeMid.center, j.midProbe);
+            for (int i = 0; i < atom1Arcs.length; ++i){
+                Arc a = atom1Arcs[i];
+                for (int j = 0; j < atom2Arcs.length; ++j){
+                    Arc b = atom2Arcs[j];
+                    if (Point.distance(a.midProbe, b.midProbe) < 0.001){
+                        a.opposite = b;
+                        b.opposite = a;
+                        ToroidalPatch tp = new ToroidalPatch(probe1.center, probeMid.center, b.midProbe);
                         tp.convexPatchArcs.add(a);
-                        tp.convexPatchArcs.add(j);
+                        tp.convexPatchArcs.add(b);
                         tp.circular = true;
 
                         assignRollingPatchToAtoms(atom1, atom2, tp);
-                        Arc smallerRadius = (a.owner.sphere.radius <= j.owner.sphere.radius) ? a : j;
-                        Arc greaterRadius = (smallerRadius == a) ? j : a;
+                        Arc smallerRadius = (a.owner.sphere.radius <= b.owner.sphere.radius) ? a : b;
+                        Arc greaterRadius = (smallerRadius == a) ? b : a;
                         ArcUtil.refineArc(greaterRadius, 0, true,1, false);
                         greaterRadius.baseSubdivision = -1;
                         ArcUtil.refineArc(greaterRadius, Surface.maxEdgeLen, false,0, false);
@@ -728,7 +730,9 @@ public class SurfaceParser {
             }
             if ((mask & 1) > 0) {
                 for (SphericalPatch a : Surface.convexPatches) {
-
+                    if (a.faces == null){
+                        continue;
+                    }
                     List<Point> vrts = a.vertices;
                     //List<Integer> faces = a.faces;
                     int[] faces = a.faces;
@@ -787,6 +791,9 @@ public class SurfaceParser {
             }
             if ((mask & 2) > 0) {
                 for (SphericalPatch cp : Surface.triangles) {
+                    if (cp.faces == null){
+                        continue;
+                    }
                     List<Point> vrts = cp.vertices;
                     //List<Integer> faces = cp.faces;
                     int[] faces = cp.faces;
@@ -840,6 +847,9 @@ public class SurfaceParser {
             }
             if ((mask & 4) > 0) {
                 for (ToroidalPatch tp : Surface.rectangles) {
+                    if (tp.faces == null){
+                        continue;
+                    }
                     List<Point> vrts = tp.vertices;
                     List<Vector> normals = tp.normals;
                     //List<Face> faces = tp.faces;
@@ -892,7 +902,6 @@ public class SurfaceParser {
                 }
             }
             bw.flush();
-            bw.close();
         } catch (IOException e){
             e.printStackTrace();
             return false;

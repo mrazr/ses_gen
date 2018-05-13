@@ -20,7 +20,7 @@ public class Point {
     public int ownIdx = -1;
     public int _id = -1;
     //public static double scaleFactor = 5;
-    public boolean arcPoint = false;
+    //public boolean arcPoint = false;
     public Arc arc;
 
     public double getX() {
@@ -65,6 +65,13 @@ public class Point {
         z = Surface.scaleFactor * (Double)jObj.get("z");
     }
 
+    public Point change(Point p){
+        this.x = p.x;
+        this.y = p.y;
+        this.z = p.z;
+        return this;
+    }
+
     public static Point translatePoint(Point p, Vector v){
         double nX = p.x + v.getX();
         double nY = p.y + v.getY();
@@ -87,8 +94,7 @@ public class Point {
         return new Vector(x, y, z);
     }
 
-    public static Point getMidPoint(Point p1, Point p2)
-    {
+    public static Point getMidPoint(Point p1, Point p2) {
         double x = p1.x + 0.5 * (p2.x - p1.x);
         double y = p1.y + 0.5 * (p2.y - p1.y);
         double z = p1.z + 0.5 * (p2.z - p1.z);

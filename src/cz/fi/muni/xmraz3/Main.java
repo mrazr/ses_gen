@@ -41,6 +41,11 @@ public class Main {
                 jc.usage();
                 return;
             }
+            //try {
+            //    System.in.read();
+            //} catch (Exception e){
+            //    e.printStackTrace();
+            //}
             String raw = SurfaceParser.loadFile(Paths.get(SesConfig.inputFolder).resolve("info.json").toString());
             SurfaceParser.parseSesConfig(raw);
             SurfaceParser.ses_start(SesConfig.inputFolder);

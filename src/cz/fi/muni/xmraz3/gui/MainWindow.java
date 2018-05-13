@@ -19,6 +19,7 @@ import cz.fi.muni.xmraz3.math.Point;
 import cz.fi.muni.xmraz3.math.Vector;
 import cz.fi.muni.xmraz3.mesh.*;
 import cz.fi.muni.xmraz3.utils.GLUtil;
+import cz.fi.muni.xmraz3.utils.PatchUtil;
 import graphicslib3D.*;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -313,9 +314,11 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 //sendConvexPatches2GPU();
                 //sendToriPatches2GPU();
                 //sendConcavePathes2GPU();
-                pushConcaveEdgesToGPU();
-                pushConvexEdgesToGPU();
+               //pushConcaveEdgesToGPU();
+               //pushConvexEdgesToGPU();
                 //render = true;
+                pushBoundariesToGPU(true);
+                pushBoundariesToGPU(false);
                 //animator.start();
                 stopRendering.set(false);
                 stoppedRendering.set(false);
@@ -326,38 +329,38 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         window.invoke(false, task);
     }
 
-    private void pushConvexEdgesToGPU(){
+    private void pushBoundariesToGPU(boolean convex){
         int totalVerticesCount = 0;
         int totalIndicesCount = 0;
         int indexOffset = 0;
         int vertexOffset = 0;
         List<Point> vertices = new ArrayList<>();
         List<Integer> indices = new ArrayList<>();
-        for (SphericalPatch a : convexPatchList){
-            a.lineOffset = indexOffset;
-            for (Boundary b : a.boundaries){
-                Boundary b_ = b;
-                //b_.patch = a;
-                /*for (Arc _a : b.arcs){
-                    b_.arcs.add(_a.refined);
+        List<SphericalPatch> patchList = (convex) ? Surface.convexPatches : Surface.triangles;
+        for (SphericalPatch sp : patchList){
+            sp.lineOffset = indexOffset;
+            for (Boundary b : sp.boundaries){
+                sp.lineCount += b.vrts.size();
+                vertices.addAll(b.vrts);
+                for (int i = 0; i < b.vrts.size(); ++i){
+                    indices.add(i + vertexOffset);
+                    if (i < b.vrts.size() - 1) {
+                        indices.add(i + 1 + vertexOffset);
+                    } else {
+                        indices.add(vertexOffset);
+                    }
                 }
-                ArcUtil.buildEdges(b_, true);*/
-                a.lineCount += b_.lines.size();
-                for (Point p : b_.vrts){
-                    vertices.add(p);
-                }
-                for (Edge e : b_.lines){
-                    indices.add(e.v1 + vertexOffset);
-                    indices.add(e.v2 + vertexOffset);
-                }
-                vertexOffset += b_.vrts.size();
-                //totalVerticesCount += b.vrts.size();
+                vertexOffset += b.vrts.size();
             }
-            indexOffset += a.lineCount;
+            indexOffset += sp.lineCount;
         }
         totalVerticesCount = vertices.size();
         totalIndicesCount = indices.size();
-        convexPatchesEdgeCount = totalIndicesCount / 2;
+        if (convex){
+            convexPatchesEdgeCount = indices.size() / 2;
+        } else {
+            concavePatchesEdgeCount = indices.size() / 2;
+        }
         FloatBuffer vBuff = GLBuffers.newDirectFloatBuffer(3 * totalVerticesCount);
         IntBuffer iBuff = GLBuffers.newDirectIntBuffer(totalIndicesCount);
 
@@ -367,61 +370,114 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         vBuff.rewind();
         iBuff.rewind();
 
-        gl.glBindVertexArray(lineVao[CONVEX]);
-        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, lineVbo[CONVEX]);
+        gl.glBindVertexArray(lineVao[(convex) ? CONVEX : CONCAVE]);
+        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, lineVbo[(convex) ? CONVEX : CONCAVE]);
         gl.glBufferData(GL4.GL_ARRAY_BUFFER, vBuff.capacity() * Float.BYTES, vBuff, GL4.GL_STATIC_DRAW);
         gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 3 * Float.BYTES, 0);
         gl.glEnableVertexAttribArray(0);
         gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
-        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[CONVEX]);
+        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[(convex) ? CONVEX : CONCAVE]);
         gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, iBuff.capacity() * Integer.BYTES, iBuff, GL4.GL_STATIC_DRAW);
         gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
         gl.glBindVertexArray(0);
     }
 
-    private void pushConcaveEdgesToGPU(){
-        int totalVerticesCount = 0;
-        int totalIndicesCount = 0;
-        int indexOffset = 0;
-        int vertexOffset = 0;
-        List<Point> vertices = new ArrayList<>();
-        List<Integer> indices = new ArrayList<>();
-        for (SphericalPatch cp : concavePatchList){
-            cp.lineOffset = indexOffset;
-            for (Boundary b : cp.boundaries){
-                cp.lineCount += b.lines.size();
-                for (Point p : b.vrts){
-                    vertices.add(p);
-                }
-                for (Edge e : b.lines){
-                    indices.add(e.v1 + vertexOffset);
-                    indices.add(e.v2 + vertexOffset);
-                }
-                vertexOffset += b.vrts.size();
-            }
-            indexOffset += cp.lineCount;
-        }
-        concavePatchesEdgeCount = indices.size() / 2;
-        FloatBuffer vBuff = GLBuffers.newDirectFloatBuffer(3 * vertices.size());
-        IntBuffer iBuff = GLBuffers.newDirectIntBuffer(indices.size());
-
-        vertices.forEach(p -> vBuff.put(p.getFloatData()));
-        indices.forEach(i -> iBuff.put(i));
-
-        vBuff.rewind();
-        iBuff.rewind();
-
-        gl.glBindVertexArray(lineVao[CONCAVE]);
-        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, lineVbo[CONCAVE]);
-        gl.glBufferData(GL4.GL_ARRAY_BUFFER, vBuff.capacity() * Float.BYTES, vBuff, GL4.GL_STATIC_DRAW);
-        gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 3 * Float.BYTES, 0);
-        gl.glEnableVertexAttribArray(0);
-        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
-        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[CONCAVE]);
-        gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, iBuff.capacity() * Integer.BYTES, iBuff, GL4.GL_STATIC_DRAW);
-        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
-        gl.glBindVertexArray(0);
-    }
+//    private void pushConvexEdgesToGPU(){
+//        int totalVerticesCount = 0;
+//        int totalIndicesCount = 0;
+//        int indexOffset = 0;
+//        int vertexOffset = 0;
+//        List<Point> vertices = new ArrayList<>();
+//        List<Integer> indices = new ArrayList<>();
+//        for (SphericalPatch a : convexPatchList){
+//            a.lineOffset = indexOffset;
+//            for (Boundary b : a.boundaries){
+//                Boundary b_ = b;
+//                //b_.patch = a;
+//                /*for (Arc _a : b.arcs){
+//                    b_.arcs.add(_a.refined);
+//                }
+//                ArcUtil.buildEdges(b_, true);*/
+//                a.lineCount += b_.lines.size();
+//                for (Point p : b_.vrts){
+//                    vertices.add(p);
+//                }
+//                for (Edge e : b_.lines){
+//                    indices.add(e.v1 + vertexOffset);
+//                    indices.add(e.v2 + vertexOffset);
+//                }
+//                vertexOffset += b_.vrts.size();
+//                //totalVerticesCount += b.vrts.size();
+//            }
+//            indexOffset += a.lineCount;
+//        }
+//        totalVerticesCount = vertices.size();
+//        totalIndicesCount = indices.size();
+//        convexPatchesEdgeCount = totalIndicesCount / 2;
+//        FloatBuffer vBuff = GLBuffers.newDirectFloatBuffer(3 * totalVerticesCount);
+//        IntBuffer iBuff = GLBuffers.newDirectIntBuffer(totalIndicesCount);
+//
+//        vertices.forEach(p -> vBuff.put(p.getFloatData()));
+//        indices.forEach(i -> iBuff.put(i));
+//
+//        vBuff.rewind();
+//        iBuff.rewind();
+//
+//        gl.glBindVertexArray(lineVao[CONVEX]);
+//        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, lineVbo[CONVEX]);
+//        gl.glBufferData(GL4.GL_ARRAY_BUFFER, vBuff.capacity() * Float.BYTES, vBuff, GL4.GL_STATIC_DRAW);
+//        gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 3 * Float.BYTES, 0);
+//        gl.glEnableVertexAttribArray(0);
+//        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
+//        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[CONVEX]);
+//        gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, iBuff.capacity() * Integer.BYTES, iBuff, GL4.GL_STATIC_DRAW);
+//        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
+//        gl.glBindVertexArray(0);
+//    }
+//
+//    private void pushConcaveEdgesToGPU(){
+//        int totalVerticesCount = 0;
+//        int totalIndicesCount = 0;
+//        int indexOffset = 0;
+//        int vertexOffset = 0;
+//        List<Point> vertices = new ArrayList<>();
+//        List<Integer> indices = new ArrayList<>();
+//        for (SphericalPatch cp : concavePatchList){
+//            cp.lineOffset = indexOffset;
+//            for (Boundary b : cp.boundaries){
+//                cp.lineCount += b.lines.size();
+//                for (Point p : b.vrts){
+//                    vertices.add(p);
+//                }
+//                for (Edge e : b.lines){
+//                    indices.add(e.v1 + vertexOffset);
+//                    indices.add(e.v2 + vertexOffset);
+//                }
+//                vertexOffset += b.vrts.size();
+//            }
+//            indexOffset += cp.lineCount;
+//        }
+//        concavePatchesEdgeCount = indices.size() / 2;
+//        FloatBuffer vBuff = GLBuffers.newDirectFloatBuffer(3 * vertices.size());
+//        IntBuffer iBuff = GLBuffers.newDirectIntBuffer(indices.size());
+//
+//        vertices.forEach(p -> vBuff.put(p.getFloatData()));
+//        indices.forEach(i -> iBuff.put(i));
+//
+//        vBuff.rewind();
+//        iBuff.rewind();
+//
+//        gl.glBindVertexArray(lineVao[CONCAVE]);
+//        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, lineVbo[CONCAVE]);
+//        gl.glBufferData(GL4.GL_ARRAY_BUFFER, vBuff.capacity() * Float.BYTES, vBuff, GL4.GL_STATIC_DRAW);
+//        gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 3 * Float.BYTES, 0);
+//        gl.glEnableVertexAttribArray(0);
+//        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
+//        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[CONCAVE]);
+//        gl.glBufferData(GL4.GL_ELEMENT_ARRAY_BUFFER, iBuff.capacity() * Integer.BYTES, iBuff, GL4.GL_STATIC_DRAW);
+//        gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
+//        gl.glBindVertexArray(0);
+//    }
 
     public void sendConvexPatchList(List<SphericalPatch> at){
         convexPatchList = at;
@@ -837,7 +893,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 gl.glBindVertexArray(0);
                 probeScaleT.glPopMatrix();*/
                 float r = (float)SesConfig.probeRadius;
-                for (Integer i : concavePatchesSelect){
+                for (int j = 0; j < concavePatchesSelect.size(); ++j){
+                    Integer i = concavePatchesSelect.get(j);
                     SphericalPatch cp2 = concavePatchList.get(i);
                     float[] c2 = cp2.sphere.center.getFloatData();
                     probeScaleT.glPushMatrix();
@@ -851,7 +908,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 }
 
             } else {
-                for (Integer i : linkNeighbors) {
+                for (int j = 0; j < linkNeighbors.size(); ++j) {
+                    Integer i = linkNeighbors.get(j);
                     SphericalPatch cp = concavePatchList.get(i);
                     probeScaleT.glPushMatrix();
                     float r = (float) Double.longBitsToDouble(Surface.probeRadius.get());
@@ -1050,9 +1108,12 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     concaveVerticesCount += cp.vertices.size();
                 }
                 for (ToroidalPatch tp : Surface.rectangles){
+                    if (tp.faces == null){
+                        continue;
+                    }
                     boffsets.put(accumulator);
-                    accumulator += tp.vrts.size() / 2;
-                    toriVerticesCount += tp.vrts.size() / 2;
+                    accumulator += tp.faces.length;// * 3;//tp.vrts.size() / 2;
+                    toriVerticesCount += tp.faces.length;//tp.vrts.size() / 2;
                 }
                 //toriVerticesCount = accumulator;
                 boffsets.rewind();
@@ -1163,10 +1224,11 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     gl.glUniform3fv(uniNormalColorLoc, 1, convexPatchCol, 0);
                     gl.glBindVertexArray(meshVao[CONVEX]);
                     gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, meshEbo[CONVEX]);
-                    for (Integer i : convexPatchesSelect) {
-                        SphericalPatch a = convexPatchList.get(i);
-                        int off = (convexFaceCountShow > a.faces.size()) ? a.faces.size() : convexFaceCountShow;
-                        gl.glDrawElements(GL4.GL_TRIANGLES, 3 * a.faces.size() - 3 * off, GL4.GL_UNSIGNED_INT, a.eboOffset * Integer.BYTES);
+                    for (int i = 0; i < convexPatchesSelect.size(); ++i) {
+                        Integer j = convexPatchesSelect.get(i);
+                        SphericalPatch a = convexPatchList.get(j);
+                        int off = (convexFaceCountShow > a.faces.length / 3) ? a.faces.length : convexFaceCountShow * 3;
+                        gl.glDrawElements(GL4.GL_TRIANGLES,  a.faces.length - off, GL4.GL_UNSIGNED_INT, a.eboOffset * Integer.BYTES);
                     }
                 }
             } else {
@@ -1176,8 +1238,9 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 //IntBuffer end = GLBuffers.newDirectIntBuffer(convexPatchesSelect.size());
                 selectStart.clear();
                 selectEnd.clear();
-                for (Integer i : convexPatchesSelect) {
-                    SphericalPatch a = convexPatchList.get(i);
+                for (int i = 0; i < convexPatchesSelect.size(); ++i) {
+                    Integer j = convexPatchesSelect.get(i);
+                    SphericalPatch a = convexPatchList.get(j);
                     //start.put(a.vboOffset);
                     //end.put(a.vboOffset + a.vertices.size());
                     selectStart.put(a.vboOffset);
@@ -1212,8 +1275,9 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             gl.glBindVertexArray(lineVao[CONVEX]);
             gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[CONVEX]);
             if (selectedExclusiveRender){
-                for (Integer i : convexPatchesSelect){
-                    SphericalPatch a = convexPatchList.get(i);
+                for (int i = 0; i < convexPatchesSelect.size(); ++i){
+                    Integer j = convexPatchesSelect.get(i);
+                    SphericalPatch a = convexPatchList.get(j);
                     gl.glDrawElements(GL4.GL_LINES, 2 * a.lineCount, GL4.GL_UNSIGNED_INT, 2 * a.lineOffset * Integer.BYTES);
                 }
             } else {
@@ -1236,10 +1300,11 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                     gl.glUniform3fv(uniNormalColorLoc, 1, concavePatchCol, 0);
                     gl.glBindVertexArray(meshVao[CONCAVE]);
                     gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, meshEbo[CONCAVE]);
-                    for (Integer i : concavePatchesSelect) {
-                        SphericalPatch a = concavePatchList.get(i);
-                        int off = (concaveFaceCountShow > a.faces.size()) ? a.faces.size() : concaveFaceCountShow;
-                        gl.glDrawElements(GL4.GL_TRIANGLES, 3 * a.faces.size() - 3 * off, GL4.GL_UNSIGNED_INT, a.eboOffset * Integer.BYTES);
+                    for (int i = 0; i < concavePatchesSelect.size(); ++i) {
+                        Integer j = concavePatchesSelect.get(i);
+                        SphericalPatch a = concavePatchList.get(j);
+                        int off = (concaveFaceCountShow > a.faces.length / 3) ? a.faces.length / 3 : concaveFaceCountShow * 3;
+                        gl.glDrawElements(GL4.GL_TRIANGLES, a.faces.length - off, GL4.GL_UNSIGNED_INT, a.eboOffset * Integer.BYTES);
                     }
                     gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, 0);
                     gl.glBindVertexArray(0);
@@ -1252,8 +1317,9 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 //IntBuffer end = GLBuffers.newDirectIntBuffer(concavePatchesSelect.size());
                 selectStart.clear();
                 selectEnd.clear();
-                for (Integer i : concavePatchesSelect) {
-                    SphericalPatch a = concavePatchList.get(i);
+                for (int i = 0; i < concavePatchesSelect.size(); ++i) {
+                    Integer j = concavePatchesSelect.get(i);
+                    SphericalPatch a = concavePatchList.get(j);
                     //start.put(a.vboOffset);
                     //end.put(a.vboOffset + a.vertices.size());
                     selectStart.put(a.vboOffset);
@@ -1290,8 +1356,9 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             gl.glBindVertexArray(lineVao[CONCAVE]);
             gl.glBindBuffer(GL4.GL_ELEMENT_ARRAY_BUFFER, lineEbo[CONCAVE]);
             if (selectedExclusiveRender){
-                for (Integer i : concavePatchesSelect){
-                    SphericalPatch cp = concavePatchList.get(i);
+                for (int i = 0; i < concavePatchesSelect.size(); ++i){
+                    Integer j = concavePatchesSelect.get(i);
+                    SphericalPatch cp = concavePatchList.get(j);
                     gl.glDrawElements(GL4.GL_LINES, 2 * cp.lineCount, GL4.GL_UNSIGNED_INT, 2 * cp.lineOffset * Integer.BYTES);
                 }
             } else {
@@ -1311,9 +1378,10 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 gl.glUniform1i(uniSelectedMeshCountLoc, 0);
                 gl.glUniform3fv(uniNormalColorLoc, 1, toriPatchCol, 0);
                 gl.glBindVertexArray(meshVao[TORUS]);
-                for (Integer i : toriPatchesSelect){
-                    ToroidalPatch rp = Surface.rectangles.get(i);
-                    gl.glDrawArrays(GL4.GL_TRIANGLES, rp.vboOffset, 3 * rp.faces.size());
+                for (int i = 0; i < toriPatchesSelect.size(); ++i){
+                    Integer j = toriPatchesSelect.get(i);
+                    ToroidalPatch rp = Surface.rectangles.get(j);
+                    gl.glDrawArrays(GL4.GL_TRIANGLES, rp.vboOffset, rp.faces.length);
                 }
                 gl.glBindVertexArray(0);
                 return;
@@ -1324,10 +1392,11 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             //IntBuffer end = GLBuffers.newDirectIntBuffer(toriPatchesSelect.size());
             selectStart.clear();
             selectEnd.clear();
-            for (Integer i : toriPatchesSelect) {
-                ToroidalPatch a = Surface.rectangles.get(i);
+            for (int i = 0; i < toriPatchesSelect.size(); ++i) {
+                Integer j = toriPatchesSelect.get(i);
+                ToroidalPatch a = Surface.rectangles.get(j);
                 selectStart.put(a.vboOffset);
-                selectEnd.put(a.vboOffset + (a.vrts.size() / 2));
+                selectEnd.put(a.vboOffset + (a.faces.length));//a.vrts.size() / 2));
                 //start.put(a.vboOffset);
                 //end.put(a.vboOffset + (a.vrts.size() / 2));
             }
@@ -1371,7 +1440,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             GLRunnable task = new GLRunnable() {
                 @Override
                 public boolean run(GLAutoDrawable glAutoDrawable) {
-                    pushToriMesh2GPU();
+                    pushToriMeshToGPU();
                     stopRendering.set(false);
                     return true;
                 }
@@ -1423,21 +1492,24 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         int eboOffset = 0;
         int faceCount = 0;
         for (SphericalPatch a : Surface.convexPatches){
+            if (!a.meshed){
+                continue;
+            }
             for (Point v : a.vertices){
                 Point n = new Point(Point.subtractPoints(v, a.sphere.center).makeUnit().getFloatData());
                 vrtsNnormals.add(v);
                 vrtsNnormals.add(n);
             }
-            for (Face f : a.faces){
-                indices.add(f.a + vboOffset);
-                indices.add(f.b + vboOffset);
-                indices.add(f.c + vboOffset);
+            for (int i = 0; i < a.faces.length; ++i){
+                indices.add(a.faces[i] + vboOffset);
+                //indices.add(a.faces[i + 1] + vboOffset);
+                //indices.add(a.faces[i + 2] + vboOffset);
             }
             a.vboOffset = vboOffset;
             a.eboOffset = eboOffset;
             vboOffset += a.vertices.size();
-            eboOffset += 3 * a.faces.size();
-            faceCount += a.faces.size();
+            eboOffset += a.faces.length;
+            faceCount += a.faces.length / 3;
         }
         convexPatchesFaceCount = indices.size() / 3;
         //System.out.println(convexPatchList.size() + " convex patches");
@@ -1453,21 +1525,24 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         int eboOffset = 0;
         int faceCount = 0;
         for (SphericalPatch cp : Surface.triangles){
+            if (!cp.meshed){
+                continue;
+            }
             for (Point v : cp.vertices){
                 Point n = new Point(Point.subtractPoints(cp.sphere.center, v).makeUnit().getFloatData());
                 vrtsNnormals.add(v);
                 vrtsNnormals.add(n);
             }
-            for (Face f : cp.faces){
-                indices.add(f.a + vboOffset);
-                indices.add(f.b + vboOffset);
-                indices.add(f.c + vboOffset);
+            for (int i = 0; i < cp.faces.length; i++){ //Face f : cp.faces){
+                indices.add(cp.faces[i] + vboOffset);
+                //indices.add(cp.faces[i + 1] + vboOffset);
+                //indices.add(cp.faces[i + 2] + vboOffset);
             }
             cp.vboOffset = vboOffset;
             cp.eboOffset = eboOffset;
             vboOffset += cp.vertices.size();
-            eboOffset += 3 * cp.faces.size();
-            faceCount += cp.faces.size();
+            eboOffset += cp.faces.length;
+            faceCount += cp.faces.length / 3;
         }
         concavePatchesFaceCount = indices.size() / 3;
         //System.out.println(concavePatchList.size() + " concave patches");
@@ -1498,32 +1573,56 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         window.invoke(true, r);
     }
 
-    private void pushToriMesh2GPU(){
+
+    private void _pushToriMeshToGPU(){
         stopRendering.set(true);
-        List<Point> vrtsNormals = new ArrayList<>();
+        FloatBuffer _vrtsNormals = GLBuffers.newDirectFloatBuffer(Surface.toriFacesCount * 3 * 2 * 3);
+        int m = 0;
         int vboOffset = 0;
         int faceCount = 0;
+        int _tmpOffset = 0;
+        Point _p;
+        Point _probe;
+        Vector _n = new Vector(0, 0, 0);
         for (ToroidalPatch tp : Surface.rectangles){
             if (!tp.valid){
                 continue;
             }
-            for (Point p : tp.vrts){
-                vrtsNormals.add(p);
+            _tmpOffset = 0;
+            //m = tp.arcVertsCount;
+            for (int i = 0; i < tp.faces.length; i ++){//Face f : tp.faces){
+               _p = tp.vertices.get(tp.faces[i]);
+               _probe = tp.probes[PatchUtil.getTorusProbeIdx(tp, tp.faces[i])];
+               _vrtsNormals.put((float)_p.getX());
+               _vrtsNormals.put((float)_p.getY());
+               _vrtsNormals.put((float)_p.getZ());
+
+               _n.changeVector(_probe, _p).makeUnit();
+               _vrtsNormals.put((float)_n.getX());
+               _vrtsNormals.put((float)_n.getY());
+               _vrtsNormals.put((float)_n.getZ());
+               _tmpOffset += 1;
             }
+            //for (Point p : tp.vrts){
+            //    vrtsNormals.add(p);
+            //}
             tp.vboOffset = vboOffset;
             //tp.faceCount = 3 * tp.faces.size();
-            vboOffset += tp.vrts.size() / 2;
-            faceCount += tp.faces.size();
+            vboOffset += _tmpOffset;
+            faceCount += tp.faces.length / 3;
         }
-        FloatBuffer buffer = GLBuffers.newDirectFloatBuffer(vrtsNormals.size() * 3);
-        for (Point p : vrtsNormals){
-            buffer.put(p.getFloatData());
-        }
-        buffer.rewind();
-        toriPatchesFaceCount = buffer.capacity() / 6;
+        //FloatBuffer buffer = GLBuffers.newDirectFloatBuffer(_vrtsNormals.size());
+        ////for (Point p : vrtsNormals){
+        //  //  buffer.put(p.getFloatData());
+        ////}
+        //for (Float f : _vrtsNormals){
+        //    buffer.put(f);
+        //}
+        _vrtsNormals.rewind();
+        toriPatchesFaceCount = _vrtsNormals.capacity() / 18;
         gl.glBindVertexArray(meshVao[TORUS]);
         gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, meshVbo[TORUS]);
-        gl.glBufferData(GL4.GL_ARRAY_BUFFER, buffer.capacity() * Float.BYTES, buffer, GL4.GL_STATIC_DRAW);
+        gl.glBufferData(GL4.GL_ARRAY_BUFFER, _vrtsNormals.capacity() * Float.BYTES, _vrtsNormals, GL4.GL_STATIC_DRAW);
         gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 6 * Float.BYTES, 0);
         gl.glEnableVertexAttribArray(0);
         gl.glVertexAttribPointer(1, 3, GL4.GL_FLOAT, false, 6 * Float.BYTES, 3 * Float.BYTES);
@@ -1534,13 +1633,127 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
         toriPushData2GPU.set(false);
         toriMeshInitialized = true;
         System.out.println("Number of triangles: " + faceCount);
+        _vrtsNormals.clear();
     }
+    private void pushToriMeshToGPU(){
+        stopRendering.set(true);
+        FloatBuffer _vrtsNormals = GLBuffers.newDirectFloatBuffer(Surface.toriFacesCount * 3 * 2 * 3);
+        int vboOffset = 0;
+        int faceCount = 0;
+        int _tmpOffset = 0;
+        for (ToroidalPatch tp : Surface.rectangles){
+            if (!tp.valid){
+                continue;
+            }
+            _tmpOffset = 0;
+            for (int i = 0; i < tp.faces.length; i += 3){//Face f : tp.faces){
+                Point p = tp.vertices.get(tp.faces[i]);
+                Vector n = tp.normals.get(tp.faces[i]);
+                //Point p = tp.vertices.get(f.a);
+                //Vector n = tp.normals.get(f.a);
+                _vrtsNormals.put((float)p.x);
+                _vrtsNormals.put((float)p.y);
+                _vrtsNormals.put((float)p.z);
+                _vrtsNormals.put((float)n.getX());
+                _vrtsNormals.put((float)n.getY());
+                _vrtsNormals.put((float)n.getZ());
+
+                p = tp.vertices.get(tp.faces[i + 1]);
+                n = tp.normals.get(tp.faces[i + 1]);
+                _vrtsNormals.put((float)p.x);
+                _vrtsNormals.put((float)p.y);
+                _vrtsNormals.put((float)p.z);
+                _vrtsNormals.put((float)n.getX());
+                _vrtsNormals.put((float)n.getY());
+                _vrtsNormals.put((float)n.getZ());
+
+                p = tp.vertices.get(tp.faces[i + 2]);
+                n = tp.normals.get(tp.faces[i + 2]);
+                _vrtsNormals.put((float)p.x);
+                _vrtsNormals.put((float)p.y);
+                _vrtsNormals.put((float)p.z);
+                _vrtsNormals.put((float)n.getX());
+                _vrtsNormals.put((float)n.getY());
+                _vrtsNormals.put((float)n.getZ());
+                _tmpOffset += 3;
+            }
+            //for (Point p : tp.vrts){
+            //    vrtsNormals.add(p);
+            //}
+            tp.vboOffset = vboOffset;
+            //tp.faceCount = 3 * tp.faces.size();
+            vboOffset += _tmpOffset;
+            faceCount += tp.faces.length / 3;
+        }
+        //FloatBuffer buffer = GLBuffers.newDirectFloatBuffer(_vrtsNormals.size());
+        ////for (Point p : vrtsNormals){
+        //  //  buffer.put(p.getFloatData());
+        ////}
+        //for (Float f : _vrtsNormals){
+        //    buffer.put(f);
+        //}
+        _vrtsNormals.rewind();
+        toriPatchesFaceCount = _vrtsNormals.capacity() / 18;
+        gl.glBindVertexArray(meshVao[TORUS]);
+        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, meshVbo[TORUS]);
+        gl.glBufferData(GL4.GL_ARRAY_BUFFER, _vrtsNormals.capacity() * Float.BYTES, _vrtsNormals, GL4.GL_STATIC_DRAW);
+        gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 6 * Float.BYTES, 0);
+        gl.glEnableVertexAttribArray(0);
+        gl.glVertexAttribPointer(1, 3, GL4.GL_FLOAT, false, 6 * Float.BYTES, 3 * Float.BYTES);
+        gl.glEnableVertexAttribArray(1);
+        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
+        gl.glBindVertexArray(0);
+        stopRendering.set(false);
+        toriPushData2GPU.set(false);
+        toriMeshInitialized = true;
+        System.out.println("Number of triangles: " + faceCount);
+        _vrtsNormals.clear();
+    }
+
+//    private void pushToriMesh2GPU(){
+//        stopRendering.set(true);
+//        List<Point> vrtsNormals = new ArrayList<>();
+//        int vboOffset = 0;
+//        int faceCount = 0;
+//        for (ToroidalPatch tp : Surface.rectangles){
+//            if (!tp.valid){
+//                continue;
+//            }
+//            for (Point p : tp.vrts){
+//                vrtsNormals.add(p);
+//            }
+//            tp.vboOffset = vboOffset;
+//            //tp.faceCount = 3 * tp.faces.size();
+//            vboOffset += tp.vrts.size() / 2;
+//            faceCount += tp.faces.size();
+//        }
+//        FloatBuffer buffer = GLBuffers.newDirectFloatBuffer(vrtsNormals.size() * 3);
+//        for (Point p : vrtsNormals){
+//            buffer.put(p.getFloatData());
+//        }
+//        buffer.rewind();
+//        toriPatchesFaceCount = buffer.capacity() / 6;
+//        gl.glBindVertexArray(meshVao[TORUS]);
+//        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, meshVbo[TORUS]);
+//        gl.glBufferData(GL4.GL_ARRAY_BUFFER, buffer.capacity() * Float.BYTES, buffer, GL4.GL_STATIC_DRAW);
+//        gl.glVertexAttribPointer(0, 3, GL4.GL_FLOAT, false, 6 * Float.BYTES, 0);
+//        gl.glEnableVertexAttribArray(0);
+//        gl.glVertexAttribPointer(1, 3, GL4.GL_FLOAT, false, 6 * Float.BYTES, 3 * Float.BYTES);
+//        gl.glEnableVertexAttribArray(1);
+//        gl.glBindBuffer(GL4.GL_ARRAY_BUFFER, 0);
+//        gl.glBindVertexArray(0);
+//        stopRendering.set(false);
+//        toriPushData2GPU.set(false);
+//        toriMeshInitialized = true;
+//        System.out.println("Number of triangles: " + faceCount);
+//    }
 
     public void pushTori(){
         GLRunnable r = new GLRunnable() {
             @Override
             public boolean run(GLAutoDrawable glAutoDrawable) {
-                pushToriMesh2GPU();
+                //pushToriMesh2GPU();
+                _pushToriMeshToGPU();
                 return true;
             }
         };
@@ -1639,8 +1852,8 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             convexFaceCountShow = 0;
         }
         if (keyEvent.getKeyCode() == KeyEvent.VK_F4){
-            concaveFaceCountShow = (concavePatchesSelect.size() > 0) ? Surface.triangles.get(concavePatchesSelect.get(0)).faces.size() : 0;
-            convexFaceCountShow = (convexPatchesSelect.size() > 0) ? Surface.convexPatches.get(convexPatchesSelect.get(0)).faces.size(): 0;
+            concaveFaceCountShow = (concavePatchesSelect.size() > 0) ? Surface.triangles.get(concavePatchesSelect.get(0)).faces.length / 3: 0;
+            convexFaceCountShow = (convexPatchesSelect.size() > 0) ? Surface.convexPatches.get(convexPatchesSelect.get(0)).faces.length / 3 : 0;
         }
         if (keyEvent.getKeyCode() == KeyEvent.VK_F5){
             if (concavePatchesSelect.size() > 0) {
@@ -1655,16 +1868,16 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             SphericalPatch sp = Surface.convexPatches.get(convexPatchesSelect.get(0));
             SurfaceParser.exportPatch(sp);
             SurfaceParser.exportCP(sp, "/home/radoslav/objs/cp_" + sp.id + ".obj");
-            SurfaceParser.exportOldFaces(sp);
-            SurfaceParser.exportCP_(sp);
+            //SurfaceParser.exportOldFaces(sp);
+            //SurfaceParser.exportCP_(sp);
         }
 
         if (keyEvent.getKeyChar() == 'i'){
             SphericalPatch sp = Surface.triangles.get(concavePatchesSelect.get(0));
             SurfaceParser.exportPatch(sp);
             SurfaceParser.exportCP(sp, "/home/radoslav/objs/concp_" + sp.id + ".obj");
-            SurfaceParser.exportOldFaces(sp);
-            SurfaceParser.exportCP_(sp);
+            //SurfaceParser.exportOldFaces(sp);
+            //SurfaceParser.exportCP_(sp);
         }
 
         if (keyEvent.getKeyChar() == ']'){
@@ -1953,7 +2166,7 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
             viewPanning = false;
             addToSelection = false;
         }
-        if (keyEvent.getKeyCode() == keyEvent.VK_CONTROL){
+        if (keyEvent.getKeyCode() == KeyEvent.VK_CONTROL){
             removeSelection = false;
         }
     }
@@ -1987,11 +2200,14 @@ public class MainWindow implements GLEventListener, KeyListener, MouseListener{
                 return CONCAVE;
             } else {
                 int localCount = hoverAtom - convexVerticesCount - concaveVerticesCount;
-                System.out.println("loc count: " + localCount);
+                //System.out.println("loc count: " + localCount);
                 int h = 0;
                 //selectedToriP.set(hoverAtom - convexPatches.size() - concavePatchList.size());
                 for (int i = 0; i < Surface.rectangles.size(); ++i){
-                    h += Surface.rectangles.get(i).vrts.size() / 2;
+                    if (Surface.rectangles.get(i).faces == null){
+                        continue;
+                    }
+                    h += Surface.rectangles.get(i).faces.length;//.vrts.size() / 2;
                     if (localCount < h){
                         hoverSelectID = i;
                         break;
